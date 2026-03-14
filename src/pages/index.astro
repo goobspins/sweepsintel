@@ -1,0 +1,287 @@
+---
+// Homepage for SweepsIntel
+// Built with Astro, minimal JavaScript shipped to browser
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SweepsIntel — Sweepstakes Casino Intelligence Platform</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      min-height: 100vh;
+    }
+
+    header {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    header nav {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      color: #667eea;
+      font-weight: 700;
+    }
+
+    header nav a {
+      margin-left: 2rem;
+      text-decoration: none;
+      color: #333;
+      font-weight: 500;
+    }
+
+    header nav a:hover {
+      color: #667eea;
+    }
+
+    .cta-button {
+      background: #667eea;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
+    .cta-button:hover {
+      background: #5568d3;
+    }
+
+    .hero {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+      text-align: center;
+      color: white;
+    }
+
+    .hero h2 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+
+    .hero .cta-button {
+      display: inline-block;
+      margin: 0 0.5rem;
+    }
+
+    .features {
+      background: white;
+      padding: 4rem 2rem;
+      margin-top: 2rem;
+    }
+
+    .features-grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .feature-card {
+      padding: 2rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 0.5rem;
+      background: #f9f9f9;
+    }
+
+    .feature-card h3 {
+      color: #667eea;
+      margin-bottom: 1rem;
+      font-size: 1.3rem;
+    }
+
+    .feature-card p {
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .casino-grid {
+      max-width: 1200px;
+      margin: 2rem auto 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      padding: 0 2rem;
+    }
+
+    .casino-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      border-left: 4px solid #667eea;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .casino-card h4 {
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    .casino-rating {
+      color: #667eea;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .casino-card p {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .casino-card a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .casino-card a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+      margin-top: 4rem;
+    }
+
+    .section-title {
+      max-width: 1200px;
+      margin: 2rem auto 1rem;
+      padding: 0 2rem;
+      font-size: 1.8rem;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <h1>🎰 SweepsIntel</h1>
+      <div>
+        <a href="/casinos">Casinos</a>
+        <a href="/reports">Ban Reports</a>
+        <a href="/tracker" class="cta-button">Start Tracking</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h2>The Casino Intelligence Platform</h2>
+    <p>Track daily bonuses. Avoid bans. Know your casinos.</p>
+    <p style="font-size: 1rem; opacity: 0.8;">33 casinos profiled. 100+ community reports. $400k+ community winnings.</p>
+    <div>
+      <a href="/tracker" class="cta-button">Start Tracking Now</a>
+      <a href="/casinos" class="cta-button" style="background: rgba(255, 255, 255, 0.2); border: 2px solid white;">Browse Casinos</a>
+    </div>
+  </div>
+
+  <div class="features">
+    <div class="features-grid">
+      <div class="feature-card">
+        <h3>📊 Daily Bonus Tracker</h3>
+        <p>Track daily bonuses across all your casinos in one place. See which casinos you haven't joined yet and claim your daily earnings.</p>
+      </div>
+      <div class="feature-card">
+        <h3>⚠️ Ban Intelligence</h3>
+        <p>Community-verified ban reports with automated duplicate detection. Know which casinos are issuing bans before you get hit.</p>
+      </div>
+      <div class="feature-card">
+        <h3>💰 P&L Tracker</h3>
+        <p>Log your offer spends and redemptions. See your profitability per casino and plan your strategy.</p>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Top-Rated Casinos</h2>
+  <div class="casino-grid">
+    <div class="casino-card">
+      <h4>Global Poker</h4>
+      <div class="casino-rating">9.0/10</div>
+      <p>The gold standard. VGW operator, instant GC payouts, zero promoban risk.</p>
+      <a href="/casinos/global-poker">Learn More →</a>
+    </div>
+
+    <div class="casino-card">
+      <h4>Shuffle</h4>
+      <div class="casino-rating">8.0/10</div>
+      <p>98% dice wash, shared VIP with Stake.us. Top grinder pick.</p>
+      <a href="/casinos/shuffle">Learn More →</a>
+    </div>
+
+    <div class="casino-card">
+      <h4>Betr</h4>
+      <div class="casino-rating">7.5/10</div>
+      <p>Fastest redemptions at 20 minutes. Brand new, backed by sportsbook.</p>
+      <a href="/casinos/betr">Learn More →</a>
+    </div>
+
+    <div class="casino-card">
+      <h4>Fliff</h4>
+      <div class="casino-rating">7.5/10</div>
+      <p>Best sportsbook. Sports arbitrage strategies. PA confirmed.</p>
+      <a href="/casinos/fliff">Learn More →</a>
+    </div>
+
+    <div class="casino-card">
+      <h4>American Luck</h4>
+      <div class="casino-rating">7.0/10</div>
+      <p>Gateway to PriorityPlay family. 6-casino crossing confirmed.</p>
+      <a href="/casinos/american-luck">Learn More →</a>
+    </div>
+
+    <div class="casino-card">
+      <h4>Gold Machine</h4>
+      <div class="casino-rating">7.0/10</div>
+      <p>Instant debit redemptions. 1x playthrough. Fair and fast.</p>
+      <a href="/casinos/gold-machine">Learn More →</a>
+    </div>
+  </div>
+
+  <div class="features" style="margin-top: 2rem;">
+    <div style="max-width: 1200px; margin: 0 auto; text-align: center;">
+      <h2>Ready to Track Your Casinos?</h2>
+      <p style="margin: 1rem 0; font-size: 1rem; color: #666;">Join players tracking daily bonuses across 33 casinos and earning $400+ per month.</p>
+      <a href="/tracker" class="cta-button">Create Free Account</a>
+    </div>
+  </div>
+
+  <footer>
+    <p>SweepsIntel © 2026. Information platform for sweepstakes casino players. Not affiliated with any casino.</p>
+    <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">Platform managed by Apex Collective. <a href="#" style="color: white;">Privacy Policy</a></p>
+  </footer>
+</body>
+</html>
