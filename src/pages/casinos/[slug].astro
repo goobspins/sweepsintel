@@ -1,0 +1,419 @@
+---
+import { getCollection } from 'astro:content';
+
+import AffiliateCTA from '../../components/casino/AffiliateCTA';
+import BanReportFeed from '../../components/casino/BanReportFeed';
+import CasinoDetailPanel from '../../components/casino/CasinoDetailPanel';
+import GameAvailabilityTable from '../../components/casino/GameAvailabilityTable';
+import LiveGamesIndicator from '../../components/casino/LiveGamesIndicator';
+import RedemptionTimeStats from '../../components/casino/RedemptionTimeStats';
+import EmailCaptureForm from '../../components/forms/EmailCaptureForm';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { hasJoinedCasino } from '../../lib/affiliate';
+import { getSessionUser } from '../../lib/auth';
+import { getCached } from '../../lib/cache';
+import { query } from '../../lib/db';
+import { getRedemptionStats } from '../../lib/redemption-stats';
+import { computeNextReset } from '../../lib/reset';
+
+export const prerender = false;
+
+const slug = Astro.params.slug ?? '';
+const user = await getSessionUser(Astro.request);
+
+const casinoRows = await query<{
+  id: number;
+  slug: string;
+  name: string;
+  tier: number;
+  rating: number | null;
+  parent_company: string | null;
+  promoban_risk: string;
+  hardban_risk: string;
+  family_ban_propagation: boolean;
+  ban_confiscates_funds: boolean;
+  sc_to_usd_ratio: number | string | null;
+  redemption_speed_desc: string | null;
+  redemption_fee_desc: string | null;
+  min_redemption_usd: number | string | null;
+  playthrough_multiplier: number | string | null;
+  playthrough_notes: string | null;
+  streak_mode: string | null;
+  reset_time_local: string | null;
+  reset_timezone: string | null;
+  has_live_games: boolean;
+  cw_direction: string | null;
+  cw_notes: string | null;
+  has_affiliate_link: boolean;
+  affiliate_link_url: string | null;
+  is_excluded: boolean;
+}>(
+  `SELECT
+    id,
+    slug,
+    name,
+    tier,
+    rating,
+    parent_company,
+    promoban_risk,
+    hardban_risk,
+    family_ban_propagation,
+    ban_confiscates_funds,
+    sc_to_usd_ratio,
+    redemption_speed_desc,
+    redemption_fee_desc,
+    min_redemption_usd,
+    playthrough_multiplier,
+    playthrough_notes,
+    streak_mode,
+    reset_time_local,
+    reset_timezone,
+    has_live_games,
+    cw_direction,
+    cw_notes,
+    has_affiliate_link,
+    affiliate_link_url,
+    is_excluded
+  FROM casinos
+  WHERE slug = $1
+  LIMIT 1`,
+  [slug],
+);
+
+const currentCasino = casinoRows[0];
+
+if (!currentCasino) {
+  return new Response('Not found', { status: 404 });
+}
+
+const editorialEntries = await getCollection(
+  'casinos',
+  ({ data }) => data.slug === slug,
+);
+const editorialEntry = editorialEntries[0];
+const renderedEntry = editorialEntry ? await editorialEntry.render() : null;
+const Content = renderedEntry?.Content ?? null;
+
+const profileData = await getCached(
+  `casino-profile:${slug}`,
+  5 * 60 * 1000,
+  async () => {
+    const [providers, games, banReports, uptick, intelItems, states] =
+      await Promise.all([
+        query<{ provider_id: number; name: string; slug: string }>(
+          `SELECT clgp.provider_id, gp.name, gp.slug
+          FROM casino_live_game_providers clgp
+          JOIN game_providers gp ON gp.id = clgp.provider_id
+          WHERE clgp.casino_id = $1`,
+          [currentCasino.id],
+        ),
+        query<{
+          id: number;
+          game_name: string;
+          provider_name: string | null;
+          is_cross_wash_relevant: boolean;
+          confidence: string;
+        }>(
+          `SELECT
+            cga.id,
+            cga.game_name,
+            gp.name AS provider_name,
+            cga.is_cross_wash_relevant,
+            cga.confidence
+          FROM casino_game_availability cga
+          LEFT JOIN game_providers gp ON gp.id = cga.provider_id
+          WHERE cga.casino_id = $1
+            AND cga.status != 'removed'
+          ORDER BY
+            CASE cga.confidence
+              WHEN 'high' THEN 1
+              WHEN 'medium' THEN 2
+              WHEN 'low' THEN 3
+              ELSE 4
+            END,
+            cga.game_name`,
+          [currentCasino.id],
+        ),
+        query<{
+          id: number;
+          report_type: string;
+          description: string;
+          submitted_at: string;
+        }>(
+          `SELECT id, report_type, description, submitted_at
+          FROM ban_reports
+          WHERE casino_id = $1
+            AND is_published = true
+          ORDER BY submitted_at DESC
+          LIMIT 20`,
+          [currentCasino.id],
+        ),
+        query<{ id: number }>(
+          `SELECT id
+          FROM ban_uptick_alerts
+          WHERE casino_id = $1
+            AND is_active = true
+          LIMIT 1`,
+          [currentCasino.id],
+        ),
+        query<{
+          id: number;
+          item_type: string;
+          title: string;
+          content: string;
+          confirm_count: number;
+          dispute_count: number;
+          created_at: string;
+        }>(
+          `SELECT
+            id,
+            item_type,
+            title,
+            content,
+            confirm_count,
+            dispute_count,
+            created_at
+          FROM discord_intel_items
+          WHERE casino_id = $1
+            AND is_published = true
+            AND (expires_at IS NULL OR expires_at > NOW())
+          ORDER BY created_at DESC
+          LIMIT 10`,
+          [currentCasino.id],
+        ),
+        query<{
+          state_code: string;
+          state_name: string;
+          status: string;
+          compliance_note: string | null;
+        }>(
+          `SELECT
+            csa.state_code,
+            sls.state_name,
+            csa.status,
+            csa.compliance_note
+          FROM casino_state_availability csa
+          JOIN state_legal_status sls ON sls.state_code = csa.state_code
+          WHERE csa.casino_id = $1`,
+          [currentCasino.id],
+        ),
+      ]);
+
+    return {
+      providers,
+      games,
+      banReports,
+      hasBanUptick: uptick.length > 0,
+      intelItems,
+      states,
+    };
+  },
+);
+
+const redemptionStats = await getRedemptionStats(currentCasino.id);
+const joined = await hasJoinedCasino(user, currentCasino.id);
+const userTimezoneRows = user
+  ? await query<{ timezone: string }>(
+      'SELECT timezone FROM user_settings WHERE user_id = $1 LIMIT 1',
+      [user.userId],
+    )
+  : [];
+const resetSummary = user
+  ? computeNextReset(
+      currentCasino,
+      userTimezoneRows[0]?.timezone ?? 'America/New_York',
+    )
+  : null;
+
+const stateSummary = {
+  available: profileData.states.filter((state) => state.status === 'available'),
+  restricted: profileData.states.filter((state) => state.status === 'restricted'),
+  pulledOut: profileData.states.filter(
+    (state) => state.status === 'legal_but_pulled_out',
+  ),
+  operating: profileData.states.filter(
+    (state) => state.status === 'operates_despite_restrictions',
+  ),
+};
+
+const directUrl =
+  joined || !currentCasino.has_affiliate_link
+    ? `/casinos/${currentCasino.slug}`
+    : currentCasino.affiliate_link_url ?? `/casinos/${currentCasino.slug}`;
+---
+
+<BaseLayout
+  title={`${currentCasino.name} | SweepsIntel`}
+  description={`Casino profile for ${currentCasino.name}.`}
+  user={user}
+  currentPath={Astro.url.pathname}
+>
+  <div class="page-shell page-stack">
+    <section class="surface-card" style="padding: 1.5rem;">
+      <div style="display:grid;gap:1rem;">
+        <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+          <div style="display:grid;gap:.45rem;">
+            <h1 class="section-title" style="margin:0;">{currentCasino.name}</h1>
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap;color:var(--color-muted);">
+              <span style="font-weight:700;color:var(--color-primary);">Tier {currentCasino.tier}</span>
+              <span>* {currentCasino.rating ?? '--'}</span>
+              <span>Parent: {currentCasino.parent_company ?? 'Independent'}</span>
+            </div>
+          </div>
+          <AffiliateCTA
+            client:load
+            casinoId={currentCasino.id}
+            fallbackUrl={currentCasino.affiliate_link_url}
+            directUrl={directUrl}
+            hasAffiliate={currentCasino.has_affiliate_link && !currentCasino.is_excluded}
+            joined={joined || !currentCasino.has_affiliate_link}
+            referrerSource="casino_profile"
+            joinLabel="Join Casino ->"
+            visitLabel="Visit Casino ->"
+          />
+        </div>
+
+        {profileData.hasBanUptick ? (
+          <div style="padding:1rem;border-radius:1rem;background:rgba(217,119,6,.12);color:#92400E;font-weight:700;">
+            Elevated ban activity reported in the last 7 days.
+          </div>
+        ) : null}
+
+        {redemptionStats.trendWarning ? (
+          <div style="padding:1rem;border-radius:1rem;background:rgba(217,119,6,.12);color:#92400E;font-weight:700;">
+            Processing times appear to be increasing recently.
+          </div>
+        ) : null}
+      </div>
+    </section>
+
+    <section class="surface-card" style="padding:1.5rem;">
+      <h2 class="section-title" style="font-size:1.6rem;">Structured Data</h2>
+      <CasinoDetailPanel
+        casino={currentCasino}
+        nextResetLabel={user ? resetSummary?.label ?? 'Reset time unknown' : 'Log in to view'}
+      />
+    </section>
+
+    <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
+      <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;">
+        <h2 class="section-title" style="font-size:1.6rem;margin:0;">Live Games</h2>
+        <LiveGamesIndicator hasLiveGames={currentCasino.has_live_games} />
+      </div>
+      <p class="muted" style="margin:0;">
+        Providers: {profileData.providers.length > 0 ? profileData.providers.map((provider) => provider.name).join(', ') : 'None listed'}
+      </p>
+      {currentCasino.has_live_games ? (
+        <div style="padding:1rem;border-radius:1rem;background:rgba(217,119,6,.12);color:#92400E;font-weight:700;">
+          Live game providers log multi-account connections at the same table. Separate devices and IPs are required.
+        </div>
+      ) : null}
+      <GameAvailabilityTable games={profileData.games} />
+      <div style="display:grid;gap:.5rem;">
+        <strong>Cross-wash compatible: {currentCasino.cw_direction ? 'Yes' : 'No'}</strong>
+        <span class="muted">Direction: {currentCasino.cw_direction ?? 'Unknown'}</span>
+        <span class="muted">[Detailed strategy notes available with Premium]</span>
+      </div>
+    </section>
+
+    <section class="surface-card" style="padding:1.5rem;">
+      <h2 class="section-title" style="font-size:1.6rem;">Community Volatility Reports</h2>
+      <p class="muted" style="margin:0;">Coming Soon</p>
+    </section>
+
+    {profileData.intelItems.length > 0 ? (
+      <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
+        <h2 class="section-title" style="font-size:1.6rem;">Community Intel</h2>
+        {profileData.intelItems.map((item) => (
+          <article
+            key={item.id}
+            style="padding:1rem;border:1px solid var(--color-border);border-radius:1.25rem;background:#fff;"
+          >
+            <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+              <strong>{item.title}</strong>
+              <span class="muted">{new Date(item.created_at).toLocaleDateString()}</span>
+            </div>
+            <p class="muted" style="margin:.5rem 0 0;">{item.content}</p>
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem;color:var(--color-muted);">
+              <span>Confirmed: {item.confirm_count}</span>
+              <span>Disputed: {item.dispute_count}</span>
+              {user ? (
+                <>
+                  <button type="button" disabled style="border:1px solid var(--color-border);background:#fff;border-radius:999px;padding:.55rem .8rem;">Confirm</button>
+                  <button type="button" disabled style="border:1px solid var(--color-border);background:#fff;border-radius:999px;padding:.55rem .8rem;">Dispute</button>
+                </>
+              ) : null}
+            </div>
+          </article>
+        ))}
+      </section>
+    ) : null}
+
+    <section class="surface-card" style="padding:1.5rem;">
+      <h2 class="section-title" style="font-size:1.6rem;">Redemption Speed</h2>
+      <RedemptionTimeStats stats={redemptionStats} />
+    </section>
+
+    <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
+      <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;">
+        <h2 class="section-title" style="font-size:1.6rem;margin:0;">Ban Reports</h2>
+        <a href="#login" style="font-weight:700;">Submit a report -></a>
+      </div>
+      <BanReportFeed reports={profileData.banReports} />
+    </section>
+
+    <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
+      <h2 class="section-title" style="font-size:1.6rem;">State Availability</h2>
+      <p class="muted" style="margin:0;">
+        Available in {stateSummary.available.length} states.
+      </p>
+      {stateSummary.restricted.length > 0 ? (
+        <p style="margin:0;color:#92400E;font-weight:700;">
+          Restricted: {stateSummary.restricted.map((state) => state.state_code).join(', ')}
+        </p>
+      ) : null}
+      {stateSummary.pulledOut.length > 0 ? (
+        <p style="margin:0;color:#92400E;font-weight:700;">
+          Pulled out: {stateSummary.pulledOut.map((state) => state.state_code).join(', ')}
+        </p>
+      ) : null}
+      {stateSummary.operating.length > 0 ? (
+        <p class="muted" style="margin:0;">
+          Operating despite restrictions: {stateSummary.operating.map((state) => state.state_code).join(', ')}
+        </p>
+      ) : null}
+      <a href="/states" style="font-weight:700;">View full state map -></a>
+    </section>
+
+    {!user ? (
+      <EmailCaptureForm
+        client:load
+        source="casino_profile"
+        title={`Stay informed about ${currentCasino.name}.`}
+        description="Get casino-specific public intel without creating a full account yet."
+      />
+    ) : null}
+
+    <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
+      <h2 class="section-title" style="font-size:1.6rem;">About {currentCasino.name}</h2>
+      {Content ? (
+        <Content />
+      ) : (
+        <p class="muted" style="margin:0;">Editorial profile copy is coming soon.</p>
+      )}
+    </section>
+  </div>
+
+  <AffiliateCTA
+    client:load
+    casinoId={currentCasino.id}
+    fallbackUrl={currentCasino.affiliate_link_url}
+    directUrl={directUrl}
+    hasAffiliate={currentCasino.has_affiliate_link && !currentCasino.is_excluded}
+    joined={joined || !currentCasino.has_affiliate_link}
+    referrerSource="casino_profile"
+    joinLabel={`Join ${currentCasino.name} ->`}
+    visitLabel={`Visit ${currentCasino.name} ->`}
+    variant="bar"
+  />
+</BaseLayout>

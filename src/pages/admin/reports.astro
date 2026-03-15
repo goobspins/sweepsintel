@@ -1,0 +1,42 @@
+---
+import ReportQueue from '../../components/admin/ReportQueue';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+
+const bans = await query<any>(
+  `SELECT br.id, c.name AS casino_name, br.report_type, br.description, br.reporter_ip_hash, br.reporter_user_id
+  FROM ban_reports br
+  LEFT JOIN casinos c ON c.id = br.casino_id
+  WHERE br.is_published = false
+  ORDER BY br.submitted_at DESC`,
+);
+const states = await query<any>(
+  `SELECT sar.id, c.name AS casino_name, sar.state_code, sar.reported_status, sar.report_text, sar.reporter_ip_hash, sar.reporter_user_id
+  FROM state_availability_reports sar
+  LEFT JOIN casinos c ON c.id = sar.casino_id
+  WHERE sar.is_published = false
+  ORDER BY sar.submitted_at DESC`,
+);
+const resets = await query<any>(
+  `SELECT rts.id, c.name AS casino_name, rts.suggested_streak_mode, rts.suggested_reset_time, rts.suggested_timezone, rts.evidence_text, rts.reporter_ip_hash, rts.reporter_user_id
+  FROM reset_time_suggestions rts
+  LEFT JOIN casinos c ON c.id = rts.casino_id
+  WHERE rts.status = 'pending'
+  ORDER BY rts.submitted_at DESC`,
+);
+---
+
+<BaseLayout title="Admin Reports | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <section class="surface-card" style="padding:1.25rem;">
+      <h1 class="section-title" style="margin:0 0 1rem;">Community Reports</h1>
+      <ReportQueue client:load bans={bans} states={states} resets={resets} />
+    </section>
+  </div>
+</BaseLayout>

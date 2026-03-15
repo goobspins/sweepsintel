@@ -1,0 +1,211 @@
+import ClaimModal from './ClaimModal';
+import ResetCountdown from './ResetCountdown';
+
+export interface CasinoRowViewModel {
+  casinoId: number;
+  name: string;
+  slug: string;
+  source: string;
+  dailyBonusDesc: string | null;
+  sortOrder: number | null;
+  streakMode: string | null;
+  resetTimeLocal: string | null;
+  resetTimezone: string | null;
+  hasStreaks: boolean;
+  todayClaimId: number | null;
+  todaySc: number | string | null;
+  todayClaimedAt: string | null;
+  lastClaimedAt: string | null;
+  status: 'available' | 'countdown' | 'claimed';
+  streakText: string | null;
+}
+
+interface CasinoRowProps {
+  casino: CasinoRowViewModel;
+  ledgerMode: 'simple' | 'advanced';
+  userTimezone: string;
+  nowTs: number;
+  pending: boolean;
+  expanded: boolean;
+  onClaimSimple: () => void;
+  onClaimAdvancedOpen: () => void;
+  onClaimAdvancedCommit: (scAmount: number | null) => Promise<void>;
+  onClaimAdvancedCancel: () => void;
+  onRemove: () => void;
+}
+
+export default function CasinoRow({
+  casino,
+  ledgerMode,
+  userTimezone,
+  nowTs,
+  pending,
+  expanded,
+  onClaimSimple,
+  onClaimAdvancedOpen,
+  onClaimAdvancedCommit,
+  onClaimAdvancedCancel,
+  onRemove,
+}: CasinoRowProps) {
+  const isClaimed = casino.status === 'claimed';
+  const canClaim = casino.status === 'available';
+
+  const rowClass =
+    casino.status === 'available'
+      ? 'row row-available'
+      : casino.status === 'claimed'
+        ? 'row row-claimed'
+        : 'row';
+
+  const claimLabel =
+    ledgerMode === 'advanced' && isClaimed && casino.todaySc !== null
+      ? `Claimed ${casino.todaySc} SC`
+      : 'Claimed';
+
+  return (
+    <article className={rowClass}>
+      <div className="row-main">
+        <div className="row-copy">
+          {casino.source === 'admin' ? (
+            <a href={`/casinos/${casino.slug}`} className="casino-link">
+              {casino.name}
+            </a>
+          ) : (
+            <span className="casino-link">{casino.name}</span>
+          )}
+          <div className="row-meta">
+            <ResetCountdown
+              streakMode={casino.streakMode}
+              resetTimeLocal={casino.resetTimeLocal}
+              resetTimezone={casino.resetTimezone}
+              lastClaimedAt={casino.lastClaimedAt}
+              claimedToday={isClaimed}
+              userTimezone={userTimezone}
+              nowTs={nowTs}
+            />
+            {casino.streakText ? <span>{casino.streakText}</span> : null}
+            {casino.dailyBonusDesc ? <span>{casino.dailyBonusDesc}</span> : null}
+          </div>
+        </div>
+        <div className="row-actions">
+          {isClaimed ? (
+            <span className="claimed-badge">{claimLabel}</span>
+          ) : canClaim ? (
+            <button
+              type="button"
+              className="claim-button"
+              onClick={ledgerMode === 'advanced' ? onClaimAdvancedOpen : onClaimSimple}
+              disabled={pending}
+            >
+              {pending ? 'Saving...' : 'Claim'}
+            </button>
+          ) : null}
+          <button type="button" className="remove-button" onClick={onRemove}>
+            x
+          </button>
+        </div>
+      </div>
+      {expanded ? (
+        <ClaimModal
+          onCommit={onClaimAdvancedCommit}
+          onCancel={onClaimAdvancedCancel}
+        />
+      ) : null}
+      <style>{`
+        .row {
+          display: grid;
+          gap: 1rem;
+          padding: 1rem;
+          border-radius: 1.25rem;
+          border: 1px solid var(--color-border);
+          background: #fff;
+          box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+        }
+
+        .row-available {
+          border-left: 6px solid var(--color-success);
+          background: rgba(22, 163, 74, 0.05);
+        }
+
+        .row-claimed {
+          background: rgba(148, 163, 184, 0.08);
+        }
+
+        .row-main {
+          display: flex;
+          gap: 1rem;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .row-copy {
+          display: grid;
+          gap: 0.5rem;
+        }
+
+        .casino-link {
+          color: var(--color-ink);
+          text-decoration: none;
+          font-size: 1.15rem;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+        }
+
+        .row-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.75rem;
+          color: var(--color-muted);
+          font-size: 0.94rem;
+        }
+
+        .row-actions {
+          display: flex;
+          gap: 0.75rem;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: flex-end;
+        }
+
+        .claim-button,
+        .claimed-badge,
+        .remove-button {
+          border-radius: 999px;
+          padding: 0.72rem 0.95rem;
+          font: inherit;
+          font-weight: 700;
+        }
+
+        .claim-button {
+          border: none;
+          background: var(--color-primary);
+          color: #fff;
+          cursor: pointer;
+        }
+
+        .claimed-badge {
+          background: rgba(22, 163, 74, 0.12);
+          color: var(--color-success);
+        }
+
+        .remove-button {
+          border: 1px solid var(--color-border);
+          background: #fff;
+          color: var(--color-muted);
+          cursor: pointer;
+        }
+
+        @media (max-width: 639px) {
+          .row-main {
+            flex-direction: column;
+          }
+
+          .row-actions {
+            width: 100%;
+            justify-content: flex-start;
+          }
+        }
+      `}</style>
+    </article>
+  );
+}

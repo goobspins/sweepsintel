@@ -1,0 +1,46 @@
+---
+import SessionGate from '../components/auth/SessionGate';
+import DailyTracker from '../components/tracker/DailyTracker';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionUser } from '../lib/auth';
+import { query } from '../lib/db';
+import { getTrackerStatus } from '../lib/tracker';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+const initialData = user ? await getTrackerStatus(user.userId) : null;
+const claimCountRows = user
+  ? await query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+      FROM daily_bonus_claims
+      WHERE user_id = $1
+        AND claim_type = 'daily'`,
+      [user.userId],
+    )
+  : [];
+const claimCount = Number(claimCountRows[0]?.count ?? 0);
+const vapidPublicKey = import.meta.env.VAPID_PUBLIC_KEY ?? '';
+---
+
+<BaseLayout title="Tracker | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <SessionGate
+      client:load
+      user={user}
+      redirectTo="/tracker"
+      title="Save your tracker"
+      description="Enter your email the first time you want to save tracker data."
+    >
+      {user && initialData ? (
+        <DailyTracker
+          client:load
+          user={user}
+          initialData={initialData}
+          initialClaimCount={claimCount}
+          vapidPublicKey={vapidPublicKey}
+        />
+      ) : null}
+    </SessionGate>
+  </div>
+</BaseLayout>

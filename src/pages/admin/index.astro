@@ -1,0 +1,146 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+if (!user) {
+  return Astro.redirect('/');
+}
+if (!user.isAdmin) {
+  return new Response('Forbidden', { status: 403 });
+}
+
+const counts = await query<{
+  pending_bans: number;
+  pending_states: number;
+  pending_resets: number;
+  pending_flags: number;
+  pending_intel: number;
+  user_suggested: number;
+}>(
+  `SELECT
+    (SELECT COUNT(*) FROM ban_reports WHERE is_published = false) AS pending_bans,
+    (SELECT COUNT(*) FROM state_availability_reports WHERE is_published = false) AS pending_states,
+    (SELECT COUNT(*) FROM reset_time_suggestions WHERE status = 'pending') AS pending_resets,
+    (SELECT COUNT(*) FROM admin_flags WHERE status = 'pending') AS pending_flags,
+    (SELECT COUNT(*) FROM discord_intel_items WHERE is_published = false) AS pending_intel,
+    (SELECT COUNT(*) FROM casinos WHERE source = 'user_suggested') AS user_suggested`,
+);
+
+const recentFlags = await query<{
+  id: number;
+  flag_type: string;
+  ai_summary: string | null;
+  flag_content: string;
+  created_at: string;
+}>(
+  `SELECT id, flag_type, ai_summary, flag_content, created_at
+  FROM admin_flags
+  ORDER BY created_at DESC
+  LIMIT 10`,
+);
+
+const recentIntel = await query<{
+  id: number;
+  title: string;
+  confidence: string;
+  confidence_reason: string | null;
+  created_at: string;
+}>(
+  `SELECT id, title, confidence, confidence_reason, created_at
+  FROM discord_intel_items
+  WHERE is_published = false
+  ORDER BY created_at DESC
+  LIMIT 10`,
+);
+
+const systemHealth = await query<{
+  active_users_7d: number;
+  pending_redemptions: number;
+  active_ban_upticks: number;
+}>(
+  `SELECT
+    (SELECT COUNT(*) FROM auth_sessions WHERE last_active_at > NOW() - INTERVAL '7 days') AS active_users_7d,
+    (SELECT COUNT(*) FROM redemptions WHERE status = 'pending') AS pending_redemptions,
+    (SELECT COUNT(*) FROM ban_uptick_alerts WHERE is_active = true) AS active_ban_upticks`,
+);
+const health = systemHealth[0];
+const queue = counts[0];
+---
+
+<BaseLayout title="Admin Dashboard | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <section class="surface-card" style="padding:1.25rem;">
+      <h1 class="section-title" style="margin:0 0 1rem;">SweepsIntel Admin</h1>
+      <div class="admin-cards">
+        <a class="admin-card" href="/admin/flags"><strong>Flags</strong><span>{queue.pending_flags}</span></a>
+        <a class="admin-card" href="/admin/reports"><strong>Reports</strong><span>{queue.pending_bans + queue.pending_states + queue.pending_resets}</span></a>
+        <a class="admin-card" href="/admin/discord"><strong>Intel</strong><span>{queue.pending_intel}</span></a>
+        <a class="admin-card" href="/admin/casinos"><strong>Suggested</strong><span>{queue.user_suggested}</span></a>
+      </div>
+    </section>
+
+    <section class="surface-card" style="padding:1.25rem;">
+      <h2 style="margin:0 0 1rem;">Recent Flags</h2>
+      <div class="admin-list">
+        {recentFlags.map((flag) => (
+          <article class="admin-row">
+            <strong>{flag.ai_summary ?? flag.flag_content}</strong>
+            <span class="muted">{flag.flag_type} - {new Date(flag.created_at).toLocaleString()}</span>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="surface-card" style="padding:1.25rem;">
+      <h2 style="margin:0 0 1rem;">Pending Intel</h2>
+      <div class="admin-list">
+        {recentIntel.map((item) => (
+          <article class="admin-row">
+            <strong>{item.title}</strong>
+            <span class="muted">{item.confidence} - {item.confidence_reason ?? 'No reason'}</span>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="surface-card" style="padding:1.25rem;">
+      <h2 style="margin:0 0 1rem;">System Health</h2>
+      <div class="admin-cards">
+        <div class="admin-card static"><strong>Active users (7d)</strong><span>{health.active_users_7d}</span></div>
+        <div class="admin-card static"><strong>Pending redemptions</strong><span>{health.pending_redemptions}</span></div>
+        <div class="admin-card static"><strong>Active ban upticks</strong><span>{health.active_ban_upticks}</span></div>
+      </div>
+    </section>
+  </div>
+  <script>
+    document.addEventListener('keydown', (event) => {
+      const routes = {
+        '1': '/admin/flags',
+        '2': '/admin/reports',
+        '3': '/admin/discord',
+        '4': '/admin/casinos',
+      };
+      const destination = routes[event.key as '1' | '2' | '3' | '4'];
+      if (destination) {
+        window.location.assign(destination);
+      }
+    });
+  </script>
+  <style>
+    .admin-shell { padding-bottom: 4rem; }
+    .admin-cards { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 1rem; }
+    .admin-card {
+      display:grid; gap:.5rem; padding:1rem; border-radius:1rem; border:1px solid var(--color-border);
+      background:#fff; text-decoration:none; color:var(--color-ink);
+    }
+    .admin-card span { font-size:2rem; font-weight:800; color:var(--color-primary); }
+    .static { text-decoration:none; }
+    .admin-list { display:grid; gap:.85rem; }
+    .admin-row { display:grid; gap:.35rem; padding:1rem; border:1px solid var(--color-border); border-radius:1rem; background:#fff; }
+    @media (max-width: 1023px) { .admin-shell::before { content:'Admin panel requires a larger screen'; display:block; padding:1rem; border-radius:1rem; background:#fff7ed; color:#9A3412; border:1px solid #FED7AA; } }
+  </style>
+</BaseLayout>

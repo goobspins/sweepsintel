@@ -1,0 +1,195 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+export const prerender = true;
+
+const myPrizeAffiliateUrl = 'https://myprize.us/invite/goobspins';
+---
+
+<BaseLayout title="Getting Started | SweepsIntel" user={null} currentPath={Astro.url.pathname}>
+  <div class="guide-shell">
+    <article class="guide-body">
+      <h1>How to Start Earning with Sweepstakes Casinos</h1>
+
+      <section>
+        <h2>1. What sweepstakes casinos are</h2>
+        <p>
+          Sweepstakes casinos are online gaming platforms that use a dual-currency model. You play with Gold Coins for fun, and
+          Sweeps Coins are the redeemable currency that can be exchanged for real money where the model is allowed.
+        </p>
+        <p>
+          They operate under sweepstakes rules rather than traditional real-money casino licensing. That means the purchase is for
+          entertainment currency, while redeemable currency is framed as a promotional bonus and must also be available through a
+          no-purchase path.
+        </p>
+      </section>
+
+      <section>
+        <h2>2. Understanding SC and GC</h2>
+        <p>
+          SC stands for Sweeps Coins. That is the redeemable balance you care about. GC stands for Gold Coins. That is the
+          play-for-fun balance you receive when you buy packages.
+        </p>
+        <p>
+          Example: you buy 200K GC for $9.99 and receive 20 free SC as the bonus. The GC is entertainment currency. The SC is what
+          you play through and eventually redeem.
+        </p>
+      </section>
+
+      <section>
+        <h2>3. Your first day at MyPrize</h2>
+        <div class="screenshot-placeholder">[SCREENSHOT: MyPrize signup page]</div>
+        <p><strong>3a.</strong> Sign up at MyPrize using the link below.</p>
+        <p><strong>3b.</strong> Complete ID verification. Do not skip this. It is one of the easiest ways to delay your first redemption.</p>
+        <div class="screenshot-placeholder">[SCREENSHOT: ID verification screen]</div>
+        <p><strong>3c.</strong> Purchase the first welcome offer. Start with the smallest offer first so you learn the mechanics without overcommitting.</p>
+        <div class="screenshot-placeholder">[SCREENSHOT: Welcome offer purchase screen]</div>
+        <p>
+          MyPrize uses batched playthrough. Each purchase can have its own separate progress tracker. That looks more complicated
+          than it is. You just need to finish the active batch before redeeming.
+        </p>
+        <p><strong>3d.</strong> Open <code>TODO: wash game recommendation</code> and play at <code>TODO: bet size</code> per spin.</p>
+        <div class="screenshot-placeholder">[SCREENSHOT: Game play screen]</div>
+        <p>
+          The goal here is simple: meet the 1x playthrough requirement on your SC as efficiently as possible. You are not trying to
+          force action. You are just completing the required loop cleanly.
+        </p>
+        <p><strong>3e.</strong> Check your Playthrough screen, find the active batch, and keep playing until that batch reaches 100%.</p>
+        <div class="screenshot-placeholder">[SCREENSHOT: Playthrough tracker screen]</div>
+        <p><strong>3f.</strong> Submit your first redemption.</p>
+        <div class="screenshot-placeholder">[SCREENSHOT: Redemption submission screen]</div>
+        <p><strong>3g.</strong> Wait for payment. MyPrize offers instant or same-day processing in many cases.</p>
+        <div class="screenshot-placeholder">[SCREENSHOT: Money received confirmation]</div>
+      </section>
+
+      <section>
+        <h2>4. Key terms defined</h2>
+        <p><strong>Playthrough:</strong> how many times you need to wager your SC before you can redeem it.</p>
+        <p><strong>Wash / wash game:</strong> a low-volatility game you use mainly to satisfy playthrough efficiently.</p>
+        <p><strong>SC-to-USD ratio:</strong> how many Sweeps Coins equal one dollar. A 1:1 ratio means 1 SC equals $1.</p>
+      </section>
+
+      <section>
+        <h2>5. Common new player mistakes</h2>
+        <ul>
+          <li>Do not skip ID verification.</li>
+          <li>Do not try to redeem before playthrough completes.</li>
+          <li>Do not chase losses. Set a daily limit and learn the mechanics first.</li>
+          <li>Start with the smallest welcome offer so the process is easy to understand.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. What&apos;s next</h2>
+        <ul>
+          <li>Add more casinos to your tracker.</li>
+          <li>Check daily for reset timers so you never miss a bonus.</li>
+          <li>Watch the community intel feed for flash deals and promo codes.</li>
+        </ul>
+      </section>
+
+      <section class="affiliate-cta">
+        <h2>Ready to start?</h2>
+        <p>Use code: <strong>goobspins</strong></p>
+        <a
+          href={myPrizeAffiliateUrl}
+          id="getting-started-affiliate"
+          data-fallback-url={myPrizeAffiliateUrl}
+          class="cta-button"
+        >
+          Sign up at MyPrize -&gt;
+        </a>
+      </section>
+    </article>
+  </div>
+
+  <script is:inline>
+    const cta = document.getElementById('getting-started-affiliate');
+    if (cta) {
+      cta.addEventListener('click', async (event) => {
+        event.preventDefault();
+        const fallbackUrl = cta.getAttribute('data-fallback-url');
+        try {
+          const controller = new AbortController();
+          const timeout = window.setTimeout(() => controller.abort(), 3000);
+          const response = await fetch('/api/affiliate/click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ casino_slug: 'myprize', referrer_source: 'getting_started' }),
+            signal: controller.signal,
+          });
+          window.clearTimeout(timeout);
+          const data = await response.json();
+          window.open(data.url || fallbackUrl, '_blank', 'noopener,noreferrer');
+        } catch (error) {
+          console.error(error);
+          if (fallbackUrl) {
+            window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+          }
+        }
+      });
+    }
+  </script>
+
+  <style>
+    .guide-shell {
+      width: min(100%, 960px);
+      margin: 0 auto;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .guide-body {
+      max-width: 720px;
+      margin: 0 auto;
+      display: grid;
+      gap: 2rem;
+      line-height: 1.8;
+    }
+
+    .guide-body h1,
+    .guide-body h2,
+    .guide-body p,
+    .guide-body ul {
+      margin: 0;
+    }
+
+    .guide-body section {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .guide-body ul {
+      padding-left: 1.2rem;
+    }
+
+    .screenshot-placeholder {
+      min-height: 180px;
+      border: 1px dashed var(--color-border);
+      border-radius: 1rem;
+      background: #f8fafc;
+      display: grid;
+      place-items: center;
+      color: var(--color-muted);
+      text-align: center;
+      padding: 1rem;
+    }
+
+    .affiliate-cta {
+      padding: 1.5rem;
+      border-radius: 1.5rem;
+      border: 1px solid var(--color-border);
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), #fff);
+    }
+
+    .cta-button {
+      display: inline-flex;
+      width: fit-content;
+      padding: 0.95rem 1.2rem;
+      border-radius: 999px;
+      background: var(--color-primary);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+  </style>
+</BaseLayout>

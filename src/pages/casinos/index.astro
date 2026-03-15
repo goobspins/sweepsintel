@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CasinoDirectory from '../../components/casino/CasinoDirectory';
+import { getCached } from '../../lib/cache';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+
+const casinos = await getCached('directory:casinos', 10 * 60 * 1000, async () =>
+  query<{
+    id: number;
+    slug: string;
+    name: string;
+    tier: number;
+    rating: number | null;
+    promoban_risk: string;
+    has_live_games: boolean;
+    redemption_speed_desc: string | null;
+    daily_bonus_desc: string | null;
+    has_affiliate_link: boolean;
+    affiliate_link_url: string | null;
+  }>(
+    `SELECT
+      id,
+      slug,
+      name,
+      tier,
+      rating,
+      promoban_risk,
+      has_live_games,
+      redemption_speed_desc,
+      daily_bonus_desc,
+      has_affiliate_link,
+      affiliate_link_url
+    FROM casinos
+    WHERE is_excluded = false
+      AND source = 'admin'
+    ORDER BY tier ASC, rating DESC NULLS LAST, name ASC`,
+  ),
+);
+
+const joinedRows =
+  user && casinos.length > 0
+    ? await query<{ casino_id: number }>(
+        `SELECT DISTINCT casino_id
+        FROM ledger_entries
+        WHERE user_id = $1
+          AND casino_id = ANY($2::int[])`,
+        [user.userId, casinos.map((casino) => casino.id)],
+      )
+    : [];
+
+const joinedSet = new Set(joinedRows.map((row) => row.casino_id));
+const directoryCasinos = casinos.map((casino) => ({
+  ...casino,
+  joined: joinedSet.has(casino.id),
+}));
+---
+
+<BaseLayout
+  title="Casino Directory | SweepsIntel"
+  description="Browse the SweepsIntel casino directory."
+  user={user}
+  currentPath={Astro.url.pathname}
+>
+  <div class="page-shell page-stack">
+    <section>
+      <h1 class="section-title">Casino Directory</h1>
+      <p class="muted" style="max-width: 54rem; line-height: 1.7;">
+        Compare tier, risk, live games, redemption speed, and daily value across the public directory.
+      </p>
+    </section>
+    <section class="surface-card" style="padding: 1.25rem;">
+      <CasinoDirectory client:load casinos={directoryCasinos} />
+    </section>
+  </div>
+</BaseLayout>

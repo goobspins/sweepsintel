@@ -1,287 +1,288 @@
 ---
-// Homepage for SweepsIntel
-// Built with Astro, minimal JavaScript shipped to browser
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CasinoCard from '../components/casino/CasinoCard';
+import EmailCaptureForm from '../components/forms/EmailCaptureForm';
+import { getSessionUser } from '../lib/auth';
+import { getCached } from '../lib/cache';
+import { query } from '../lib/db';
+
+export const prerender = false;
+
+function formatIntelType(itemType: string) {
+  return itemType
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function getIntelBadgeColor(itemType: string) {
+  const key = itemType.toLowerCase();
+  if (key === 'free_sc') return { background: 'rgba(22, 163, 74, 0.12)', color: '#166534' };
+  if (key === 'flash_sale' || key === 'promo_code') return { background: 'rgba(37, 99, 235, 0.12)', color: '#1d4ed8' };
+  if (key === 'alert') return { background: 'rgba(217, 119, 6, 0.14)', color: '#92400e' };
+  if (key === 'playthrough_deal') return { background: 'rgba(124, 58, 237, 0.12)', color: '#6d28d9' };
+  if (key === 'platform_warning') return { background: 'rgba(220, 38, 38, 0.12)', color: '#991b1b' };
+  return { background: 'rgba(107, 114, 128, 0.12)', color: '#4b5563' };
+}
+
+function formatTimeAgo(value: string) {
+  const timestamp = new Date(value).getTime();
+  const diffMs = timestamp - Date.now();
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  const formatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+  if (Math.abs(diffMs) >= day) {
+    return formatter.format(Math.round(diffMs / day), 'day');
+  }
+
+  if (Math.abs(diffMs) >= hour) {
+    return formatter.format(Math.round(diffMs / hour), 'hour');
+  }
+
+  return formatter.format(Math.round(diffMs / minute), 'minute');
+}
+
+const user = await getSessionUser(Astro.request);
+
+const [topCasinos, pulloutAlerts, banAlerts, intelTeaserItems] = await Promise.all([
+  getCached('homepage:top-casinos', 15 * 60 * 1000, async () =>
+    query<{
+      id: number;
+      slug: string;
+      name: string;
+      tier: number;
+      rating: number | null;
+      promoban_risk: string;
+      has_live_games: boolean;
+      redemption_speed_desc: string | null;
+      daily_bonus_desc: string | null;
+      has_affiliate_link: boolean;
+      affiliate_link_url: string | null;
+    }>(
+      `SELECT
+        id,
+        slug,
+        name,
+        tier,
+        rating,
+        promoban_risk,
+        has_live_games,
+        redemption_speed_desc,
+        daily_bonus_desc,
+        has_affiliate_link,
+        affiliate_link_url
+      FROM casinos
+      WHERE tier IN (1, 2)
+        AND rating IS NOT NULL
+        AND is_excluded = false
+        AND source = 'admin'
+      ORDER BY tier ASC, rating DESC
+      LIMIT 6`,
+    )),
+  getCached('homepage:pullout-alerts', 5 * 60 * 1000, () =>
+    query<{
+      id: number;
+      state_code: string;
+      created_at: string;
+      name: string | null;
+      slug: string | null;
+    }>(
+      `SELECT spa.id, spa.state_code, spa.created_at, c.name, c.slug
+      FROM state_pullout_alerts spa
+      LEFT JOIN casinos c ON c.id = spa.casino_id
+      WHERE spa.created_at > NOW() - INTERVAL '30 days'
+      ORDER BY spa.created_at DESC
+      LIMIT 5`,
+    )),
+  getCached('homepage:ban-upticks', 5 * 60 * 1000, () =>
+    query<{
+      id: number;
+      created_at: string;
+      name: string;
+      slug: string;
+    }>(
+      `SELECT bua.id, bua.created_at, c.name, c.slug
+      FROM ban_uptick_alerts bua
+      JOIN casinos c ON c.id = bua.casino_id
+      WHERE bua.is_active = true
+      ORDER BY bua.created_at DESC
+      LIMIT 5`,
+    )),
+  getCached('homepage:intel-teaser', 2 * 60 * 1000, () =>
+    query<{
+      id: number;
+      item_type: string;
+      title: string;
+      casino_id: number | null;
+      created_at: string;
+      casino_name: string | null;
+    }>(
+      `SELECT dii.id, dii.item_type, dii.title, dii.casino_id, dii.created_at, c.name AS casino_name
+      FROM discord_intel_items dii
+      LEFT JOIN casinos c ON c.id = dii.casino_id
+      WHERE dii.is_published = true
+        AND (dii.expires_at IS NULL OR dii.expires_at > NOW())
+      ORDER BY dii.created_at DESC
+      LIMIT 3`,
+    )),
+]);
+
+const joinedRows =
+  user && topCasinos.length > 0
+    ? await query<{ casino_id: number }>(
+        `SELECT DISTINCT casino_id
+        FROM ledger_entries
+        WHERE user_id = $1
+          AND casino_id = ANY($2::int[])`,
+        [user.userId, topCasinos.map((casino) => casino.id)],
+      )
+    : [];
+
+const joinedSet = new Set(joinedRows.map((row) => row.casino_id));
+const homepageCasinos = topCasinos.map((casino) => ({
+  ...casino,
+  joined: joinedSet.has(casino.id),
+}));
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SweepsIntel — Sweepstakes Casino Intelligence Platform</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #333;
-      min-height: 100vh;
-    }
-
-    header {
-      background: rgba(255, 255, 255, 0.95);
-      padding: 1rem 2rem;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    header nav {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    header h1 {
-      font-size: 1.8rem;
-      color: #667eea;
-      font-weight: 700;
-    }
-
-    header nav a {
-      margin-left: 2rem;
-      text-decoration: none;
-      color: #333;
-      font-weight: 500;
-    }
-
-    header nav a:hover {
-      color: #667eea;
-    }
-
-    .cta-button {
-      background: #667eea;
-      color: white;
-      padding: 0.75rem 1.5rem;
-      border-radius: 0.5rem;
-      text-decoration: none;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-    }
-
-    .cta-button:hover {
-      background: #5568d3;
-    }
-
-    .hero {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 4rem 2rem;
-      text-align: center;
-      color: white;
-    }
-
-    .hero h2 {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      font-weight: 700;
-    }
-
-    .hero p {
-      font-size: 1.2rem;
-      margin-bottom: 2rem;
-      opacity: 0.9;
-    }
-
-    .hero .cta-button {
-      display: inline-block;
-      margin: 0 0.5rem;
-    }
-
-    .features {
-      background: white;
-      padding: 4rem 2rem;
-      margin-top: 2rem;
-    }
-
-    .features-grid {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-    }
-
-    .feature-card {
-      padding: 2rem;
-      border: 1px solid #e0e0e0;
-      border-radius: 0.5rem;
-      background: #f9f9f9;
-    }
-
-    .feature-card h3 {
-      color: #667eea;
-      margin-bottom: 1rem;
-      font-size: 1.3rem;
-    }
-
-    .feature-card p {
-      color: #666;
-      line-height: 1.6;
-    }
-
-    .casino-grid {
-      max-width: 1200px;
-      margin: 2rem auto 0;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-      padding: 0 2rem;
-    }
-
-    .casino-card {
-      background: white;
-      padding: 1.5rem;
-      border-radius: 0.5rem;
-      border-left: 4px solid #667eea;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    }
-
-    .casino-card h4 {
-      color: #333;
-      margin-bottom: 0.5rem;
-    }
-
-    .casino-rating {
-      color: #667eea;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-
-    .casino-card p {
-      color: #666;
-      font-size: 0.9rem;
-      margin-bottom: 1rem;
-    }
-
-    .casino-card a {
-      color: #667eea;
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    .casino-card a:hover {
-      text-decoration: underline;
-    }
-
-    footer {
-      background: rgba(0, 0, 0, 0.5);
-      color: white;
-      padding: 2rem;
-      text-align: center;
-      margin-top: 4rem;
-    }
-
-    .section-title {
-      max-width: 1200px;
-      margin: 2rem auto 1rem;
-      padding: 0 2rem;
-      font-size: 1.8rem;
-      color: #333;
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <nav>
-      <h1>🎰 SweepsIntel</h1>
-      <div>
-        <a href="/casinos">Casinos</a>
-        <a href="/reports">Ban Reports</a>
-        <a href="/tracker" class="cta-button">Start Tracking</a>
+<BaseLayout
+  title="SweepsIntel"
+  description="Track your sweepstakes casinos in one place."
+  user={user}
+  currentPath={Astro.url.pathname}
+>
+  <div class="page-shell page-stack">
+    <section class="surface-card" style="padding:2rem;">
+      <div style="display:grid;gap:2rem;">
+        <div style="display:grid;gap:1rem;">
+          <span style="display:inline-flex;width:fit-content;padding:.45rem .75rem;border-radius:999px;background:rgba(37,99,235,.1);color:var(--color-primary);font-weight:700;text-transform:uppercase;font-size:.78rem;">
+            Casino intelligence platform
+          </span>
+          <h1 class="section-title" style="font-size:clamp(2.6rem,8vw,4.8rem);line-height:.95;margin:0;">
+            Track your sweepstakes casinos in one place.
+          </h1>
+          <p class="muted" style="max-width:44rem;line-height:1.8;">
+            Use the public directory to compare casinos, then switch into your tracker for daily claims, redemption timing, and community intel.
+          </p>
+          <div style="display:flex;gap:.85rem;flex-wrap:wrap;">
+            <a href="/getting-started" style="display:inline-flex;padding:.95rem 1.2rem;border-radius:999px;background:var(--color-primary);color:#fff;text-decoration:none;font-weight:700;">
+              Start earning today →
+            </a>
+            <a href="/tracker" style="display:inline-flex;padding:.95rem 1.2rem;border-radius:999px;border:1px solid var(--color-border);background:#fff;color:var(--color-ink);text-decoration:none;font-weight:700;">
+              Open tracker →
+            </a>
+          </div>
+        </div>
+        {!user ? <EmailCaptureForm client:load source="homepage_banner" /> : null}
       </div>
-    </nav>
-  </header>
+    </section>
 
-  <div class="hero">
-    <h2>The Casino Intelligence Platform</h2>
-    <p>Track daily bonuses. Avoid bans. Know your casinos.</p>
-    <p style="font-size: 1rem; opacity: 0.8;">33 casinos profiled. 100+ community reports. $400k+ community winnings.</p>
-    <div>
-      <a href="/tracker" class="cta-button">Start Tracking Now</a>
-      <a href="/casinos" class="cta-button" style="background: rgba(255, 255, 255, 0.2); border: 2px solid white;">Browse Casinos</a>
-    </div>
-  </div>
+    {pulloutAlerts.length > 0 || banAlerts.length > 0 ? (
+      <section class="surface-card" style="padding:1.5rem;display:grid;gap:1.25rem;">
+        {pulloutAlerts.length > 0 ? (
+          <div style="display:grid;gap:.75rem;">
+            <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;">
+              <h2 class="section-title" style="font-size:1.4rem;margin:0;">⚠️ Recent state pullout alerts</h2>
+              <a href="/states" style="font-weight:700;">View all →</a>
+            </div>
+            <ul style="margin:0;padding-left:1.15rem;display:grid;gap:.55rem;">
+              {pulloutAlerts.map((alert) => (
+                <li>
+                  {alert.slug ? <a href={`/casinos/${alert.slug}`}>{alert.name ?? 'Unknown casino'}</a> : alert.name ?? 'Unknown casino'} stopped accepting in {alert.state_code} - {new Date(alert.created_at).toLocaleDateString()}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
-  <div class="features">
-    <div class="features-grid">
-      <div class="feature-card">
-        <h3>📊 Daily Bonus Tracker</h3>
-        <p>Track daily bonuses across all your casinos in one place. See which casinos you haven't joined yet and claim your daily earnings.</p>
+        {banAlerts.length > 0 ? (
+          <div style="display:grid;gap:.75rem;">
+            <h2 class="section-title" style="font-size:1.4rem;margin:0;">🚩 Active ban uptick warnings</h2>
+            <ul style="margin:0;padding-left:1.15rem;display:grid;gap:.55rem;">
+              {banAlerts.map((alert) => (
+                <li>
+                  Elevated ban reports at <a href={`/casinos/${alert.slug}`}>{alert.name}</a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </section>
+    ) : null}
+
+    {intelTeaserItems.length > 0 ? (
+      <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
+        <div>
+          <h2 class="section-title" style="margin:0 0 .4rem;">Today&apos;s Community Intel</h2>
+          <p class="muted" style="margin:0;">Recent public intel from the community feed.</p>
+        </div>
+        <div style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+          {intelTeaserItems.map((item) => {
+            const badge = getIntelBadgeColor(item.item_type);
+            return (
+              <article style="border:1px solid var(--color-border);border-radius:1.25rem;padding:1rem;display:grid;gap:.75rem;background:#fff;">
+                <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;">
+                  <span style={`display:inline-flex;width:fit-content;padding:.3rem .6rem;border-radius:999px;font-weight:700;font-size:.8rem;background:${badge.background};color:${badge.color};`}>
+                    {formatIntelType(item.item_type)}
+                  </span>
+                  <span class="muted" style="font-size:.85rem;">{formatTimeAgo(item.created_at)}</span>
+                </div>
+                <strong style="font-size:1rem;line-height:1.4;">{item.title}</strong>
+                <span class="muted">{item.casino_name ?? 'Community-wide'}</span>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    ) : null}
+
+    <section>
+      <div style="display:flex;justify-content:space-between;gap:1rem;align-items:end;flex-wrap:wrap;">
+        <div>
+          <h2 class="section-title" style="margin:0 0 .5rem;">Top-rated casinos</h2>
+          <p class="muted" style="margin:0;">Tier 1 leaders first, then the strongest Tier 2 backfill.</p>
+        </div>
+        <a href="/casinos" style="font-weight:700;">Browse all casinos →</a>
       </div>
-      <div class="feature-card">
-        <h3>⚠️ Ban Intelligence</h3>
-        <p>Community-verified ban reports with automated duplicate detection. Know which casinos are issuing bans before you get hit.</p>
+      <div style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:1rem;">
+        {homepageCasinos.map((casino) => (
+          <CasinoCard
+            client:load
+            casino={casino}
+            destination={
+              casino.has_affiliate_link && !casino.joined
+                ? {
+                    kind: 'affiliate',
+                    href: null,
+                    fallbackUrl: casino.affiliate_link_url,
+                  }
+                : {
+                    kind: 'profile',
+                    href: `/casinos/${casino.slug}`,
+                    fallbackUrl: null,
+                  }
+            }
+            referrerSource="homepage"
+          />
+        ))}
       </div>
-      <div class="feature-card">
-        <h3>💰 P&L Tracker</h3>
-        <p>Log your offer spends and redemptions. See your profitability per casino and plan your strategy.</p>
-      </div>
-    </div>
+    </section>
+
+    <section class="surface-card" style="padding:1.5rem;display:grid;gap:.65rem;">
+      <h2 class="section-title" style="font-size:1.6rem;margin:0;">Join the community</h2>
+      <p class="muted" style="margin:0;">
+        Dogbear&apos;s SweepstakeSideHustle Discord is still the fastest way to hear the raw chatter.
+      </p>
+      <a
+        href="https://discord.gg/9CgSgJHFu8"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="font-weight:700;"
+      >
+        Join Discord →
+      </a>
+    </section>
   </div>
-
-  <h2 class="section-title">Top-Rated Casinos</h2>
-  <div class="casino-grid">
-    <div class="casino-card">
-      <h4>Global Poker</h4>
-      <div class="casino-rating">9.0/10</div>
-      <p>The gold standard. VGW operator, instant GC payouts, zero promoban risk.</p>
-      <a href="/casinos/global-poker">Learn More →</a>
-    </div>
-
-    <div class="casino-card">
-      <h4>Shuffle</h4>
-      <div class="casino-rating">8.0/10</div>
-      <p>98% dice wash, shared VIP with Stake.us. Top grinder pick.</p>
-      <a href="/casinos/shuffle">Learn More →</a>
-    </div>
-
-    <div class="casino-card">
-      <h4>Betr</h4>
-      <div class="casino-rating">7.5/10</div>
-      <p>Fastest redemptions at 20 minutes. Brand new, backed by sportsbook.</p>
-      <a href="/casinos/betr">Learn More →</a>
-    </div>
-
-    <div class="casino-card">
-      <h4>Fliff</h4>
-      <div class="casino-rating">7.5/10</div>
-      <p>Best sportsbook. Sports arbitrage strategies. PA confirmed.</p>
-      <a href="/casinos/fliff">Learn More →</a>
-    </div>
-
-    <div class="casino-card">
-      <h4>American Luck</h4>
-      <div class="casino-rating">7.0/10</div>
-      <p>Gateway to PriorityPlay family. 6-casino crossing confirmed.</p>
-      <a href="/casinos/american-luck">Learn More →</a>
-    </div>
-
-    <div class="casino-card">
-      <h4>Gold Machine</h4>
-      <div class="casino-rating">7.0/10</div>
-      <p>Instant debit redemptions. 1x playthrough. Fair and fast.</p>
-      <a href="/casinos/gold-machine">Learn More →</a>
-    </div>
-  </div>
-
-  <div class="features" style="margin-top: 2rem;">
-    <div style="max-width: 1200px; margin: 0 auto; text-align: center;">
-      <h2>Ready to Track Your Casinos?</h2>
-      <p style="margin: 1rem 0; font-size: 1rem; color: #666;">Join players tracking daily bonuses across 33 casinos and earning $400+ per month.</p>
-      <a href="/tracker" class="cta-button">Create Free Account</a>
-    </div>
-  </div>
-
-  <footer>
-    <p>SweepsIntel © 2026. Information platform for sweepstakes casino players. Not affiliated with any casino.</p>
-    <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">Platform managed by Apex Collective. <a href="#" style="color: white;">Privacy Policy</a></p>
-  </footer>
-</body>
-</html>
+</BaseLayout>

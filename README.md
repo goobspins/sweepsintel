@@ -1,115 +1,44 @@
-# SweepsIntel MVP
+# SweepsIntel
 
-A sweepstakes casino intelligence platform with daily bonus tracking, community ban reporting, and affiliate monetization.
+Sweepstakes casino intelligence platform. Daily bonus tracking, community intel, affiliate monetization.
 
-**Status:** Day 1 Execution Started (2026-03-14)
-**Target Launch:** 2026-03-20 (7 days)
-**Owner:** Axiom (Apex Collective)
-**Authority:** Dylan (Gates UX changes, new casinos, strategic decisions)
+**Owner:** Dylan | **Operated by:** Apex Collective | **Revenue model:** Affiliate CPA
 
-## Quick Links
+## For Codex
 
-- **Execution Plan:** `/EXECUTION-PLAN.md` — Complete 7-day build plan
-- **Database Schema:** `/docs/NEON_SCHEMA.sql` — Neon PostgreSQL schema
-- **Case File:** `/mnt/Cowork/collective/queue/approved/case-biz-007.md` — Full case details
+**Start here → `CODEX-README.md`** in this directory. It maps every spec file and tells you what to read per task.
 
 ## Stack
 
-- **Frontend:** Astro.js (TypeScript + React islands)
-- **Backend:** Vercel serverless functions (Edge Functions)
-- **Database:** Neon PostgreSQL (Dylan confirmed available)
-- **Hosting:** Vercel (auto-deploy on git push)
-- **Auth:** Email OTP (no passwords)
+- Astro 4 (hybrid) + React 18 + Neon PostgreSQL + Vercel + TypeScript
+- Luxon for timezone/DST. Resend for transactional email.
 
-## Project Structure
+## Spec files (`docs/`)
 
-```
-/src
-  /pages          — Astro pages (casino profiles, tracker, P&L, reports)
-  /components     — Reusable Astro/React components
-  /content/
-    /casinos      — Markdown profiles for each casino
-  /middleware     — Auth, CSRF protection
-/api              — Vercel serverless functions (claims, reports, etc.)
-/scripts          — Utility scripts (backup, uptime checks)
-/docs             — Runbooks, guides, schema
-.env.example      — Environment variables template
-```
+| File | What |
+|---|---|
+| `00-OVERVIEW.md` | Mission, context, tech stack, architecture |
+| `01-SCHEMA.md` | Complete database schema (authoritative) |
+| `02-CORE-MECHANICS.md` | Redemption state machine, affiliate gate |
+| `03-FEATURES-PUBLIC.md` | Casino directory, states, ban reports, homepage, Getting Started |
+| `04-FEATURES-PRIVATE.md` | Tracker, redemptions, ledger, auth, notifications |
+| `05-FEATURES-ADMIN.md` | Admin panel, discord intel, volatility (post-MVP) |
+| `06-FEATURES-RETENTION.md` | PWA, push notifications, bookmarks |
+| `07-FILE-STRUCTURE.md` | Complete src/ tree, redemption stats |
+| `08-CONSTRAINTS.md` | Hard constraints, DB efficiency, caching, future model |
+| `UI-SPEC-v1.md` | Visual layouts for every page |
+| `MONITORING-SPEC-v1.md` | Discord monitoring pipeline |
 
-## Features (MVP)
-
-- [x] Casino knowledge base (33 casinos)
-- [x] Daily bonus tracker (retention engine)
-- [x] P&L tracker (expense/earning ledger)
-- [x] Ban/issue report system (IP deduplication)
-- [x] Discord embed (invite widget)
-- [x] Email OTP auth
-- [ ] Premium tier (Phase 2)
-
-## Current Status (Day 1)
-
-**Completed:**
-- Execution plan written and approved
-- Project initialized (Astro + git)
-- Database schema designed (`NEON_SCHEMA.sql`)
-- Astro content collection configured
-- First 10 casino profiles drafted:
-  - Global Poker (9/10)
-  - Shuffle (8/10)
-  - Betr (7.5/10)
-  - Fliff (7.5/10)
-  - American Luck (7/10)
-  - Gold Machine (7/10)
-  - LuckyRush (7/10)
-  - Moozi (7/10)
-  - Scrooge (7/10)
-  - Spindoo (7/10)
-
-**In Progress:**
-- Remaining 23 casino profiles (Day 2-3)
-- API route scaffolding (Day 2)
-- Email OTP auth (Day 2)
-- Daily bonus tracker UI (Day 2-3)
-- Ban report system with deduplication (Day 3-5)
-
-**Next Milestone:**
-- Dylan review of first 10 casinos + tech stack (Day 1, 5:00 PM)
-- Complete all 33 profiles (Day 3 evening)
-- Full end-to-end testing (Day 4-5)
-- Domain setup & DNS (Day 6)
-- Launch (Day 7)
+`docs/archive/` contains superseded files — ignore.
 
 ## Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
-
-# Deploy to Vercel
-npm run deploy
+npm run dev      # dev server
+npm run build    # production build
 ```
 
-## Dylan Touchpoints (Daily Standups)
+## Revenue target
 
-- **Day 1, 5:00 PM:** Tech stack approval, casino list confirmation, schema review
-- **Day 2, 6:00 PM:** First 10 profiles review, auth flow test
-- **Day 3, 5:00 PM:** P&L tracker, ban feed, Discord embed review
-- **Day 4, 6:00 PM:** Final UX review, all profiles approved
-- **Day 5, 4:00 PM:** Performance review, production test
-- **Day 6, 5:00 PM:** Domain live, go/no-go for launch
-- **Day 7, 7:00 PM:** Launch! Day 1 monitoring + metrics
-
-## Contact
-
-- **Axiom:** Day-to-day execution, technical decisions
-- **Dylan:** Strategic decisions, content review, authority gates
-
----
-
-**Execution Clock:** 7 days to launch. Revenue target: $1,000+ by day 30.
+$1,000 affiliate income within 30 days of launch. CPA ~$20-40/signup, users typically join 20+ casinos.

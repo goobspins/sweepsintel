@@ -1,0 +1,23 @@
+---
+import NotificationComposer from '../../components/admin/NotificationComposer';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+
+const states = await query<{ state_code: string }>('SELECT state_code FROM state_legal_status ORDER BY state_code ASC');
+const casinos = await query<{ id: number; name: string }>('SELECT id, name FROM casinos ORDER BY name ASC');
+---
+
+<BaseLayout title="Admin Notifications | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <section class="surface-card" style="padding:1.25rem;">
+      <h1 class="section-title" style="margin:0 0 1rem;">Notification Composer</h1>
+      <NotificationComposer client:load states={states.map((row) => row.state_code)} casinos={casinos} />
+    </section>
+  </div>
+</BaseLayout>

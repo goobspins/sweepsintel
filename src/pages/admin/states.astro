@@ -1,0 +1,65 @@
+---
+import ProviderStateManager from '../../components/admin/ProviderStateManager';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+
+const casinoStates = await query<any>(
+  `SELECT csa.casino_id, c.name AS casino_name, csa.state_code, csa.status, csa.compliance_note
+  FROM casino_state_availability csa
+  JOIN casinos c ON c.id = csa.casino_id
+  ORDER BY c.name ASC, csa.state_code ASC
+  LIMIT 300`,
+);
+const providerStates = await query<any>(
+  `SELECT psa.provider_id, gp.name AS provider_name, psa.state_code, psa.status
+  FROM provider_state_availability psa
+  JOIN game_providers gp ON gp.id = psa.provider_id
+  ORDER BY gp.name ASC, psa.state_code ASC`,
+);
+---
+
+<BaseLayout title="Admin States | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <section class="surface-card" style="padding:1.25rem;">
+      <h1 class="section-title" style="margin:0 0 1rem;">Casino State Availability</h1>
+      <table class="admin-table">
+        <thead><tr><th>Casino</th><th>State</th><th>Status</th><th>Note</th></tr></thead>
+        <tbody>
+          {casinoStates.map((row) => (
+            <tr>
+              <td>{row.casino_name}</td>
+              <td>{row.state_code}</td>
+              <td>
+                <select
+                  onchange={`fetch('/api/admin/state-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({casino_id:${row.casino_id},state_code:'${row.state_code}',status:this.value,compliance_note:${JSON.stringify(row.compliance_note ?? '')}})}).then(()=>window.location.reload())`}
+                >
+                  {['available', 'restricted', 'legal_but_pulled_out', 'operates_despite_restrictions'].map((option) => (
+                    <option value={option} selected={row.status === option}>{option}</option>
+                  ))}
+                </select>
+              </td>
+              <td>{row.compliance_note ?? '--'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="surface-card" style="padding:1.25rem;">
+      <h2 style="margin:0 0 1rem;">Provider State Availability</h2>
+      <ProviderStateManager client:load rows={providerStates} />
+    </section>
+  </div>
+  <style>
+    .admin-table { width:100%; border-collapse:collapse; }
+    .admin-table th,
+    .admin-table td { padding:.85rem; border-bottom:1px solid var(--color-border); text-align:left; }
+    select { border:1px solid var(--color-border); border-radius:999px; padding:.55rem .8rem; font:inherit; }
+  </style>
+</BaseLayout>

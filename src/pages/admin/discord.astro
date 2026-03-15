@@ -1,0 +1,35 @@
+---
+import DiscordIntelQueue from '../../components/admin/DiscordIntelQueue';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+
+const items = await query<any>(
+  `SELECT di.id, di.item_type, c.name AS casino_name, di.casino_name_raw, di.title, di.content, di.source_channel, di.expires_at, di.confidence, di.confidence_reason, di.created_at
+  FROM discord_intel_items di
+  LEFT JOIN casinos c ON c.id = di.casino_id
+  WHERE di.is_published = false
+  ORDER BY
+    CASE di.confidence
+      WHEN 'high' THEN 1
+      WHEN 'medium' THEN 2
+      WHEN 'low' THEN 3
+      ELSE 4
+    END,
+    di.created_at DESC`,
+);
+---
+
+<BaseLayout title="Admin Discord Intel | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <section class="surface-card" style="padding:1.25rem;">
+      <h1 class="section-title" style="margin:0 0 1rem;">Discord Intel Queue</h1>
+      <DiscordIntelQueue client:load items={items} />
+    </section>
+  </div>
+</BaseLayout>

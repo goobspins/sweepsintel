@@ -1,0 +1,101 @@
+---
+import SessionGate from '../components/auth/SessionGate';
+import RedemptionList from '../components/redemptions/RedemptionList';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionUser } from '../lib/auth';
+import { query } from '../lib/db';
+import { getRedemptionStatsForCasinos } from '../lib/redemption-stats';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+
+let initialData = null;
+
+if (user) {
+  const redemptions = await query<{
+    id: number;
+    casino_id: number;
+    casino_name: string;
+    slug: string;
+    sc_to_usd_ratio: string | null;
+    sc_amount: string;
+    usd_amount: string;
+    fees_usd: string;
+    method: string;
+    is_crypto: boolean;
+    bank_note: string | null;
+    status: string;
+    notes: string | null;
+    submitted_at: string;
+    confirmed_at: string | null;
+    cancelled_at: string | null;
+  }>(
+    `SELECT
+      r.id,
+      r.casino_id,
+      c.name AS casino_name,
+      c.slug,
+      c.sc_to_usd_ratio,
+      r.sc_amount,
+      r.usd_amount,
+      r.fees_usd,
+      r.method,
+      r.is_crypto,
+      r.bank_note,
+      r.status,
+      r.notes,
+      r.submitted_at,
+      r.confirmed_at,
+      r.cancelled_at
+    FROM redemptions r
+    JOIN casinos c ON c.id = r.casino_id
+    WHERE r.user_id = $1
+    ORDER BY r.submitted_at DESC`,
+    [user.userId],
+  );
+
+  const statsMap = await getRedemptionStatsForCasinos(
+    redemptions.map((redemption) => redemption.casino_id),
+  );
+
+  const hydrated = redemptions.map((redemption) => {
+    const stats = statsMap.get(redemption.casino_id);
+    return {
+      ...redemption,
+      sc_amount: Number(redemption.sc_amount),
+      usd_amount: Number(redemption.usd_amount),
+      fees_usd: Number(redemption.fees_usd ?? 0),
+      sc_to_usd_ratio: redemption.sc_to_usd_ratio === null ? null : Number(redemption.sc_to_usd_ratio),
+      average_days: stats?.medianDays ?? null,
+      p80_days: stats?.p80Days ?? null,
+      trend_warning: stats?.trendWarning ?? false,
+      sample_count: stats?.sampleCount ?? 0,
+    };
+  });
+
+  const pending = hydrated.filter((item) => item.status === 'pending');
+
+  initialData = {
+    redemptions: hydrated,
+    inTransitTotalUsd: pending.reduce((sum, item) => sum + item.usd_amount, 0),
+    pendingCount: pending.length,
+  };
+}
+---
+
+<BaseLayout title="Redemptions | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <SessionGate
+      client:load
+      user={user}
+      redirectTo="/redemptions"
+      title="Log in to track redemptions"
+      description="Save pending cashouts, mark them received, and keep your balances accurate."
+    >
+      {user && initialData ? (
+        <RedemptionList client:load initialData={initialData} />
+      ) : null}
+    </SessionGate>
+  </div>
+</BaseLayout>

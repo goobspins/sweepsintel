@@ -1,0 +1,123 @@
+---
+import SessionGate from '../components/auth/SessionGate';
+import LedgerTable from '../components/ledger/LedgerTable';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionUser } from '../lib/auth';
+import { getCached } from '../lib/cache';
+import { query } from '../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+
+let initialData = null;
+
+if (user) {
+  const entries = await query<{
+    id: number;
+    casino_id: number;
+    casino_name: string;
+    entry_type: string;
+    sc_amount: string | null;
+    usd_amount: string | null;
+    is_crypto: boolean;
+    notes: string | null;
+    source_redemption_id: number | null;
+    source_claim_id: number | null;
+    link_id: string | null;
+    entry_at: string;
+    entry_date: string;
+  }>(
+    `SELECT
+      le.id,
+      le.casino_id,
+      c.name AS casino_name,
+      le.entry_type,
+      le.sc_amount,
+      le.usd_amount,
+      le.is_crypto,
+      le.notes,
+      le.source_redemption_id,
+      le.source_claim_id,
+      le.link_id,
+      le.entry_at,
+      le.entry_date
+    FROM ledger_entries le
+    JOIN casinos c ON c.id = le.casino_id
+    WHERE le.user_id = $1
+    ORDER BY le.entry_at DESC
+    LIMIT 20 OFFSET 0`,
+    [user.userId],
+  );
+
+  const summary = await getCached(`ledger-summary:${user.userId}`, 5 * 60 * 1000, async () => {
+    const rows = await query<{
+      casino_id: number;
+      casino_name: string;
+      net_usd: string | null;
+      net_sc: string | null;
+      pending_redemption_sc: string | null;
+    }>(
+      `SELECT
+        le.casino_id,
+        c.name AS casino_name,
+        SUM(le.usd_amount) AS net_usd,
+        SUM(le.sc_amount) AS net_sc,
+        COALESCE(r.pending_redemption_sc, 0) AS pending_redemption_sc
+      FROM ledger_entries le
+      JOIN casinos c ON c.id = le.casino_id
+      LEFT JOIN (
+        SELECT casino_id, SUM(sc_amount) AS pending_redemption_sc
+        FROM redemptions
+        WHERE user_id = $1
+          AND status = 'pending'
+        GROUP BY casino_id
+      ) r ON r.casino_id = le.casino_id
+      WHERE le.user_id = $1
+      GROUP BY le.casino_id, c.name, r.pending_redemption_sc
+      ORDER BY c.name ASC`,
+      [user.userId],
+    );
+
+    const breakdown = rows.map((row) => ({
+      casino_id: row.casino_id,
+      casino_name: row.casino_name,
+      net_usd: Number(row.net_usd ?? 0),
+      net_sc: Number(row.net_sc ?? 0),
+      available_sc: Number(row.net_sc ?? 0) - Number(row.pending_redemption_sc ?? 0),
+    }));
+
+    return {
+      total_in_usd: breakdown.reduce((sum, row) => sum + Math.max(row.net_usd, 0), 0),
+      total_out_usd: breakdown.reduce((sum, row) => sum + Math.abs(Math.min(row.net_usd, 0)), 0),
+      net_pl_usd: breakdown.reduce((sum, row) => sum + row.net_usd, 0),
+      breakdown,
+    };
+  });
+
+  initialData = {
+    entries: entries.map((entry) => ({
+      ...entry,
+      sc_amount: entry.sc_amount === null ? null : Number(entry.sc_amount),
+      usd_amount: entry.usd_amount === null ? null : Number(entry.usd_amount),
+    })),
+    summary,
+  };
+}
+---
+
+<BaseLayout title="Ledger | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <SessionGate
+      client:load
+      user={user}
+      redirectTo="/ledger"
+      title="Log in to view your ledger"
+      description="Track cash in, cash out, and your SC balances without changing your existing data."
+    >
+      {user && initialData ? (
+        <LedgerTable client:load initialData={initialData} ledgerMode={user.ledgerMode} />
+      ) : null}
+    </SessionGate>
+  </div>
+</BaseLayout>

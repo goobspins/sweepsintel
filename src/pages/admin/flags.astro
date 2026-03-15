@@ -1,0 +1,38 @@
+---
+import FlagQueue from '../../components/admin/FlagQueue';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+
+const flags = await query<{
+  id: number;
+  source: string;
+  flag_type: string;
+  casino_name: string | null;
+  state_code: string | null;
+  flag_content: string;
+  ai_summary: string | null;
+  proposed_action: string | null;
+  created_at: string;
+}>(
+  `SELECT af.id, af.source, af.flag_type, c.name AS casino_name, af.state_code, af.flag_content, af.ai_summary, af.proposed_action, af.created_at
+  FROM admin_flags af
+  LEFT JOIN casinos c ON c.id = af.casino_id
+  WHERE af.status = 'pending'
+  ORDER BY af.created_at DESC`,
+);
+---
+
+<BaseLayout title="Admin Flags | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <section class="surface-card" style="padding:1.25rem;">
+      <h1 class="section-title" style="margin:0 0 1rem;">Flag Queue</h1>
+      <FlagQueue client:load flags={flags} />
+    </section>
+  </div>
+</BaseLayout>

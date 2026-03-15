@@ -1,0 +1,141 @@
+import { useState } from 'react';
+
+interface ResetTimeSuggestionFormProps {
+  casinoId: number;
+  casinoName: string;
+  onClose: () => void;
+  onSuccess: (message: string) => void;
+}
+
+const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+];
+
+export default function ResetTimeSuggestionForm({
+  casinoId,
+  casinoName,
+  onClose,
+  onSuccess,
+}: ResetTimeSuggestionFormProps) {
+  const [streakMode, setStreakMode] = useState<'rolling' | 'fixed'>('fixed');
+  const [resetTime, setResetTime] = useState('');
+  const [timezone, setTimezone] = useState('America/New_York');
+  const [evidence, setEvidence] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/reports/reset-suggestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          casino_id: casinoId,
+          suggested_streak_mode: streakMode,
+          suggested_reset_time: streakMode === 'fixed' ? resetTime : null,
+          suggested_timezone: streakMode === 'fixed' ? timezone : null,
+          evidence_text: evidence,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Unable to submit suggestion.');
+      }
+
+      onSuccess(data.message);
+      onClose();
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Unable to submit suggestion.',
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card">
+        <div className="modal-header">
+          <h2>Suggest a Reset Time for {casinoName}</h2>
+          <button type="button" className="ghost-button" onClick={onClose}>Close</button>
+        </div>
+
+        <form className="form-grid" onSubmit={handleSubmit}>
+          <fieldset className="radio-group">
+            <legend>Streak mode</legend>
+            <label>
+              <input type="radio" checked={streakMode === 'fixed'} onChange={() => setStreakMode('fixed')} />
+              Fixed daily reset
+            </label>
+            <label>
+              <input type="radio" checked={streakMode === 'rolling'} onChange={() => setStreakMode('rolling')} />
+              Rolling 24-hour
+            </label>
+          </fieldset>
+
+          {streakMode === 'fixed' ? (
+            <>
+              <label>
+                Reset time (HH:MM)
+                <input type="time" value={resetTime} onChange={(event) => setResetTime(event.target.value)} required />
+              </label>
+              <label>
+                Timezone
+                <select value={timezone} onChange={(event) => setTimezone(event.target.value)}>
+                  {TIMEZONES.map((value) => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+            </>
+          ) : null}
+
+          <label>
+            Evidence
+            <textarea
+              rows={5}
+              value={evidence}
+              onChange={(event) => setEvidence(event.target.value)}
+              required
+            />
+          </label>
+
+          {error ? <p className="error-text">{error}</p> : null}
+
+          <div className="actions">
+            <button type="button" className="ghost-button" onClick={onClose}>Cancel</button>
+            <button type="submit" disabled={pending || evidence.trim().length < 1}>
+              {pending ? 'Submitting...' : 'Submit suggestion'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <style>{`
+        .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.55); display:grid; align-items:end; z-index:40; padding:1rem; }
+        .modal-card { width:min(100%,34rem); margin:0 auto; border-radius:1.5rem 1.5rem 0 0; background:#fff; padding:1.25rem; display:grid; gap:1rem; }
+        .modal-header, .actions { display:flex; justify-content:space-between; gap:.75rem; align-items:center; flex-wrap:wrap; }
+        .modal-header h2, .error-text { margin:0; }
+        .form-grid { display:grid; gap:1rem; }
+        .form-grid label, .radio-group { display:grid; gap:.45rem; margin:0; font-weight:600; }
+        .form-grid input, .form-grid select, .form-grid textarea { border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem; font:inherit; }
+        .radio-group { border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem; }
+        .radio-group label { display:flex; gap:.5rem; align-items:center; font-weight:500; }
+        .actions button { border:none; border-radius:999px; padding:.85rem 1rem; background:var(--color-primary); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+        .ghost-button { background:#fff; color:var(--color-ink); border:1px solid var(--color-border) !important; }
+        .error-text { color:var(--color-danger); font-weight:600; }
+        @media (min-width: 768px) { .modal-backdrop { align-items:center; } .modal-card { border-radius:1.5rem; } }
+      `}</style>
+    </div>
+  );
+}

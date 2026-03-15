@@ -1,0 +1,104 @@
+---
+import QuickEditRow from '../../../components/admin/QuickEditRow';
+import UserSuggestedCasinoQueue from '../../../components/admin/UserSuggestedCasinoQueue';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../../lib/auth';
+import { query } from '../../../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+
+const casinos = await query<{
+  id: number;
+  name: string;
+  tier: number;
+  rating: number | null;
+  promoban_risk: string;
+  source: string;
+  has_affiliate_link: boolean;
+  redemption_speed_desc: string | null;
+  is_excluded: boolean;
+  tracked_by_count: number;
+}>(
+  `SELECT
+    c.id,
+    c.name,
+    c.tier,
+    c.rating,
+    c.promoban_risk,
+    c.source,
+    c.has_affiliate_link,
+    c.redemption_speed_desc,
+    c.is_excluded,
+    COUNT(DISTINCT ucs.user_id) AS tracked_by_count
+  FROM casinos c
+  LEFT JOIN user_casino_settings ucs ON ucs.casino_id = c.id
+  GROUP BY c.id
+  ORDER BY c.source DESC, c.name ASC`,
+);
+
+const adminCasinos = casinos.filter((casino) => casino.source === 'admin' && !casino.is_excluded);
+const suggestedCasinos = casinos.filter((casino) => casino.source === 'user_suggested' && !casino.is_excluded);
+const excludedCasinos = casinos.filter((casino) => casino.is_excluded);
+---
+
+<BaseLayout title="Admin Casinos | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <section class="surface-card" style="padding:1.25rem;">
+      <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;">
+        <h1 class="section-title" style="margin:0;">Casinos</h1>
+        <a href="/admin/casinos/new" class="new-button">New Casino</a>
+      </div>
+    </section>
+
+    <section class="surface-card" style="padding:1.25rem;">
+      <h2 style="margin:0 0 1rem;">Admin-curated</h2>
+      <table class="admin-table">
+        <thead><tr><th>Name</th><th>Tier</th><th>Rating</th><th>Risk</th><th>Affiliate</th><th>Redemption speed</th></tr></thead>
+        <tbody>
+          {adminCasinos.map((casino) => (
+            <tr>
+              <td><a href={`/admin/casinos/${casino.id}`}>{casino.name}</a></td>
+              <td><QuickEditRow client:load casinoId={casino.id} field="tier" value={casino.tier} type="number" /></td>
+              <td><QuickEditRow client:load casinoId={casino.id} field="rating" value={casino.rating} type="number" /></td>
+              <td><QuickEditRow client:load casinoId={casino.id} field="promoban_risk" value={casino.promoban_risk} options={['none', 'low', 'medium', 'high', 'unknown']} /></td>
+              <td>{casino.has_affiliate_link ? 'Yes' : 'No'}</td>
+              <td><QuickEditRow client:load casinoId={casino.id} field="redemption_speed_desc" value={casino.redemption_speed_desc} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="surface-card" style="padding:1.25rem;">
+      <h2 style="margin:0 0 1rem;">User-suggested</h2>
+      <UserSuggestedCasinoQueue client:load casinos={suggestedCasinos.map((casino) => ({ id: casino.id, name: casino.name, slug: '', tracked_by_count: casino.tracked_by_count, is_excluded: casino.is_excluded }))} />
+    </section>
+
+    <section class="surface-card" style="padding:1.25rem;">
+      <h2 style="margin:0 0 1rem;">Excluded</h2>
+      <table class="admin-table">
+        <thead><tr><th>Name</th><th>Tier</th><th>Rating</th><th>Risk</th></tr></thead>
+        <tbody>
+          {excludedCasinos.map((casino) => (
+            <tr>
+              <td><a href={`/admin/casinos/${casino.id}`}>{casino.name}</a></td>
+              <td>{casino.tier}</td>
+              <td>{casino.rating ?? '--'}</td>
+              <td>{casino.promoban_risk}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  </div>
+  <style>
+    .new-button { display:inline-flex; border-radius:999px; padding:.85rem 1rem; background:var(--color-primary); color:#fff; text-decoration:none; font-weight:700; }
+    .admin-table { width:100%; border-collapse: collapse; }
+    .admin-table th, .admin-table td { padding:.85rem; border-bottom:1px solid var(--color-border); text-align:left; }
+    @media (max-width: 1023px) { .admin-shell::before { content:'Admin panel requires a larger screen'; display:block; padding:1rem; border-radius:1rem; background:#fff7ed; color:#9A3412; border:1px solid #FED7AA; } }
+  </style>
+</BaseLayout>

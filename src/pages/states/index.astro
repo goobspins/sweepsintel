@@ -1,0 +1,47 @@
+---
+import StateMap from '../../components/states/StateMap';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { getCached } from '../../lib/cache';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+
+const states = await getCached('states:index', 30 * 60 * 1000, () =>
+  query<{
+    state_code: string;
+    state_name: string;
+    sweepstakes_legal: boolean;
+    legal_notes: string | null;
+    casino_count: number | string;
+    pullout_count: number | string;
+  }>(
+    `SELECT
+      sls.state_code,
+      sls.state_name,
+      sls.sweepstakes_legal,
+      sls.legal_notes,
+      COUNT(csa.id) FILTER (WHERE csa.status = 'available') AS casino_count,
+      COUNT(csa.id) FILTER (WHERE csa.status = 'legal_but_pulled_out') AS pullout_count
+    FROM state_legal_status sls
+    LEFT JOIN casino_state_availability csa ON csa.state_code = sls.state_code
+    GROUP BY sls.state_code
+    ORDER BY sls.state_name`,
+  ));
+---
+
+<BaseLayout title="States | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <section class="surface-card" style="padding:1.25rem;display:grid;gap:1rem;">
+      <div>
+        <h1 class="section-title">State Availability</h1>
+        <p class="muted" style="margin:0;line-height:1.7;">
+          Check sweepstakes legality, recent pullouts, and how many casinos remain available in each state.
+        </p>
+      </div>
+      <StateMap client:load states={states} />
+    </section>
+  </div>
+</BaseLayout>

@@ -1,8 +1,9 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
+import vercel from '@astrojs/vercel/serverless';
 
 export default defineConfig({
   integrations: [react()],
   output: 'hybrid',
-  adapter: undefined, // Using Vercel adapter in production
+  adapter: vercel(),
 });

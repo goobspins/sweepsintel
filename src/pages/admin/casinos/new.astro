@@ -1,0 +1,25 @@
+---
+import AdminCasinoForm from '../../../components/admin/AdminCasinoForm';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../../lib/auth';
+import { query } from '../../../lib/db';
+
+export const prerender = false;
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+const providers = await query<{ id: number; name: string }>('SELECT id, name FROM game_providers ORDER BY name ASC');
+---
+
+<BaseLayout title="New Casino | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <AdminCasinoForm
+      client:load
+      mode="new"
+      casino={{ slug: '', name: '', tier: 2, rating: null }}
+      providers={providers}
+      selectedProviders={[]}
+      games={[]}
+    />
+  </div>
+</BaseLayout>

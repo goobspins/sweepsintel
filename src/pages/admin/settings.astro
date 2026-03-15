@@ -1,0 +1,53 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+
+const settingsRows = await query<{ key: string; value: string }>('SELECT key, value FROM admin_settings');
+const settings = Object.fromEntries(settingsRows.map((row) => [row.key, row.value]));
+---
+
+<BaseLayout title="Admin Settings | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <section class="surface-card" style="padding:1.25rem;">
+      <h1 class="section-title" style="margin:0 0 1rem;">Admin Settings</h1>
+      <form id="admin-settings-form" style="display:grid;gap:1rem;max-width:34rem;">
+        <label style="display:flex;gap:.75rem;align-items:center;">
+          <input type="checkbox" name="auto_publish_enabled" checked={settings.auto_publish_enabled === 'true'} />
+          <span>Auto-publish enabled</span>
+        </label>
+        <label style="display:grid;gap:.35rem;">
+          <span>Auto-publish delay (minutes)</span>
+          <input
+            type="number"
+            name="auto_publish_delay_minutes"
+            value={settings.auto_publish_delay_minutes ?? '120'}
+            style="border:1px solid var(--color-border);border-radius:.9rem;padding:.8rem .9rem;font:inherit;"
+          />
+        </label>
+        <button type="submit" style="width:fit-content;border:none;border-radius:999px;padding:.85rem 1rem;background:var(--color-primary);color:#fff;font:inherit;font-weight:700;cursor:pointer;">Save settings</button>
+      </form>
+    </section>
+  </div>
+  <script>
+    document.getElementById('admin-settings-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const data = new FormData(form);
+      await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          auto_publish_enabled: data.get('auto_publish_enabled') === 'on',
+          auto_publish_delay_minutes: data.get('auto_publish_delay_minutes'),
+        }),
+      });
+      window.location.reload();
+    });
+  </script>
+</BaseLayout>

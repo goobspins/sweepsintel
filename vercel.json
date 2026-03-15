@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/auto-publish", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/push-resets", "schedule": "*/15 * * * *" }
+  ]
+}

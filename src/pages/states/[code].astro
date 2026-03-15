@@ -1,0 +1,179 @@
+---
+import EmailCaptureForm from '../../components/forms/EmailCaptureForm';
+import PulloutAlertBanner from '../../components/states/PulloutAlertBanner';
+import StateCard from '../../components/states/StateCard';
+import StateReportLauncher from '../../components/states/StateReportLauncher';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getDirectoryDestination } from '../../lib/affiliate';
+import { getSessionUser } from '../../lib/auth';
+import { getCached } from '../../lib/cache';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+
+const stateCode = (Astro.params.code ?? '').toUpperCase();
+const user = await getSessionUser(Astro.request);
+
+const stateData = await getCached(`state-detail:${stateCode}`, 15 * 60 * 1000, async () => {
+  const [stateInfoRows, casinoRows, alertRows, providerRows] = await Promise.all([
+    query<{
+      state_code: string;
+      state_name: string;
+      sweepstakes_legal: boolean;
+      legal_notes: string | null;
+      last_verified: string | null;
+      source_url: string | null;
+    }>(
+      `SELECT state_code, state_name, sweepstakes_legal, legal_notes, last_verified, source_url
+      FROM state_legal_status
+      WHERE state_code = $1
+      LIMIT 1`,
+      [stateCode],
+    ),
+    query<{
+      id: number;
+      name: string;
+      slug: string;
+      tier: number;
+      rating: number | null;
+      promoban_risk: string;
+      has_live_games: boolean;
+      has_affiliate_link: boolean;
+      affiliate_link_url: string | null;
+      status: string;
+      compliance_note: string | null;
+    }>(
+      `SELECT
+        c.id,
+        c.name,
+        c.slug,
+        c.tier,
+        c.rating,
+        c.promoban_risk,
+        c.has_live_games,
+        c.has_affiliate_link,
+        c.affiliate_link_url,
+        csa.status,
+        csa.compliance_note
+      FROM casino_state_availability csa
+      JOIN casinos c ON c.id = csa.casino_id
+      WHERE csa.state_code = $1
+        AND c.is_excluded = false
+      ORDER BY c.tier ASC, c.rating DESC NULLS LAST`,
+      [stateCode],
+    ),
+    query<{
+      id: number;
+      casino_name: string | null;
+      alert_message: string | null;
+      created_at: string;
+    }>(
+      `SELECT
+        spa.id,
+        c.name AS casino_name,
+        spa.alert_message,
+        spa.created_at
+      FROM state_pullout_alerts spa
+      LEFT JOIN casinos c ON c.id = spa.casino_id
+      WHERE spa.state_code = $1
+        AND spa.created_at > NOW() - INTERVAL '30 days'
+      ORDER BY spa.created_at DESC
+      LIMIT 10`,
+      [stateCode],
+    ),
+    query<{
+      id: number;
+      name: string;
+    }>(
+      `SELECT DISTINCT gp.id, gp.name
+      FROM provider_state_availability psa
+      JOIN game_providers gp ON gp.id = psa.provider_id
+      WHERE psa.state_code = $1
+      ORDER BY gp.name ASC`,
+      [stateCode],
+    ),
+  ]);
+
+  return {
+    stateInfo: stateInfoRows[0] ?? null,
+    casinos: casinoRows,
+    alerts: alertRows,
+    providers: providerRows,
+  };
+});
+
+if (!stateData.stateInfo) {
+  return new Response('Not found', { status: 404 });
+}
+
+const joinedRows =
+  user && stateData.casinos.length > 0
+    ? await query<{ casino_id: number }>(
+        `SELECT DISTINCT casino_id
+        FROM ledger_entries
+        WHERE user_id = $1
+          AND casino_id = ANY($2::int[])`,
+        [user.userId, stateData.casinos.map((casino) => casino.id)],
+      )
+    : [];
+
+const joinedSet = new Set(joinedRows.map((row) => row.casino_id));
+---
+
+<BaseLayout title={`${stateData.stateInfo.state_name} | SweepsIntel`} user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <section class="surface-card" style="padding:1.25rem;display:grid;gap:1rem;">
+      <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:flex-start;">
+        <div style="display:grid;gap:.45rem;">
+          <h1 class="section-title" style="margin:0;">{stateData.stateInfo.state_name}</h1>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+            <span style={`border-radius:999px;padding:.35rem .7rem;font-weight:700;${stateData.stateInfo.sweepstakes_legal ? 'background:#ecfdf5;color:#166534;' : 'background:#fef2f2;color:#991b1b;'}`}>
+              {stateData.stateInfo.sweepstakes_legal ? 'Legal ✓' : 'Not Legal'}
+            </span>
+            <span class="muted">{stateData.casinos.length} casinos tracked</span>
+          </div>
+        </div>
+      </div>
+      {stateData.stateInfo.legal_notes ? (
+        <p class="muted" style="margin:0;line-height:1.7;">{stateData.stateInfo.legal_notes}</p>
+      ) : null}
+      <PulloutAlertBanner stateName={stateData.stateInfo.state_name} alerts={stateData.alerts} />
+    </section>
+
+    <section class="surface-card" style="padding:1.25rem;display:grid;gap:1rem;">
+      <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;">
+        <div>
+          <h2 class="section-title" style="font-size:1.6rem;margin:0 0 .35rem;">Available Casinos</h2>
+          <p class="muted" style="margin:0;">Curated casinos visible in {stateData.stateInfo.state_name}.</p>
+        </div>
+        <StateReportLauncher
+          client:load
+          stateCode={stateCode}
+          stateName={stateData.stateInfo.state_name}
+          casinos={stateData.casinos.map((casino) => ({ id: casino.id, name: casino.name }))}
+          providers={stateData.providers}
+        />
+      </div>
+
+      <div style="display:grid;gap:1rem;">
+        {stateData.casinos.map((casino) => (
+          <StateCard
+            client:load
+            casino={casino}
+            destination={getDirectoryDestination(casino, joinedSet.has(casino.id))}
+            referrerSource="state_page"
+          />
+        ))}
+      </div>
+    </section>
+
+    {!user ? (
+      <EmailCaptureForm
+        client:load
+        source="state_page"
+        title={`Get alerts for ${stateData.stateInfo.state_name}`}
+        description="Stay on top of pullouts, restrictions, and other public intel for this state."
+      />
+    ) : null}
+  </div>
+</BaseLayout>

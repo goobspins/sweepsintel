@@ -1,0 +1,64 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SettingsPanel from '../components/settings/SettingsPanel';
+import { getSessionUser } from '../lib/auth';
+import { getCached } from '../lib/cache';
+import { query } from '../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+if (!user) {
+  return Astro.redirect('/');
+}
+
+const [settingsRows, subscriptionRows, states] = await Promise.all([
+  query<{
+    timezone: string | null;
+    home_state: string | null;
+    ledger_mode: 'simple' | 'advanced' | null;
+  }>(
+    `SELECT timezone, home_state, ledger_mode
+    FROM user_settings
+    WHERE user_id = $1
+    LIMIT 1`,
+    [user.userId],
+  ),
+  query<{ state_code: string }>(
+    `SELECT state_code
+    FROM user_state_subscriptions
+    WHERE user_id = $1
+    ORDER BY state_code ASC`,
+    [user.userId],
+  ),
+  getCached('settings:states', 30 * 60 * 1000, () =>
+    query<{ state_code: string; state_name: string }>(
+      `SELECT state_code, state_name
+      FROM state_legal_status
+      ORDER BY state_name ASC`,
+    )),
+]);
+
+const settings = settingsRows[0] ?? {
+  timezone: 'America/New_York',
+  home_state: null,
+  ledger_mode: 'simple' as const,
+};
+const vapidPublicKey = import.meta.env.VAPID_PUBLIC_KEY ?? '';
+---
+
+<BaseLayout title="Settings | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <SettingsPanel
+      client:load
+      initialSettings={{
+        timezone: settings.timezone ?? 'America/New_York',
+        home_state: settings.home_state,
+        ledger_mode: settings.ledger_mode ?? 'simple',
+        state_subscriptions: subscriptionRows.map((row) => row.state_code),
+        states,
+        vapid_public_key: vapidPublicKey,
+      }}
+    />
+  </div>
+</BaseLayout>
