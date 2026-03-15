@@ -46,84 +46,101 @@ function formatTimeAgo(value: string) {
 
 const user = await getSessionUser(Astro.request);
 
+async function safeHomepageQuery<T>(label: string, fetcher: () => Promise<T[]>) {
+  try {
+    return await fetcher();
+  } catch (error) {
+    console.error(`homepage section failed: ${label}`, error);
+    return [] as T[];
+  }
+}
+
 const [topCasinos, pulloutAlerts, banAlerts, intelTeaserItems] = await Promise.all([
-  getCached('homepage:top-casinos', 15 * 60 * 1000, async () =>
-    query<{
-      id: number;
-      slug: string;
-      name: string;
-      tier: string;
-      promoban_risk: string;
-      has_live_games: boolean;
-      redemption_speed_desc: string | null;
-      daily_bonus_desc: string | null;
-      has_affiliate_link: boolean;
-      affiliate_link_url: string | null;
-    }>(
-      `SELECT
-        id,
-        slug,
-        name,
-        tier,
-        promoban_risk,
-        has_live_games,
-        redemption_speed_desc,
-        daily_bonus_desc,
-        has_affiliate_link,
-        affiliate_link_url
-      FROM casinos
-      WHERE tier IN ('S', 'A')
-        AND is_excluded = false
-        AND source = 'admin'
-      ORDER BY tier ASC, name ASC
-      LIMIT 6`,
-    )),
-  getCached('homepage:pullout-alerts', 5 * 60 * 1000, () =>
-    query<{
-      id: number;
-      state_code: string;
-      created_at: string;
-      name: string | null;
-      slug: string | null;
-    }>(
-      `SELECT spa.id, spa.state_code, spa.created_at, c.name, c.slug
-      FROM state_pullout_alerts spa
-      LEFT JOIN casinos c ON c.id = spa.casino_id
-      WHERE spa.created_at > NOW() - INTERVAL '30 days'
-      ORDER BY spa.created_at DESC
-      LIMIT 5`,
-    )),
-  getCached('homepage:ban-upticks', 5 * 60 * 1000, () =>
-    query<{
-      id: number;
-      created_at: string;
-      name: string;
-      slug: string;
-    }>(
-      `SELECT bua.id, bua.created_at, c.name, c.slug
-      FROM ban_uptick_alerts bua
-      JOIN casinos c ON c.id = bua.casino_id
-      WHERE bua.is_active = true
-      ORDER BY bua.created_at DESC
-      LIMIT 5`,
-    )),
-  getCached('homepage:intel-teaser', 2 * 60 * 1000, () =>
-    query<{
-      id: number;
-      item_type: string;
-      title: string;
-      casino_id: number | null;
-      created_at: string;
-      casino_name: string | null;
-    }>(
-      `SELECT dii.id, dii.item_type, dii.title, dii.casino_id, dii.created_at, c.name AS casino_name
-      FROM discord_intel_items dii
-      LEFT JOIN casinos c ON c.id = dii.casino_id
-      WHERE dii.is_published = true
-        AND (dii.expires_at IS NULL OR dii.expires_at > NOW())
-      ORDER BY dii.created_at DESC
-      LIMIT 3`,
-    )),
+  safeHomepageQuery('top-casinos', () =>
+    getCached('homepage:top-casinos', 15 * 60 * 1000, async () =>
+      query<{
+        id: number;
+        slug: string;
+        name: string;
+        tier: string;
+        promoban_risk: string;
+        has_live_games: boolean;
+        redemption_speed_desc: string | null;
+        daily_bonus_desc: string | null;
+        has_affiliate_link: boolean;
+        affiliate_link_url: string | null;
+      }>(
+        `SELECT
+          id,
+          slug,
+          name,
+          tier,
+          promoban_risk,
+          has_live_games,
+          redemption_speed_desc,
+          daily_bonus_desc,
+          has_affiliate_link,
+          affiliate_link_url
+        FROM casinos
+        WHERE tier IN ('S', 'A')
+          AND is_excluded = false
+          AND source = 'admin'
+        ORDER BY tier ASC, name ASC
+        LIMIT 6`,
+      )),
+  ),
+  safeHomepageQuery('pullout-alerts', () =>
+    getCached('homepage:pullout-alerts', 5 * 60 * 1000, () =>
+      query<{
+        id: number;
+        state_code: string;
+        created_at: string;
+        name: string | null;
+        slug: string | null;
+      }>(
+        `SELECT spa.id, spa.state_code, spa.created_at, c.name, c.slug
+        FROM state_pullout_alerts spa
+        LEFT JOIN casinos c ON c.id = spa.casino_id
+        WHERE spa.created_at > NOW() - INTERVAL '30 days'
+        ORDER BY spa.created_at DESC
+        LIMIT 5`,
+      )),
+  ),
+  safeHomepageQuery('ban-upticks', () =>
+    getCached('homepage:ban-upticks', 5 * 60 * 1000, () =>
+      query<{
+        id: number;
+        created_at: string;
+        name: string;
+        slug: string;
+      }>(
+        `SELECT bua.id, bua.created_at, c.name, c.slug
+        FROM ban_uptick_alerts bua
+        JOIN casinos c ON c.id = bua.casino_id
+        WHERE bua.is_active = true
+        ORDER BY bua.created_at DESC
+        LIMIT 5`,
+      )),
+  ),
+  safeHomepageQuery('intel-teaser', () =>
+    getCached('homepage:intel-teaser', 2 * 60 * 1000, () =>
+      query<{
+        id: number;
+        item_type: string;
+        title: string;
+        casino_id: number | null;
+        created_at: string;
+        casino_name: string | null;
+      }>(
+        `SELECT dii.id, dii.item_type, dii.title, dii.casino_id, dii.created_at, c.name AS casino_name
+        FROM discord_intel_items dii
+        LEFT JOIN casinos c ON c.id = dii.casino_id
+        WHERE dii.is_published = true
+          AND (dii.expires_at IS NULL OR dii.expires_at > NOW())
+        ORDER BY dii.created_at DESC
+        LIMIT 3`,
+      )),
+  ),
 ]);
 
 const joinedRows =
