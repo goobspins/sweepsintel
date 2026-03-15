@@ -8,6 +8,31 @@ interface OTPFormProps {
 
 type FormStep = 'email' | 'otp';
 
+async function readApiResponse(response: Response) {
+  const contentType = response.headers.get('Content-Type') ?? '';
+  const rawText = await response.text();
+
+  if (contentType.includes('application/json')) {
+    try {
+      return rawText ? JSON.parse(rawText) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  if (
+    rawText.includes('Vercel Authentication') ||
+    rawText.includes('Authentication Required')
+  ) {
+    return {
+      error:
+        'This preview deployment is behind Vercel authentication, so login requests are being blocked before they reach the app. Test on the production domain or disable preview protection for this deployment.',
+    };
+  }
+
+  return {};
+}
+
 export default function OTPForm({
   redirectTo = '/tracker',
   title = 'Save your data with email login',
@@ -33,7 +58,7 @@ export default function OTPForm({
         credentials: 'same-origin',
         body: JSON.stringify({ email }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
         setError(data.error ?? 'Unable to send code.');
@@ -63,7 +88,7 @@ export default function OTPForm({
         credentials: 'same-origin',
         body: JSON.stringify({ email, otp }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
 
       if (!response.ok) {
         setError(data.error ?? 'Unable to verify code.');
