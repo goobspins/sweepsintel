@@ -201,10 +201,10 @@ export async function getTrackerStatus(userId: string): Promise<TrackerStatusDat
           FROM discord_intel_items
           WHERE is_published = true
             AND (expires_at IS NULL OR expires_at > NOW())
-            AND (casino_id = ANY($2::int[]) OR casino_id IS NULL)
+            AND (casino_id = ANY($1::int[]) OR casino_id IS NULL)
           ORDER BY created_at DESC
           LIMIT 20`,
-          [userId, trackedIds],
+          [trackedIds],
         )
       : await query<TrackerAlertItem>(
           `SELECT id, item_type, casino_id, title, content, expires_at, confirm_count, dispute_count, created_at

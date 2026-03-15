@@ -9,17 +9,27 @@ import { getTrackerStatus } from '../lib/tracker';
 export const prerender = false;
 
 const user = await getSessionUser(Astro.request);
-const initialData = user ? await getTrackerStatus(user.userId) : null;
-const claimCountRows = user
-  ? await query<{ count: number }>(
+let initialData = null;
+let claimCount = 0;
+let trackerError: string | null = null;
+
+if (user) {
+  try {
+    initialData = await getTrackerStatus(user.userId);
+    const claimCountRows = await query<{ count: number }>(
       `SELECT COUNT(*)::int AS count
       FROM daily_bonus_claims
       WHERE user_id = $1
         AND claim_type = 'daily'`,
       [user.userId],
-    )
-  : [];
-const claimCount = Number(claimCountRows[0]?.count ?? 0);
+    );
+    claimCount = Number(claimCountRows[0]?.count ?? 0);
+  } catch (error) {
+    console.error('tracker page load failed', error);
+    trackerError =
+      'Your session is valid, but tracker data could not be loaded right now.';
+  }
+}
 const vapidPublicKey = import.meta.env.VAPID_PUBLIC_KEY ?? '';
 ---
 
@@ -32,6 +42,15 @@ const vapidPublicKey = import.meta.env.VAPID_PUBLIC_KEY ?? '';
       title="Save your tracker"
       description="Enter your email the first time you want to save tracker data."
     >
+      {user && trackerError ? (
+        <section class="surface-card" style="padding: 1.25rem; display: grid; gap: 0.75rem;">
+          <h1 class="section-title" style="font-size: 1.5rem; margin: 0;">Tracker unavailable</h1>
+          <p class="muted" style="margin: 0; line-height: 1.6;">{trackerError}</p>
+          <p class="muted" style="margin: 0; line-height: 1.6;">
+            Refresh the page. If it keeps happening, one of the tracker data queries is still failing server-side.
+          </p>
+        </section>
+      ) : null}
       {user && initialData ? (
         <DailyTracker
           client:load
