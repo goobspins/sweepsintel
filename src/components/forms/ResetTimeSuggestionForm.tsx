@@ -20,7 +20,7 @@ export default function ResetTimeSuggestionForm({
   onClose,
   onSuccess,
 }: ResetTimeSuggestionFormProps) {
-  const [streakMode, setStreakMode] = useState<'rolling' | 'fixed'>('fixed');
+  const [resetMode, setResetMode] = useState<'rolling' | 'fixed'>('fixed');
   const [resetTime, setResetTime] = useState('');
   const [timezone, setTimezone] = useState('America/New_York');
   const [evidence, setEvidence] = useState('');
@@ -38,9 +38,9 @@ export default function ResetTimeSuggestionForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           casino_id: casinoId,
-          suggested_streak_mode: streakMode,
-          suggested_reset_time: streakMode === 'fixed' ? resetTime : null,
-          suggested_timezone: streakMode === 'fixed' ? timezone : null,
+          suggested_reset_mode: resetMode,
+          suggested_reset_time: resetMode === 'fixed' ? resetTime : null,
+          suggested_timezone: resetMode === 'fixed' ? timezone : null,
           evidence_text: evidence,
         }),
       });
@@ -72,18 +72,18 @@ export default function ResetTimeSuggestionForm({
 
         <form className="form-grid" onSubmit={handleSubmit}>
           <fieldset className="radio-group">
-            <legend>Streak mode</legend>
+            <legend>Reset mode</legend>
             <label>
-              <input type="radio" checked={streakMode === 'fixed'} onChange={() => setStreakMode('fixed')} />
+              <input type="radio" checked={resetMode === 'fixed'} onChange={() => setResetMode('fixed')} />
               Fixed daily reset
             </label>
             <label>
-              <input type="radio" checked={streakMode === 'rolling'} onChange={() => setStreakMode('rolling')} />
+              <input type="radio" checked={resetMode === 'rolling'} onChange={() => setResetMode('rolling')} />
               Rolling 24-hour
             </label>
           </fieldset>
 
-          {streakMode === 'fixed' ? (
+          {resetMode === 'fixed' ? (
             <>
               <label>
                 Reset time (HH:MM)

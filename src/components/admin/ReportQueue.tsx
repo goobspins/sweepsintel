@@ -22,7 +22,7 @@ interface StateReport {
 interface ResetSuggestion {
   id: number;
   casino_name: string | null;
-  suggested_streak_mode: string | null;
+  suggested_reset_mode: string | null;
   suggested_reset_time: string | null;
   suggested_timezone: string | null;
   evidence_text: string | null;
@@ -60,24 +60,24 @@ export default function ReportQueue({ bans, states, resets }: ReportQueueProps) 
     tab === 'bans'
       ? bans.map((row) => ({
           id: row.id,
-          title: `${row.casino_name ?? 'Unknown'} · ${row.report_type}`,
+          title: `${row.casino_name ?? 'Unknown'} - ${row.report_type}`,
           body: row.description,
-          meta: `${row.reporter_user_id ?? 'anon'} · ${row.reporter_ip_hash ?? 'no hash'}`,
+          meta: `${row.reporter_user_id ?? 'anon'} - ${row.reporter_ip_hash ?? 'no hash'}`,
           kind: 'ban' as const,
         }))
       : tab === 'states'
         ? states.map((row) => ({
             id: row.id,
-            title: `${row.casino_name ?? 'Unknown'} · ${row.state_code ?? '--'} · ${row.reported_status}`,
+            title: `${row.casino_name ?? 'Unknown'} - ${row.state_code ?? '--'} - ${row.reported_status}`,
             body: row.report_text,
-            meta: `${row.reporter_user_id ?? 'anon'} · ${row.reporter_ip_hash ?? 'no hash'}`,
+            meta: `${row.reporter_user_id ?? 'anon'} - ${row.reporter_ip_hash ?? 'no hash'}`,
             kind: 'state' as const,
           }))
         : resets.map((row) => ({
             id: row.id,
-            title: `${row.casino_name ?? 'Unknown'} · ${row.suggested_streak_mode ?? 'unknown'} @ ${row.suggested_reset_time ?? '--'}`,
+            title: `${row.casino_name ?? 'Unknown'} - ${row.suggested_reset_mode ?? 'unknown'} @ ${row.suggested_reset_time ?? '--'}`,
             body: row.evidence_text ?? 'No evidence text',
-            meta: `${row.reporter_user_id ?? 'anon'} · ${row.reporter_ip_hash ?? 'no hash'}`,
+            meta: `${row.reporter_user_id ?? 'anon'} - ${row.reporter_ip_hash ?? 'no hash'}`,
             kind: 'reset' as const,
           }));
 

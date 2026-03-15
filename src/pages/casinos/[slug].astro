@@ -25,8 +25,7 @@ const casinoRows = await query<{
   id: number;
   slug: string;
   name: string;
-  tier: number;
-  rating: number | null;
+  tier: string;
   parent_company: string | null;
   promoban_risk: string;
   hardban_risk: string;
@@ -36,14 +35,10 @@ const casinoRows = await query<{
   redemption_speed_desc: string | null;
   redemption_fee_desc: string | null;
   min_redemption_usd: number | string | null;
-  playthrough_multiplier: number | string | null;
-  playthrough_notes: string | null;
-  streak_mode: string | null;
+  reset_mode: string | null;
   reset_time_local: string | null;
   reset_timezone: string | null;
   has_live_games: boolean;
-  cw_direction: string | null;
-  cw_notes: string | null;
   has_affiliate_link: boolean;
   affiliate_link_url: string | null;
   is_excluded: boolean;
@@ -53,7 +48,6 @@ const casinoRows = await query<{
     slug,
     name,
     tier,
-    rating,
     parent_company,
     promoban_risk,
     hardban_risk,
@@ -63,14 +57,10 @@ const casinoRows = await query<{
     redemption_speed_desc,
     redemption_fee_desc,
     min_redemption_usd,
-    playthrough_multiplier,
-    playthrough_notes,
-    streak_mode,
+    reset_mode,
     reset_time_local,
     reset_timezone,
     has_live_games,
-    cw_direction,
-    cw_notes,
     has_affiliate_link,
     affiliate_link_url,
     is_excluded
@@ -256,7 +246,6 @@ const directUrl =
             <h1 class="section-title" style="margin:0;">{currentCasino.name}</h1>
             <div style="display:flex;gap:.75rem;flex-wrap:wrap;color:var(--color-muted);">
               <span style="font-weight:700;color:var(--color-primary);">Tier {currentCasino.tier}</span>
-              <span>* {currentCasino.rating ?? '--'}</span>
               <span>Parent: {currentCasino.parent_company ?? 'Independent'}</span>
             </div>
           </div>
@@ -309,11 +298,6 @@ const directUrl =
         </div>
       ) : null}
       <GameAvailabilityTable games={profileData.games} />
-      <div style="display:grid;gap:.5rem;">
-        <strong>Cross-wash compatible: {currentCasino.cw_direction ? 'Yes' : 'No'}</strong>
-        <span class="muted">Direction: {currentCasino.cw_direction ?? 'Unknown'}</span>
-        <span class="muted">[Detailed strategy notes available with Premium]</span>
-      </div>
     </section>
 
     <section class="surface-card" style="padding:1.5rem;">

@@ -3,16 +3,21 @@ import { transaction, query, type TransactionClient } from './db';
 export interface TrackerCasinoRow {
   casino_id: number;
   sort_order: number | null;
+  no_daily_reward: boolean;
   typical_daily_sc: number | string | null;
   personal_notes: string | null;
   name: string;
   slug: string;
-  streak_mode: string | null;
+  tier: string;
+  claim_url: string | null;
+  reset_mode: string | null;
   reset_time_local: string | null;
   reset_timezone: string | null;
+  reset_interval_hours: number;
   has_streaks: boolean;
   sc_to_usd_ratio: number | string | null;
   has_affiliate_link: boolean;
+  affiliate_link_url: string | null;
   source: string;
   daily_bonus_desc: string | null;
   today_claim_id: number | null;
@@ -36,10 +41,10 @@ export interface TrackerSuggestion {
   id: number;
   name: string;
   slug: string;
+  tier: string;
   daily_bonus_desc: string | null;
   has_affiliate_link: boolean;
   affiliate_link_url: string | null;
-  tier: number;
   sc_to_usd_ratio: number | string | null;
   sort_sc: number | string | null;
 }
@@ -53,6 +58,7 @@ export interface TrackerStatusData {
   casinos: TrackerCasinoRow[];
   streakClaims: TrackerClaimHistoryRow[];
   alerts: TrackerAlertItem[];
+  joinedCasinoIds: number[];
 }
 
 export interface AddCasinoResult {
@@ -157,9 +163,9 @@ async function resolveCasinoById(
 export async function getTrackerStatus(userId: string): Promise<TrackerStatusData> {
   const casinos = await query<TrackerCasinoRow>(
     `SELECT
-      ucs.casino_id, ucs.sort_order, ucs.typical_daily_sc, ucs.personal_notes,
-      c.name, c.slug, c.streak_mode, c.reset_time_local, c.reset_timezone,
-      c.has_streaks, c.sc_to_usd_ratio, c.has_affiliate_link, c.source,
+      ucs.casino_id, ucs.sort_order, ucs.no_daily_reward, ucs.typical_daily_sc, ucs.personal_notes,
+      c.name, c.slug, c.tier, c.claim_url, c.reset_mode, c.reset_time_local, c.reset_timezone, c.reset_interval_hours,
+      c.has_streaks, c.sc_to_usd_ratio, c.has_affiliate_link, c.affiliate_link_url, c.source,
       c.daily_bonus_desc,
       dbc.id AS today_claim_id, dbc.sc_amount AS today_sc, dbc.claimed_at AS today_claimed_at
     FROM user_casino_settings ucs
@@ -176,7 +182,7 @@ export async function getTrackerStatus(userId: string): Promise<TrackerStatusDat
 
   const streakOrRollingIds = casinos
     .filter(
-      (casino) => casino.has_streaks || casino.streak_mode === 'rolling',
+      (casino) => casino.has_streaks || casino.reset_mode === 'rolling',
     )
     .map((casino) => casino.casino_id);
 
@@ -194,6 +200,17 @@ export async function getTrackerStatus(userId: string): Promise<TrackerStatusDat
       : [];
 
   const trackedIds = casinos.map((casino) => casino.casino_id);
+  const joinedCasinoIds =
+    trackedIds.length > 0
+      ? await query<{ casino_id: number }>(
+          `SELECT DISTINCT casino_id
+          FROM ledger_entries
+          WHERE user_id = $1
+            AND casino_id = ANY($2::int[])`,
+          [userId, trackedIds],
+        )
+      : [];
+
   const alerts =
     trackedIds.length > 0
       ? await query<TrackerAlertItem>(
@@ -216,7 +233,12 @@ export async function getTrackerStatus(userId: string): Promise<TrackerStatusDat
           LIMIT 20`,
         );
 
-  return { casinos, streakClaims, alerts };
+  return {
+    casinos,
+    streakClaims,
+    alerts,
+    joinedCasinoIds: joinedCasinoIds.map((row) => row.casino_id),
+  };
 }
 
 export async function getTrackerSuggestions(userId: string) {
@@ -283,7 +305,7 @@ export async function addCasinoToTracker(options: {
           source,
           has_affiliate_link,
           is_excluded,
-          streak_mode
+          reset_mode
         ) VALUES ($1, $2, 'user_suggested', false, false, 'rolling')
         RETURNING id, name, slug, source, has_affiliate_link, affiliate_link_url`,
         [slug, trimmedName],

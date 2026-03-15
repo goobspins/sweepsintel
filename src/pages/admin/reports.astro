@@ -24,7 +24,7 @@ const states = await query<any>(
   ORDER BY sar.submitted_at DESC`,
 );
 const resets = await query<any>(
-  `SELECT rts.id, c.name AS casino_name, rts.suggested_streak_mode, rts.suggested_reset_time, rts.suggested_timezone, rts.evidence_text, rts.reporter_ip_hash, rts.reporter_user_id
+  `SELECT rts.id, c.name AS casino_name, rts.suggested_reset_mode, rts.suggested_reset_time, rts.suggested_timezone, rts.evidence_text, rts.reporter_ip_hash, rts.reporter_user_id
   FROM reset_time_suggestions rts
   LEFT JOIN casinos c ON c.id = rts.casino_id
   WHERE rts.status = 'pending'

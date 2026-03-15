@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { getTierStyles } from '../../lib/casino-tier';
+
 const riskColors: Record<string, string> = {
   none: '#16A34A',
   low: '#16A34A',
@@ -13,8 +15,7 @@ interface StateCardProps {
     id: number;
     slug: string;
     name: string;
-    tier: number;
-    rating: number | null;
+    tier: string;
     promoban_risk: string;
   };
   destination: {
@@ -31,6 +32,7 @@ export default function StateCard({
   referrerSource,
 }: StateCardProps) {
   const [pending, setPending] = useState(false);
+  const tierStyles = getTierStyles(casino.tier);
 
   async function handleClick(event: React.MouseEvent<HTMLAnchorElement>) {
     if (destination.kind !== 'affiliate' || !destination.fallbackUrl) {
@@ -80,7 +82,6 @@ export default function StateCard({
         <span className="tier-badge">Tier {casino.tier}</span>
       </div>
       <div className="meta-row">
-        <span>* {casino.rating ?? '--'}</span>
         <span style={{ color: riskColors[casino.promoban_risk] ?? '#6B7280', fontWeight: 700 }}>
           {casino.promoban_risk} risk
         </span>
@@ -98,8 +99,8 @@ export default function StateCard({
           color:var(--color-ink); text-decoration:none; font-weight:800; letter-spacing:-.03em;
         }
         .tier-badge {
-          border-radius:999px; padding:.3rem .6rem; background:rgba(37,99,235,.08);
-          color:var(--color-primary); font-weight:700;
+          border-radius:999px; padding:.3rem .6rem; font-weight:700;
+          background:${tierStyles.background}; color:${tierStyles.color};
         }
         .meta-row { color:var(--color-muted); }
       `}</style>

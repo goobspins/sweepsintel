@@ -17,6 +17,12 @@ interface SettingsPanelProps {
     state_subscriptions: string[];
     states: Array<{ state_code: string; state_name: string }>;
     vapid_public_key: string;
+    tracked_casinos: Array<{
+      casino_id: number;
+      casino_name: string;
+      slug: string;
+      no_daily_reward: boolean;
+    }>;
   };
 }
 
@@ -39,6 +45,8 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
   const [stateSubscriptions, setStateSubscriptions] = useState(initialSettings.state_subscriptions);
   const [pushOptIn, setPushOptIn] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  const [trackedCasinos, setTrackedCasinos] = useState(initialSettings.tracked_casinos);
+  const [savingCasinoId, setSavingCasinoId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -125,6 +133,38 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
     }
   }
 
+  async function updateCasinoTracking(casinoId: number, noDailyReward: boolean) {
+    setSavingCasinoId(casinoId);
+    try {
+      const response = await fetch('/api/tracker/casino-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          casino_id: casinoId,
+          no_daily_reward: noDailyReward,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Unable to save casino settings.');
+      }
+
+      setTrackedCasinos((current) =>
+        current.map((casino) =>
+          casino.casino_id === casinoId
+            ? { ...casino, no_daily_reward: data.no_daily_reward }
+            : casino,
+        ),
+      );
+      setToast({ tone: 'success', message: 'Casino tracking updated.' });
+    } catch (error) {
+      console.error(error);
+      setToast({ tone: 'error', message: 'Unable to save casino settings.' });
+    } finally {
+      setSavingCasinoId(null);
+    }
+  }
+
   return (
     <section className="surface-card settings-panel">
       {toast ? <div className={`toast toast-${toast.tone}`}>{toast.message}</div> : null}
@@ -167,6 +207,37 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         />
       </div>
 
+      <div className="field">
+        <span>Tracked Casinos</span>
+        {trackedCasinos.length === 0 ? (
+          <div className="muted">Add casinos to your tracker before changing per-casino reward behavior.</div>
+        ) : (
+          <div className="casino-settings-list">
+            {trackedCasinos.map((casino) => (
+              <label key={casino.casino_id} className="casino-setting-row">
+                <div className="casino-setting-copy">
+                  <a href={`/casinos/${casino.slug}`} className="casino-link">
+                    {casino.casino_name}
+                  </a>
+                  <span className="muted">Use this when you track the casino for balances or redemptions only.</span>
+                </div>
+                <span className="toggle-copy">
+                  <input
+                    type="checkbox"
+                    checked={casino.no_daily_reward}
+                    disabled={savingCasinoId === casino.casino_id}
+                    onChange={(event) =>
+                      void updateCasinoTracking(casino.casino_id, event.target.checked)
+                    }
+                  />
+                  <span>No daily reward</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+
       <label className="push-toggle">
         <input
           type="checkbox"
@@ -198,6 +269,14 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
           border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem;
           font:inherit; background:#fff;
         }
+        .casino-settings-list { display:grid; gap:.75rem; }
+        .casino-setting-row {
+          display:flex; justify-content:space-between; gap:1rem; align-items:center; flex-wrap:wrap;
+          border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem; background:#fff;
+        }
+        .casino-setting-copy { display:grid; gap:.25rem; }
+        .casino-link { color:var(--color-ink); text-decoration:none; font-weight:700; }
+        .toggle-copy { display:flex; gap:.5rem; align-items:center; font-weight:700; }
         .push-toggle { display:flex; gap:.6rem; align-items:center; }
         .actions { display:flex; gap:.75rem; flex-wrap:wrap; }
         .actions button {

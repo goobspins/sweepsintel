@@ -14,8 +14,7 @@ if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
 const casinos = await query<{
   id: number;
   name: string;
-  tier: number;
-  rating: number | null;
+  tier: string;
   promoban_risk: string;
   source: string;
   has_affiliate_link: boolean;
@@ -27,7 +26,6 @@ const casinos = await query<{
     c.id,
     c.name,
     c.tier,
-    c.rating,
     c.promoban_risk,
     c.source,
     c.has_affiliate_link,
@@ -57,13 +55,12 @@ const excludedCasinos = casinos.filter((casino) => casino.is_excluded);
     <section class="surface-card" style="padding:1.25rem;">
       <h2 style="margin:0 0 1rem;">Admin-curated</h2>
       <table class="admin-table">
-        <thead><tr><th>Name</th><th>Tier</th><th>Rating</th><th>Risk</th><th>Affiliate</th><th>Redemption speed</th></tr></thead>
+        <thead><tr><th>Name</th><th>Tier</th><th>Risk</th><th>Affiliate</th><th>Redemption speed</th></tr></thead>
         <tbody>
           {adminCasinos.map((casino) => (
             <tr>
               <td><a href={`/admin/casinos/${casino.id}`}>{casino.name}</a></td>
-              <td><QuickEditRow client:load casinoId={casino.id} field="tier" value={casino.tier} type="number" /></td>
-              <td><QuickEditRow client:load casinoId={casino.id} field="rating" value={casino.rating} type="number" /></td>
+              <td><QuickEditRow client:load casinoId={casino.id} field="tier" value={casino.tier} options={['S', 'A', 'B', 'C']} /></td>
               <td><QuickEditRow client:load casinoId={casino.id} field="promoban_risk" value={casino.promoban_risk} options={['none', 'low', 'medium', 'high', 'unknown']} /></td>
               <td>{casino.has_affiliate_link ? 'Yes' : 'No'}</td>
               <td><QuickEditRow client:load casinoId={casino.id} field="redemption_speed_desc" value={casino.redemption_speed_desc} /></td>
@@ -81,13 +78,12 @@ const excludedCasinos = casinos.filter((casino) => casino.is_excluded);
     <section class="surface-card" style="padding:1.25rem;">
       <h2 style="margin:0 0 1rem;">Excluded</h2>
       <table class="admin-table">
-        <thead><tr><th>Name</th><th>Tier</th><th>Rating</th><th>Risk</th></tr></thead>
+        <thead><tr><th>Name</th><th>Tier</th><th>Risk</th></tr></thead>
         <tbody>
           {excludedCasinos.map((casino) => (
             <tr>
               <td><a href={`/admin/casinos/${casino.id}`}>{casino.name}</a></td>
               <td>{casino.tier}</td>
-              <td>{casino.rating ?? '--'}</td>
               <td>{casino.promoban_risk}</td>
             </tr>
           ))}

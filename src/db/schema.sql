@@ -27,12 +27,12 @@ CREATE TABLE casinos (
   id SERIAL PRIMARY KEY,
   slug VARCHAR(50) UNIQUE NOT NULL,
   name VARCHAR(100) NOT NULL,
-  tier INT DEFAULT 2,
-  rating DECIMAL(3,1),
+  tier VARCHAR(1) DEFAULT 'B',
   claim_url TEXT,
-  streak_mode VARCHAR(20) DEFAULT 'rolling',
+  reset_mode VARCHAR(20) DEFAULT 'rolling',
   reset_time_local VARCHAR(5),
   reset_timezone VARCHAR(50),
+  reset_interval_hours INT NOT NULL DEFAULT 24,
   has_streaks BOOLEAN DEFAULT FALSE,
   sc_to_usd_ratio DECIMAL(6,4) DEFAULT 1.0,
   parent_company VARCHAR(100),
@@ -40,15 +40,9 @@ CREATE TABLE casinos (
   hardban_risk VARCHAR(20) DEFAULT 'unknown',
   family_ban_propagation BOOLEAN DEFAULT FALSE,
   ban_confiscates_funds BOOLEAN DEFAULT FALSE,
-  promoban_triggers TEXT,
-  ban_notes TEXT,
-  playthrough_multiplier DECIMAL(4,2),
-  playthrough_notes TEXT,
   daily_bonus_desc VARCHAR(100),
   daily_bonus_sc_avg INT,
   has_live_games BOOLEAN DEFAULT FALSE,
-  cw_direction VARCHAR(20),
-  cw_notes TEXT,
   redemption_speed_desc VARCHAR(100),
   redemption_fee_desc VARCHAR(100),
   min_redemption_usd DECIMAL(10,2),
@@ -58,7 +52,6 @@ CREATE TABLE casinos (
   affiliate_enrollment_verified BOOLEAN DEFAULT FALSE,
   source VARCHAR(20) DEFAULT 'admin',
   is_excluded BOOLEAN DEFAULT FALSE,
-  notes TEXT,
   last_updated_at TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP DEFAULT NOW()
 );
@@ -144,6 +137,7 @@ CREATE TABLE user_casino_settings (
   typical_daily_sc DECIMAL(8,2),
   personal_notes TEXT,
   sort_order INT,
+  no_daily_reward BOOLEAN NOT NULL DEFAULT FALSE,
   added_at TIMESTAMP DEFAULT NOW(),
   removed_at TIMESTAMP,
   UNIQUE(user_id, casino_id)
@@ -198,7 +192,7 @@ CREATE TABLE user_state_subscriptions (
 CREATE TABLE reset_time_suggestions (
   id SERIAL PRIMARY KEY,
   casino_id INT REFERENCES casinos(id),
-  suggested_streak_mode VARCHAR(20),
+  suggested_reset_mode VARCHAR(20),
   suggested_reset_time VARCHAR(5),
   suggested_timezone VARCHAR(50),
   evidence_text TEXT,
@@ -406,7 +400,7 @@ CREATE INDEX idx_ucs_user_active ON user_casino_settings(user_id) WHERE removed_
 CREATE INDEX idx_discord_intel_casino_published ON discord_intel_items(casino_id, is_published, created_at DESC) WHERE is_published = true;
 CREATE INDEX idx_push_subs_user_active ON push_subscriptions(user_id) WHERE is_active = true;
 CREATE INDEX idx_ledger_user_casino_exists ON ledger_entries(user_id, casino_id);
-CREATE INDEX idx_casinos_tier_rating ON casinos(tier, rating DESC NULLS LAST) WHERE rating IS NOT NULL;
+CREATE INDEX idx_casinos_tier ON casinos(tier);
 CREATE INDEX idx_ban_reports_pending ON ban_reports(id) WHERE is_published = false;
 CREATE INDEX idx_state_reports_pending ON state_availability_reports(id) WHERE is_published = false;
 CREATE INDEX idx_reset_suggestions_pending ON reset_time_suggestions(id) WHERE status = 'pending';

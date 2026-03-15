@@ -16,7 +16,7 @@ const providers = await query<{ id: number; name: string }>('SELECT id, name FRO
     <AdminCasinoForm
       client:load
       mode="new"
-      casino={{ slug: '', name: '', tier: 2, rating: null }}
+      casino={{ slug: '', name: '', tier: 'B' }}
       providers={providers}
       selectedProviders={[]}
       games={[]}

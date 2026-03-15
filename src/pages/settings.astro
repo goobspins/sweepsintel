@@ -39,6 +39,25 @@ const [settingsRows, subscriptionRows, states] = await Promise.all([
     )),
 ]);
 
+const trackedCasinos = await query<{
+  casino_id: number;
+  casino_name: string;
+  slug: string;
+  no_daily_reward: boolean;
+}>(
+  `SELECT
+    ucs.casino_id,
+    c.name AS casino_name,
+    c.slug,
+    ucs.no_daily_reward
+  FROM user_casino_settings ucs
+  JOIN casinos c ON c.id = ucs.casino_id
+  WHERE ucs.user_id = $1
+    AND ucs.removed_at IS NULL
+  ORDER BY ucs.sort_order ASC NULLS LAST, c.name ASC`,
+  [user.userId],
+);
+
 const settings = settingsRows[0] ?? {
   timezone: 'America/New_York',
   home_state: null,
@@ -58,6 +77,7 @@ const vapidPublicKey = import.meta.env.VAPID_PUBLIC_KEY ?? '';
         state_subscriptions: subscriptionRows.map((row) => row.state_code),
         states,
         vapid_public_key: vapidPublicKey,
+        tracked_casinos: trackedCasinos,
       }}
     />
   </div>

@@ -1,9 +1,8 @@
 import type { APIRoute } from 'astro';
 
-import { methodNotAllowed } from '../../../lib/api';
-
 import { createAdminFlag } from '../../../lib/admin';
 import { isHttpError, requireAdmin } from '../../../lib/auth';
+import { methodNotAllowed } from '../../../lib/api';
 import { query, transaction } from '../../../lib/db';
 
 function json(data: unknown, status = 200) {
@@ -113,11 +112,11 @@ export const POST: APIRoute = async ({ request }) => {
         slug,
         name,
         tier,
-        rating,
         claim_url,
-        streak_mode,
+        reset_mode,
         reset_time_local,
         reset_timezone,
+        reset_interval_hours,
         has_streaks,
         sc_to_usd_ratio,
         parent_company,
@@ -125,15 +124,9 @@ export const POST: APIRoute = async ({ request }) => {
         hardban_risk,
         family_ban_propagation,
         ban_confiscates_funds,
-        promoban_triggers,
-        ban_notes,
-        playthrough_multiplier,
-        playthrough_notes,
         daily_bonus_desc,
         daily_bonus_sc_avg,
         has_live_games,
-        cw_direction,
-        cw_notes,
         redemption_speed_desc,
         redemption_fee_desc,
         min_redemption_usd,
@@ -143,22 +136,20 @@ export const POST: APIRoute = async ({ request }) => {
         affiliate_enrollment_verified,
         source,
         is_excluded,
-        notes,
         last_updated_at
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-        $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,NOW()
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,NOW()
       )
       RETURNING id`,
       [
         body.slug,
         body.name,
-        body.tier ?? 2,
-        body.rating ?? null,
+        body.tier ?? 'B',
         body.claim_url ?? null,
-        body.streak_mode ?? 'rolling',
+        body.reset_mode ?? 'rolling',
         body.reset_time_local ?? null,
         body.reset_timezone ?? null,
+        body.reset_interval_hours ?? 24,
         Boolean(body.has_streaks),
         body.sc_to_usd_ratio ?? 1,
         body.parent_company ?? null,
@@ -166,15 +157,9 @@ export const POST: APIRoute = async ({ request }) => {
         body.hardban_risk ?? 'unknown',
         Boolean(body.family_ban_propagation),
         Boolean(body.ban_confiscates_funds),
-        body.promoban_triggers ?? null,
-        body.ban_notes ?? null,
-        body.playthrough_multiplier ?? null,
-        body.playthrough_notes ?? null,
         body.daily_bonus_desc ?? null,
         body.daily_bonus_sc_avg ?? null,
         Boolean(body.has_live_games),
-        body.cw_direction ?? null,
-        body.cw_notes ?? null,
         body.redemption_speed_desc ?? null,
         body.redemption_fee_desc ?? null,
         body.min_redemption_usd ?? null,
@@ -184,7 +169,6 @@ export const POST: APIRoute = async ({ request }) => {
         Boolean(body.affiliate_enrollment_verified),
         body.source ?? 'admin',
         Boolean(body.is_excluded),
-        body.notes ?? null,
       ],
     );
 
@@ -227,11 +211,11 @@ export const PATCH: APIRoute = async ({ request }) => {
       'slug',
       'name',
       'tier',
-      'rating',
       'claim_url',
-      'streak_mode',
+      'reset_mode',
       'reset_time_local',
       'reset_timezone',
+      'reset_interval_hours',
       'has_streaks',
       'sc_to_usd_ratio',
       'parent_company',
@@ -239,15 +223,9 @@ export const PATCH: APIRoute = async ({ request }) => {
       'hardban_risk',
       'family_ban_propagation',
       'ban_confiscates_funds',
-      'promoban_triggers',
-      'ban_notes',
-      'playthrough_multiplier',
-      'playthrough_notes',
       'daily_bonus_desc',
       'daily_bonus_sc_avg',
       'has_live_games',
-      'cw_direction',
-      'cw_notes',
       'redemption_speed_desc',
       'redemption_fee_desc',
       'min_redemption_usd',
@@ -257,7 +235,6 @@ export const PATCH: APIRoute = async ({ request }) => {
       'affiliate_enrollment_verified',
       'source',
       'is_excluded',
-      'notes',
     ];
 
     const updates: string[] = [];
@@ -307,5 +284,3 @@ export const PATCH: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to update casino.' }, 500);
   }
 };
-
-

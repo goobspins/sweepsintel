@@ -113,11 +113,11 @@ export const POST: APIRoute = async ({ request }) => {
     if (reportType === 'reset') {
       const rows = await query<{
         casino_id: number | null;
-        suggested_streak_mode: string | null;
+        suggested_reset_mode: string | null;
         suggested_reset_time: string | null;
         suggested_timezone: string | null;
       }>(
-        `SELECT casino_id, suggested_streak_mode, suggested_reset_time, suggested_timezone
+        `SELECT casino_id, suggested_reset_mode, suggested_reset_time, suggested_timezone
         FROM reset_time_suggestions
         WHERE id = $1
         LIMIT 1`,
@@ -140,13 +140,13 @@ export const POST: APIRoute = async ({ request }) => {
       if (action === 'publish' && report.casino_id) {
         await query(
           `UPDATE casinos
-          SET streak_mode = COALESCE($1, streak_mode),
+          SET reset_mode = COALESCE($1, reset_mode),
               reset_time_local = COALESCE($2, reset_time_local),
               reset_timezone = COALESCE($3, reset_timezone),
               last_updated_at = NOW()
           WHERE id = $4`,
           [
-            report.suggested_streak_mode,
+            report.suggested_reset_mode,
             report.suggested_reset_time,
             report.suggested_timezone,
             report.casino_id,

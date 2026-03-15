@@ -5,19 +5,24 @@ export interface CasinoRowViewModel {
   casinoId: number;
   name: string;
   slug: string;
+  tier: string;
   source: string;
   dailyBonusDesc: string | null;
   sortOrder: number | null;
-  streakMode: string | null;
+  resetMode: string | null;
   resetTimeLocal: string | null;
   resetTimezone: string | null;
+  resetIntervalHours: number;
   hasStreaks: boolean;
+  noDailyReward: boolean;
   todayClaimId: number | null;
   todaySc: number | string | null;
   todayClaimedAt: string | null;
   lastClaimedAt: string | null;
-  status: 'available' | 'countdown' | 'claimed';
+  status: 'available' | 'countdown' | 'claimed' | 'no-daily';
   streakText: string | null;
+  destinationUrl: string;
+  destinationKind: 'affiliate' | 'claim' | 'profile';
 }
 
 interface CasinoRowProps {
@@ -48,11 +53,44 @@ export default function CasinoRow({
   onRemove,
 }: CasinoRowProps) {
   const isClaimed = casino.status === 'claimed';
+  const isNoDaily = casino.status === 'no-daily';
   const canClaim = casino.status === 'available';
+
+  async function handleCasinoClick(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (casino.destinationKind !== 'affiliate') {
+      return;
+    }
+
+    try {
+      if (navigator.sendBeacon) {
+        const payload = JSON.stringify({
+          casino_id: casino.casinoId,
+          referrer_source: 'tracker_name',
+        });
+        const blob = new Blob([payload], { type: 'application/json' });
+        navigator.sendBeacon('/api/affiliate/click', blob);
+        return;
+      }
+
+      void fetch('/api/affiliate/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          casino_id: casino.casinoId,
+          referrer_source: 'tracker_name',
+        }),
+        keepalive: true,
+      });
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   const rowClass =
     casino.status === 'available'
       ? 'row row-available'
+      : casino.status === 'no-daily'
+        ? 'row row-no-daily'
       : casino.status === 'claimed'
         ? 'row row-claimed'
         : 'row';
@@ -67,22 +105,33 @@ export default function CasinoRow({
       <div className="row-main">
         <div className="row-copy">
           {casino.source === 'admin' ? (
-            <a href={`/casinos/${casino.slug}`} className="casino-link">
+            <a
+              href={casino.destinationUrl}
+              className="casino-link"
+              onClick={(event) => void handleCasinoClick(event)}
+              target={casino.destinationKind !== 'profile' ? '_blank' : undefined}
+              rel={casino.destinationKind !== 'profile' ? 'noopener' : undefined}
+            >
               {casino.name}
             </a>
           ) : (
             <span className="casino-link">{casino.name}</span>
           )}
           <div className="row-meta">
-            <ResetCountdown
-              streakMode={casino.streakMode}
-              resetTimeLocal={casino.resetTimeLocal}
-              resetTimezone={casino.resetTimezone}
-              lastClaimedAt={casino.lastClaimedAt}
-              claimedToday={isClaimed}
-              userTimezone={userTimezone}
-              nowTs={nowTs}
-            />
+            {isNoDaily ? (
+              <span className="no-daily-label">No daily reward</span>
+            ) : (
+              <ResetCountdown
+                resetMode={casino.resetMode}
+                resetTimeLocal={casino.resetTimeLocal}
+                resetTimezone={casino.resetTimezone}
+                resetIntervalHours={casino.resetIntervalHours}
+                lastClaimedAt={casino.lastClaimedAt}
+                claimedToday={isClaimed}
+                userTimezone={userTimezone}
+                nowTs={nowTs}
+              />
+            )}
             {casino.streakText ? <span>{casino.streakText}</span> : null}
             {casino.dailyBonusDesc ? <span>{casino.dailyBonusDesc}</span> : null}
           </div>
@@ -131,6 +180,11 @@ export default function CasinoRow({
           background: rgba(148, 163, 184, 0.08);
         }
 
+        .row-no-daily {
+          background: rgba(148, 163, 184, 0.06);
+          color: var(--color-muted);
+        }
+
         .row-main {
           display: flex;
           gap: 1rem;
@@ -157,6 +211,10 @@ export default function CasinoRow({
           gap: 0.75rem;
           color: var(--color-muted);
           font-size: 0.94rem;
+        }
+
+        .no-daily-label {
+          font-weight: 700;
         }
 
         .row-actions {

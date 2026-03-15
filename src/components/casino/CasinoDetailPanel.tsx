@@ -8,9 +8,7 @@ interface CasinoDetailPanelProps {
     redemption_speed_desc: string | null;
     min_redemption_usd: number | string | null;
     redemption_fee_desc: string | null;
-    playthrough_multiplier: number | string | null;
-    playthrough_notes: string | null;
-    streak_mode: string | null;
+    reset_mode: string | null;
     reset_time_local: string | null;
   };
   nextResetLabel?: string | null;
@@ -52,15 +50,9 @@ export default function CasinoDetailPanel({
     ],
     ['Fees', casino.redemption_fee_desc ?? 'Unknown'],
     [
-      'Playthrough',
-      casino.playthrough_multiplier
-        ? `${casino.playthrough_multiplier}x${casino.playthrough_notes ? ` - ${casino.playthrough_notes}` : ''}`
-        : 'Unknown',
-    ],
-    [
-      'Streak Mode',
-      casino.streak_mode
-        ? `${casino.streak_mode}${casino.reset_time_local ? ` @ ${casino.reset_time_local}` : ''}`
+      'Reset Mode',
+      casino.reset_mode
+        ? `${casino.reset_mode}${casino.reset_time_local ? ` @ ${casino.reset_time_local}` : ''}`
         : 'Unknown',
     ],
     ['Next Reset', nextResetLabel ?? 'Reset time unknown'],

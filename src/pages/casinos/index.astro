@@ -14,8 +14,7 @@ const casinos = await getCached('directory:casinos', 10 * 60 * 1000, async () =>
     id: number;
     slug: string;
     name: string;
-    tier: number;
-    rating: number | null;
+    tier: string;
     promoban_risk: string;
     has_live_games: boolean;
     redemption_speed_desc: string | null;
@@ -28,7 +27,6 @@ const casinos = await getCached('directory:casinos', 10 * 60 * 1000, async () =>
       slug,
       name,
       tier,
-      rating,
       promoban_risk,
       has_live_games,
       redemption_speed_desc,
@@ -38,7 +36,7 @@ const casinos = await getCached('directory:casinos', 10 * 60 * 1000, async () =>
     FROM casinos
     WHERE is_excluded = false
       AND source = 'admin'
-    ORDER BY tier ASC, rating DESC NULLS LAST, name ASC`,
+    ORDER BY tier ASC, name ASC`,
   ),
 );
 

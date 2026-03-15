@@ -6,7 +6,7 @@ import { hashReporterIp } from '../../../lib/report-utils';
 
 export const prerender = false;
 
-const VALID_STREAK_MODES = new Set(['rolling', 'fixed']);
+const VALID_RESET_MODES = new Set(['rolling', 'fixed']);
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -21,9 +21,9 @@ export const POST: APIRoute = async ({ request }) => {
     const body = await request.json();
 
     const casinoId = Number(body?.casino_id);
-    const suggestedStreakMode =
-      typeof body?.suggested_streak_mode === 'string' && body.suggested_streak_mode
-        ? body.suggested_streak_mode
+    const suggestedResetMode =
+      typeof body?.suggested_reset_mode === 'string' && body.suggested_reset_mode
+        ? body.suggested_reset_mode
         : null;
     const suggestedResetTime =
       typeof body?.suggested_reset_time === 'string' && body.suggested_reset_time.trim()
@@ -39,8 +39,8 @@ export const POST: APIRoute = async ({ request }) => {
     if (!Number.isFinite(casinoId)) {
       return json({ error: 'Casino is required.' }, 400);
     }
-    if (suggestedStreakMode && !VALID_STREAK_MODES.has(suggestedStreakMode)) {
-      return json({ error: 'Invalid streak mode.' }, 400);
+    if (suggestedResetMode && !VALID_RESET_MODES.has(suggestedResetMode)) {
+      return json({ error: 'Invalid reset mode.' }, 400);
     }
     if (suggestedResetTime && !/^\d{2}:\d{2}$/.test(suggestedResetTime)) {
       return json({ error: 'Reset time must be HH:MM.' }, 400);
@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ request }) => {
     await query(
       `INSERT INTO reset_time_suggestions (
         casino_id,
-        suggested_streak_mode,
+        suggested_reset_mode,
         suggested_reset_time,
         suggested_timezone,
         evidence_text,
@@ -87,7 +87,7 @@ export const POST: APIRoute = async ({ request }) => {
         status,
         admin_notes
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8)`,
-      [casinoId, suggestedStreakMode, suggestedResetTime, suggestedTimezone, evidenceText, reporterIpHash, user.userId, shouldFlag ? 'IP dedup threshold reached.' : null],
+      [casinoId, suggestedResetMode, suggestedResetTime, suggestedTimezone, evidenceText, reporterIpHash, user.userId, shouldFlag ? 'IP dedup threshold reached.' : null],
     );
 
     return json({

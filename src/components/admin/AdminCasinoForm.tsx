@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import type { CasinoTier } from '../../lib/casino-tier';
+
 interface ProviderOption {
   id: number;
   name: string;
@@ -19,12 +21,12 @@ interface CasinoRecord {
   id?: number;
   slug: string;
   name: string;
-  tier: number;
-  rating: number | null;
+  tier: CasinoTier;
   claim_url?: string | null;
-  streak_mode?: string | null;
+  reset_mode?: string | null;
   reset_time_local?: string | null;
   reset_timezone?: string | null;
+  reset_interval_hours?: number | null;
   has_streaks?: boolean;
   sc_to_usd_ratio?: number | string | null;
   parent_company?: string | null;
@@ -32,15 +34,9 @@ interface CasinoRecord {
   hardban_risk?: string | null;
   family_ban_propagation?: boolean;
   ban_confiscates_funds?: boolean;
-  promoban_triggers?: string | null;
-  ban_notes?: string | null;
-  playthrough_multiplier?: number | string | null;
-  playthrough_notes?: string | null;
   daily_bonus_desc?: string | null;
   daily_bonus_sc_avg?: number | null;
   has_live_games?: boolean;
-  cw_direction?: string | null;
-  cw_notes?: string | null;
   redemption_speed_desc?: string | null;
   redemption_fee_desc?: string | null;
   min_redemption_usd?: number | string | null;
@@ -50,7 +46,6 @@ interface CasinoRecord {
   affiliate_enrollment_verified?: boolean;
   source?: string;
   is_excluded?: boolean;
-  notes?: string | null;
 }
 
 interface AdminCasinoFormProps {
@@ -60,6 +55,8 @@ interface AdminCasinoFormProps {
   games: GameRow[];
   mode: 'new' | 'edit';
 }
+
+const tierOptions: CasinoTier[] = ['S', 'A', 'B', 'C'];
 
 export default function AdminCasinoForm({
   casino,
@@ -114,8 +111,7 @@ export default function AdminCasinoForm({
       <Section title="Basic info">
         <Text label="Name" value={form.name} onChange={(value) => update('name', value)} />
         <Text label="Slug" value={form.slug} onChange={(value) => update('slug', value)} />
-        <NumberField label="Tier" value={form.tier} onChange={(value) => update('tier', value)} />
-        <NumberField label="Rating" value={form.rating} onChange={(value) => update('rating', value)} />
+        <Select label="Tier" value={form.tier} options={tierOptions} onChange={(value) => update('tier', value as CasinoTier)} />
         <Text label="Parent company" value={form.parent_company ?? ''} onChange={(value) => update('parent_company', value)} />
       </Section>
 
@@ -124,18 +120,19 @@ export default function AdminCasinoForm({
         <Select label="Hardban risk" value={form.hardban_risk ?? 'unknown'} options={['none', 'low', 'medium', 'high', 'unknown']} onChange={(value) => update('hardban_risk', value)} />
         <Checkbox label="Family ban propagation" checked={Boolean(form.family_ban_propagation)} onChange={(value) => update('family_ban_propagation', value)} />
         <Checkbox label="Ban confiscates funds" checked={Boolean(form.ban_confiscates_funds)} onChange={(value) => update('ban_confiscates_funds', value)} />
-        <Area label="Promoban triggers" value={form.promoban_triggers ?? ''} onChange={(value) => update('promoban_triggers', value)} />
-        <Area label="Ban notes" value={form.ban_notes ?? ''} onChange={(value) => update('ban_notes', value)} />
-      </Section>
-
-      <Section title="Playthrough">
-        <NumberField label="Multiplier" value={form.playthrough_multiplier ?? null} onChange={(value) => update('playthrough_multiplier', value)} />
-        <Area label="Playthrough notes" value={form.playthrough_notes ?? ''} onChange={(value) => update('playthrough_notes', value)} />
       </Section>
 
       <Section title="Daily bonus">
         <Text label="Daily bonus description" value={form.daily_bonus_desc ?? ''} onChange={(value) => update('daily_bonus_desc', value)} />
         <NumberField label="Daily bonus SC average" value={form.daily_bonus_sc_avg ?? null} onChange={(value) => update('daily_bonus_sc_avg', value)} />
+        <Checkbox label="Has streaks" checked={Boolean(form.has_streaks)} onChange={(value) => update('has_streaks', value)} />
+      </Section>
+
+      <Section title="Reset time">
+        <Select label="Reset mode" value={form.reset_mode ?? 'rolling'} options={['rolling', 'fixed']} onChange={(value) => update('reset_mode', value)} />
+        <Text label="Reset time local" value={form.reset_time_local ?? ''} onChange={(value) => update('reset_time_local', value)} />
+        <Text label="Reset timezone" value={form.reset_timezone ?? ''} onChange={(value) => update('reset_timezone', value)} />
+        <NumberField label="Reset interval hours" value={form.reset_interval_hours ?? 24} onChange={(value) => update('reset_interval_hours', value)} />
       </Section>
 
       <Section title="Redemption">
@@ -144,14 +141,9 @@ export default function AdminCasinoForm({
         <NumberField label="Min redemption USD" value={form.min_redemption_usd ?? null} onChange={(value) => update('min_redemption_usd', value)} />
       </Section>
 
-      <Section title="Reset time">
-        <Select label="Streak mode" value={form.streak_mode ?? 'rolling'} options={['rolling', 'fixed']} onChange={(value) => update('streak_mode', value)} />
-        <Text label="Reset time local" value={form.reset_time_local ?? ''} onChange={(value) => update('reset_time_local', value)} />
-        <Text label="Reset timezone" value={form.reset_timezone ?? ''} onChange={(value) => update('reset_timezone', value)} />
-        <Checkbox label="Has streaks" checked={Boolean(form.has_streaks)} onChange={(value) => update('has_streaks', value)} />
-      </Section>
-
-      <Section title="Affiliate">
+      <Section title="Affiliate and access">
+        <Text label="Claim URL" value={form.claim_url ?? ''} onChange={(value) => update('claim_url', value)} />
+        <NumberField label="SC to USD ratio" value={form.sc_to_usd_ratio ?? null} onChange={(value) => update('sc_to_usd_ratio', value)} />
         <Checkbox label="Has affiliate link" checked={Boolean(form.has_affiliate_link)} onChange={(value) => update('has_affiliate_link', value)} />
         <Text label="Affiliate URL" value={form.affiliate_link_url ?? ''} onChange={(value) => update('affiliate_link_url', value)} />
         <Text label="Affiliate type" value={form.affiliate_type ?? ''} onChange={(value) => update('affiliate_type', value)} />
@@ -159,6 +151,7 @@ export default function AdminCasinoForm({
       </Section>
 
       <Section title="Providers">
+        <Checkbox label="Has live games" checked={Boolean(form.has_live_games)} onChange={(value) => update('has_live_games', value)} />
         <div className="provider-grid">
           {providers.map((provider) => (
             <label key={provider.id} className="checkbox-row">
@@ -197,18 +190,9 @@ export default function AdminCasinoForm({
         </div>
       </Section>
 
-      <Section title="Cross-wash">
-        <Checkbox label="Has live games" checked={Boolean(form.has_live_games)} onChange={(value) => update('has_live_games', value)} />
-        <Text label="CW direction" value={form.cw_direction ?? ''} onChange={(value) => update('cw_direction', value)} />
-        <Area label="CW notes" value={form.cw_notes ?? ''} onChange={(value) => update('cw_notes', value)} />
-      </Section>
-
       <Section title="Meta">
-        <Text label="Claim URL" value={form.claim_url ?? ''} onChange={(value) => update('claim_url', value)} />
-        <NumberField label="SC to USD ratio" value={form.sc_to_usd_ratio ?? null} onChange={(value) => update('sc_to_usd_ratio', value)} />
         <Select label="Source" value={form.source ?? 'admin'} options={['admin', 'user_suggested']} onChange={(value) => update('source', value)} />
         <Checkbox label="Excluded" checked={Boolean(form.is_excluded)} onChange={(value) => update('is_excluded', value)} />
-        <Area label="Notes" value={form.notes ?? ''} onChange={(value) => update('notes', value)} />
       </Section>
 
       <div className="actions">
@@ -291,15 +275,6 @@ function NumberField({ label, value, onChange }: { label: string; value: number 
         onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
         style={fieldStyle}
       />
-    </label>
-  );
-}
-
-function Area({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label style={{ display: 'grid', gap: '.35rem' }}>
-      <span>{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} style={{ ...fieldStyle, minHeight: '7rem', resize: 'vertical' }} />
     </label>
   );
 }

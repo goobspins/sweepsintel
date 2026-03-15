@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DateTime } from 'luxon';
 
+import { getTrackerDestination } from '../../lib/affiliate';
 import type { SessionUser } from '../../lib/auth';
 import type {
   TrackerCasinoRow,
@@ -56,6 +57,7 @@ export default function DailyTracker({
   const [casinos, setCasinos] = useState(initialData.casinos);
   const [streakClaims, setStreakClaims] = useState(initialData.streakClaims);
   const [alerts, setAlerts] = useState(initialData.alerts);
+  const [joinedCasinoIds, setJoinedCasinoIds] = useState(initialData.joinedCasinoIds);
   const [suggestions, setSuggestions] = useState<TrackerSuggestion[] | null>(null);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,8 +128,14 @@ export default function DailyTracker({
   }, [streakClaims]);
 
   const casinoModels = useMemo(() => {
+    const joinedSet = new Set(joinedCasinoIds);
     const rows = casinos.map((casino) =>
-      buildCasinoViewModel(casino, claimMap.get(casino.casino_id) ?? [], nowTs),
+      buildCasinoViewModel(
+        casino,
+        claimMap.get(casino.casino_id) ?? [],
+        joinedSet.has(casino.casino_id),
+        nowTs,
+      ),
     );
 
     const hasManualSort = rows.some((row) => row.sortOrder !== null);
@@ -154,7 +162,7 @@ export default function DailyTracker({
 
       return a.name.localeCompare(b.name);
     });
-  }, [casinos, claimMap, nowTs, user.timezone]);
+  }, [casinos, claimMap, joinedCasinoIds, nowTs, user.timezone]);
 
   async function refreshTracker() {
       const response = await fetch('/api/tracker/status');
@@ -166,6 +174,7 @@ export default function DailyTracker({
     setCasinos(data.casinos ?? []);
     setStreakClaims(data.streakClaims ?? []);
     setAlerts(data.alerts ?? []);
+    setJoinedCasinoIds(data.joinedCasinoIds ?? []);
   }
 
   async function loadSuggestions() {
@@ -315,16 +324,21 @@ export default function DailyTracker({
           {
             casino_id: suggestion.id,
             sort_order: null,
+            no_daily_reward: false,
             typical_daily_sc: null,
             personal_notes: null,
             name: suggestion.name,
             slug: suggestion.slug,
-            streak_mode: 'rolling',
+            tier: suggestion.tier,
+            claim_url: null,
+            reset_mode: 'rolling',
             reset_time_local: null,
             reset_timezone: null,
+            reset_interval_hours: 24,
             has_streaks: false,
             sc_to_usd_ratio: suggestion.sc_to_usd_ratio,
             has_affiliate_link: suggestion.has_affiliate_link,
+            affiliate_link_url: suggestion.affiliate_link_url,
             source: 'admin',
             daily_bonus_desc: suggestion.daily_bonus_desc,
             today_claim_id: null,
@@ -787,33 +801,43 @@ export default function DailyTracker({
 function buildCasinoViewModel(
   casino: TrackerCasinoRow,
   claims: string[],
+  hasLedgerEntry: boolean,
   nowTs: number,
 ): CasinoRowViewModel {
   const todayClaimedAt = casino.today_claimed_at;
   const lastClaimedAt = todayClaimedAt ?? claims[0] ?? null;
-  const status = todayClaimedAt
-    ? 'claimed'
-    : isAvailableNow(casino, lastClaimedAt, nowTs)
-      ? 'available'
-      : 'countdown';
+  const status = casino.no_daily_reward
+    ? 'no-daily'
+    : todayClaimedAt
+      ? 'claimed'
+      : isAvailableNow(casino, lastClaimedAt, nowTs)
+        ? 'available'
+        : 'countdown';
+
+  const destination = getTrackerDestination(casino, hasLedgerEntry);
 
   return {
     casinoId: casino.casino_id,
     name: casino.name,
     slug: casino.slug,
+    tier: casino.tier,
     source: casino.source,
     dailyBonusDesc: casino.daily_bonus_desc,
     sortOrder: casino.sort_order,
-    streakMode: casino.streak_mode,
+    resetMode: casino.reset_mode,
     resetTimeLocal: casino.reset_time_local,
     resetTimezone: casino.reset_timezone,
+    resetIntervalHours: casino.reset_interval_hours ?? 24,
     hasStreaks: casino.has_streaks,
+    noDailyReward: casino.no_daily_reward,
     todayClaimId: casino.today_claim_id,
     todaySc: casino.today_sc,
     todayClaimedAt,
     lastClaimedAt,
     status,
     streakText: casino.has_streaks ? buildStreakText(claims, nowTs) : null,
+    destinationUrl: destination.href,
+    destinationKind: destination.kind,
   };
 }
 
@@ -824,7 +848,7 @@ function isAvailableNow(
 ) {
   const now = DateTime.fromMillis(nowTs);
 
-  if (casino.streak_mode === 'fixed') {
+  if (casino.reset_mode === 'fixed') {
     if (!casino.reset_time_local || !casino.reset_timezone) {
       return false;
     }
@@ -841,7 +865,10 @@ function isAvailableNow(
     return true;
   }
 
-  const nextAvailable = DateTime.fromISO(lastClaimedAt).plus({ hours: 24 });
+  const intervalHours = casino.reset_interval_hours ?? 24;
+  const nextAvailable = DateTime.fromISO(lastClaimedAt).plus({
+    hours: intervalHours,
+  });
   return nextAvailable <= now;
 }
 
@@ -885,13 +912,20 @@ function statusRank(status: CasinoRowViewModel['status']) {
   if (status === 'countdown') {
     return 1;
   }
-  return 2;
+  if (status === 'claimed') {
+    return 2;
+  }
+  return 3;
 }
 
 function nextResetSortValue(
   casino: CasinoRowViewModel,
   userTimezone: string,
 ) {
+  if (casino.status === 'no-daily') {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
   if (casino.status === 'claimed') {
     return Number.MAX_SAFE_INTEGER;
   }
@@ -900,7 +934,7 @@ function nextResetSortValue(
     return 0;
   }
 
-  if (casino.streakMode === 'fixed' && casino.resetTimeLocal && casino.resetTimezone) {
+  if (casino.resetMode === 'fixed' && casino.resetTimeLocal && casino.resetTimezone) {
     const [hour, minute] = casino.resetTimeLocal.split(':').map(Number);
     const now = DateTime.now().setZone(casino.resetTimezone);
     let next = now.set({ hour, minute, second: 0, millisecond: 0 });
@@ -911,7 +945,9 @@ function nextResetSortValue(
   }
 
   if (casino.lastClaimedAt) {
-    return DateTime.fromISO(casino.lastClaimedAt).plus({ hours: 24 }).toMillis();
+    return DateTime.fromISO(casino.lastClaimedAt)
+      .plus({ hours: casino.resetIntervalHours ?? 24 })
+      .toMillis();
   }
 
   return 0;
@@ -922,10 +958,10 @@ function toSuggestionFromCasino(casino: TrackerCasinoRow): TrackerSuggestion {
     id: casino.casino_id,
     name: casino.name,
     slug: casino.slug,
+    tier: casino.tier,
     daily_bonus_desc: casino.daily_bonus_desc,
     has_affiliate_link: casino.has_affiliate_link,
-    affiliate_link_url: null,
-    tier: 2,
+    affiliate_link_url: casino.affiliate_link_url,
     sc_to_usd_ratio: casino.sc_to_usd_ratio,
     sort_sc: null,
   };

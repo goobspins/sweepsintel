@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { getTierStyles } from '../../lib/casino-tier';
 import LiveGamesIndicator from './LiveGamesIndicator';
 
 interface CasinoCardProps {
@@ -7,8 +8,7 @@ interface CasinoCardProps {
     id: number;
     slug: string;
     name: string;
-    tier: number;
-    rating: number | null;
+    tier: string;
     promoban_risk: string;
     has_live_games: boolean;
     redemption_speed_desc: string | null;
@@ -38,6 +38,7 @@ export default function CasinoCard({
   referrerSource,
 }: CasinoCardProps) {
   const [pending, setPending] = useState(false);
+  const tierStyles = getTierStyles(casino.tier);
 
   async function handleClick(event: React.MouseEvent<HTMLAnchorElement>) {
     if (destination.kind !== 'affiliate' || !destination.fallbackUrl) {
@@ -114,8 +115,8 @@ export default function CasinoCard({
           style={{
             borderRadius: '999px',
             padding: '0.3rem 0.6rem',
-            background: 'rgba(37, 99, 235, 0.08)',
-            color: 'var(--color-primary)',
+            background: tierStyles.background,
+            color: tierStyles.color,
             fontWeight: 700,
           }}
         >
@@ -131,7 +132,6 @@ export default function CasinoCard({
           color: 'var(--color-muted)',
         }}
       >
-        <span>* {casino.rating ?? '--'}</span>
         <span
           style={{
             color: riskColors[casino.promoban_risk] ?? '#6B7280',

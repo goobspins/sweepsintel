@@ -3,9 +3,10 @@ import { DateTime } from 'luxon';
 import { computeNextReset } from '../../lib/reset';
 
 interface ResetCountdownProps {
-  streakMode: string | null;
+  resetMode: string | null;
   resetTimeLocal: string | null;
   resetTimezone: string | null;
+  resetIntervalHours?: number;
   lastClaimedAt: string | null;
   claimedToday: boolean;
   userTimezone: string;
@@ -13,9 +14,10 @@ interface ResetCountdownProps {
 }
 
 export default function ResetCountdown({
-  streakMode,
+  resetMode,
   resetTimeLocal,
   resetTimezone,
+  resetIntervalHours,
   lastClaimedAt,
   claimedToday,
   userTimezone,
@@ -25,9 +27,10 @@ export default function ResetCountdown({
 
   const summary = computeNextReset(
     {
-      streak_mode: streakMode,
+      reset_mode: resetMode,
       reset_time_local: resetTimeLocal,
       reset_timezone: resetTimezone,
+      reset_interval_hours: resetIntervalHours,
       last_claimed_at: lastClaimedAt,
     },
     userTimezone,

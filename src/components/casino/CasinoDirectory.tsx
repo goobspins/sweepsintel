@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 
+import { compareCasinoTiers, getTierStyles, type CasinoTier } from '../../lib/casino-tier';
 import CasinoCard from './CasinoCard';
 import LiveGamesIndicator from './LiveGamesIndicator';
 
@@ -7,8 +8,7 @@ export interface DirectoryCasino {
   id: number;
   slug: string;
   name: string;
-  tier: number;
-  rating: number | null;
+  tier: CasinoTier;
   promoban_risk: string;
   has_live_games: boolean;
   redemption_speed_desc: string | null;
@@ -22,7 +22,7 @@ interface CasinoDirectoryProps {
   casinos: DirectoryCasino[];
 }
 
-const tierOptions = [1, 2, 3];
+const tierOptions: CasinoTier[] = ['S', 'A', 'B', 'C'];
 const riskOptions = ['none', 'low', 'medium', 'high'];
 const riskColors: Record<string, string> = {
   none: '#16A34A',
@@ -33,10 +33,10 @@ const riskColors: Record<string, string> = {
 };
 
 export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
-  const [activeTiers, setActiveTiers] = useState<number[]>([]);
+  const [activeTiers, setActiveTiers] = useState<CasinoTier[]>([]);
   const [activeRisks, setActiveRisks] = useState<string[]>([]);
   const [liveGamesOnly, setLiveGamesOnly] = useState(false);
-  const [sortKey, setSortKey] = useState<'name' | 'tier' | 'rating'>('tier');
+  const [sortKey, setSortKey] = useState<'name' | 'tier'>('tier');
 
   const filtered = useMemo(() => {
     const next = casinos.filter((casino) => {
@@ -54,15 +54,11 @@ export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
         return a.name.localeCompare(b.name);
       }
 
-      if (sortKey === 'rating') {
-        return (b.rating ?? 0) - (a.rating ?? 0);
-      }
-
-      return a.tier - b.tier || (b.rating ?? 0) - (a.rating ?? 0);
+      return compareCasinoTiers(a.tier, b.tier) || a.name.localeCompare(b.name);
     });
   }, [activeRisks, activeTiers, casinos, liveGamesOnly, sortKey]);
 
-  function toggleTier(tier: number) {
+  function toggleTier(tier: CasinoTier) {
     setActiveTiers((current) =>
       current.includes(tier)
         ? current.filter((value) => value !== tier)
@@ -156,11 +152,10 @@ export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
           <select
             value={sortKey}
             onChange={(event) =>
-              setSortKey(event.target.value as 'name' | 'tier' | 'rating')
+              setSortKey(event.target.value as 'name' | 'tier')
             }
           >
             <option value="tier">Tier</option>
-            <option value="rating">Rating</option>
             <option value="name">Name</option>
           </select>
         </label>
@@ -200,7 +195,6 @@ export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
                 <tr>
                   <th>Casino Name</th>
                   <th>Tier</th>
-                  <th>Rating</th>
                   <th>Risk</th>
                   <th>Live Games</th>
                   <th>Redemption Speed</th>
@@ -224,8 +218,19 @@ export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
                         {casino.name}
                       </a>
                     </td>
-                    <td>{casino.tier}</td>
-                    <td>{casino.rating ?? '--'}</td>
+                    <td>
+                      <span
+                        style={{
+                          ...getTierStyles(casino.tier),
+                          borderRadius: '999px',
+                          padding: '0.3rem 0.6rem',
+                          display: 'inline-flex',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Tier {casino.tier}
+                      </span>
+                    </td>
                     <td>
                       <span
                         style={{

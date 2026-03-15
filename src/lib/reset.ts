@@ -2,9 +2,10 @@ import { DateTime } from 'luxon';
 
 export interface ResetCasinoInput {
   name?: string;
-  streak_mode?: string | null;
+  reset_mode?: string | null;
   reset_time_local?: string | null;
   reset_timezone?: string | null;
+  reset_interval_hours?: number | null;
   last_claimed_at?: string | Date | null;
 }
 
@@ -17,7 +18,7 @@ export function computeNextReset(
   casino: ResetCasinoInput,
   userTimezone: string,
 ): ResetSummary | null {
-  if (casino.streak_mode === 'fixed') {
+  if (casino.reset_mode === 'fixed') {
     if (!casino.reset_time_local || !casino.reset_timezone) {
       return null;
     }
@@ -49,14 +50,14 @@ export function computeNextReset(
     };
   }
 
-  if (casino.streak_mode === 'rolling') {
+  if (casino.reset_mode === 'rolling') {
     if (!casino.last_claimed_at) {
       return { label: 'Available now', nextResetAt: null };
     }
 
     const nextReset = DateTime.fromJSDate(new Date(casino.last_claimed_at), {
       zone: userTimezone,
-    }).plus({ hours: 24 });
+    }).plus({ hours: casino.reset_interval_hours ?? 24 });
 
     if (!nextReset.isValid) {
       return null;

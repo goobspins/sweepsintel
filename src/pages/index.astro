@@ -52,8 +52,7 @@ const [topCasinos, pulloutAlerts, banAlerts, intelTeaserItems] = await Promise.a
       id: number;
       slug: string;
       name: string;
-      tier: number;
-      rating: number | null;
+      tier: string;
       promoban_risk: string;
       has_live_games: boolean;
       redemption_speed_desc: string | null;
@@ -66,7 +65,6 @@ const [topCasinos, pulloutAlerts, banAlerts, intelTeaserItems] = await Promise.a
         slug,
         name,
         tier,
-        rating,
         promoban_risk,
         has_live_games,
         redemption_speed_desc,
@@ -74,11 +72,10 @@ const [topCasinos, pulloutAlerts, banAlerts, intelTeaserItems] = await Promise.a
         has_affiliate_link,
         affiliate_link_url
       FROM casinos
-      WHERE tier IN (1, 2)
-        AND rating IS NOT NULL
+      WHERE tier IN ('S', 'A')
         AND is_excluded = false
         AND source = 'admin'
-      ORDER BY tier ASC, rating DESC
+      ORDER BY tier ASC, name ASC
       LIMIT 6`,
     )),
   getCached('homepage:pullout-alerts', 5 * 60 * 1000, () =>
@@ -241,8 +238,8 @@ const homepageCasinos = topCasinos.map((casino) => ({
     <section>
       <div style="display:flex;justify-content:space-between;gap:1rem;align-items:end;flex-wrap:wrap;">
         <div>
-          <h2 class="section-title" style="margin:0 0 .5rem;">Top-rated casinos</h2>
-          <p class="muted" style="margin:0;">Tier 1 leaders first, then the strongest Tier 2 backfill.</p>
+          <h2 class="section-title" style="margin:0 0 .5rem;">Top casinos</h2>
+          <p class="muted" style="margin:0;">S-tier and A-tier casinos first.</p>
         </div>
         <a href="/casinos" style="font-weight:700;">Browse all casinos →</a>
       </div>
