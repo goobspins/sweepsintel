@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 
+import { methodNotAllowed } from '../../../lib/api';
+
 import { createAdminFlag } from '../../../lib/admin';
 import {
   createIntelItem,
@@ -13,6 +15,8 @@ function json(data: unknown, status = 200) {
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+export const GET: APIRoute = async () => methodNotAllowed(['POST']);
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -54,3 +58,5 @@ function mapIntelTypeToFlagType(itemType: string) {
   }
   return 'data_anomaly';
 }
+
+

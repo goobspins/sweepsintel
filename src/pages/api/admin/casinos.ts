@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 
+import { methodNotAllowed } from '../../../lib/api';
+
 import { createAdminFlag } from '../../../lib/admin';
 import { isHttpError, requireAdmin } from '../../../lib/auth';
 import { query, transaction } from '../../../lib/db';
@@ -92,6 +94,8 @@ async function syncGames(casinoId: number, games: Array<Record<string, unknown>>
     );
   }
 }
+
+export const GET: APIRoute = async () => methodNotAllowed(['PATCH', 'POST']);
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -303,3 +307,5 @@ export const PATCH: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to update casino.' }, 500);
   }
 };
+
+

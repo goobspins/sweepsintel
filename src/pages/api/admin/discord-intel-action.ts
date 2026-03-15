@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 
+import { methodNotAllowed } from '../../../lib/api';
+
 import { discardIntelItem, publishIntelItem } from '../../../lib/discord-intel';
 import { isHttpError, requireAdmin } from '../../../lib/auth';
 import { sendPushToSegment } from '../../../lib/push';
@@ -10,6 +12,8 @@ function json(data: unknown, status = 200) {
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+export const GET: APIRoute = async () => methodNotAllowed(['POST']);
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -52,3 +56,5 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to process intel action.' }, 500);
   }
 };
+
+

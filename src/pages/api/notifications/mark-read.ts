@@ -1,9 +1,15 @@
 import type { APIRoute } from 'astro';
 
+import { methodNotAllowed } from '../../../lib/api';
+
 import { isHttpError, requireAuth } from '../../../lib/auth';
 import { query } from '../../../lib/db';
 
 export const prerender = false;
+
+export const GET: APIRoute = async () => methodNotAllowed(['POST']);
+
+
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -64,3 +70,5 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to update notifications.' }, 500);
   }
 };
+
+

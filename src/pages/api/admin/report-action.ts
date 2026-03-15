@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 
+import { methodNotAllowed } from '../../../lib/api';
+
 import {
   createAdminFlag,
   logManualReportAudit,
@@ -14,6 +16,8 @@ function json(data: unknown, status = 200) {
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+export const GET: APIRoute = async () => methodNotAllowed(['POST']);
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -168,3 +172,5 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to process report action.' }, 500);
   }
 };
+
+

@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 
+import { methodNotAllowed } from '../../../lib/api';
+
 import { invalidateCached } from '../../../lib/cache';
 import { isHttpError, requireAuth } from '../../../lib/auth';
 import { query } from '../../../lib/db';
@@ -19,6 +21,8 @@ const VALID_ENTRY_TYPES = new Set([
   'adjustment',
   'redeem_confirmed',
 ]);
+
+export const GET: APIRoute = async () => methodNotAllowed(['POST']);
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -83,3 +87,5 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to save ledger entry.' }, 500);
   }
 };
+
+
