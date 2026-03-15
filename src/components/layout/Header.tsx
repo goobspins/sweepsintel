@@ -142,7 +142,7 @@ export default function Header({
                 </div>
               ) : (
                 <a
-                  href="#login"
+                  href="/login"
                   style={{
                     borderRadius: '999px',
                     background: '#0f172a',

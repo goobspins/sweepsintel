@@ -1,0 +1,35 @@
+---
+import OTPForm from '../components/auth/OTPForm';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionUser } from '../lib/auth';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+
+if (user) {
+  return Astro.redirect('/tracker');
+}
+---
+
+<BaseLayout title="Log In | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <section class="login-shell">
+      <OTPForm
+        client:load
+        redirectTo="/tracker"
+        title="Log in to SweepsIntel"
+        description="Enter your email and we will send a 6-digit login code."
+      />
+    </section>
+  </div>
+
+  <style>
+    .login-shell {
+      min-height: 60vh;
+      display: grid;
+      place-items: center;
+      padding: 2rem 0;
+    }
+  </style>
+</BaseLayout>
