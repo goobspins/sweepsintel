@@ -1,7 +1,5 @@
 import type { APIRoute } from 'astro';
 
-import { methodNotAllowed } from '../../../lib/api';
-
 import {
   OTP_EXPIRY_MINUTES,
   generateOTP,
@@ -13,14 +11,14 @@ import {
 import { transaction } from '../../../lib/db';
 import { sendOTP } from '../../../lib/email';
 
+export const prerender = false;
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
 }
-
-export const GET: APIRoute = async () => methodNotAllowed(['POST']);
 
 export const POST: APIRoute = async ({ request }) => {
   try {

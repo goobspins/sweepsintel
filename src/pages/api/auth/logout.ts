@@ -1,7 +1,5 @@
 import type { APIRoute } from 'astro';
 
-import { methodNotAllowed } from '../../../lib/api';
-
 import {
   getSessionCookieOptions,
   getSessionCookieValue,
@@ -17,7 +15,7 @@ function json(data: unknown, status = 200) {
   });
 }
 
-export const GET: APIRoute = async () => methodNotAllowed(['POST']);
+export const prerender = false;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
