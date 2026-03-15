@@ -27,7 +27,7 @@ export default function BanReportFeed({ reports }: BanReportFeedProps) {
             border: '1px solid var(--color-border)',
             borderRadius: '1.25rem',
             padding: '1rem',
-            background: '#fff',
+            background: 'var(--color-surface)',
           }}
         >
           <div
@@ -54,3 +54,4 @@ export default function BanReportFeed({ reports }: BanReportFeedProps) {
     </div>
   );
 }
+

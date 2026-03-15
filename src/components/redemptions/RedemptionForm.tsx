@@ -261,7 +261,7 @@ export default function RedemptionForm({ onClose, onSuccess }: RedemptionFormPro
           width: min(100%, 34rem);
           margin: 0 auto;
           border-radius: 1.5rem 1.5rem 0 0;
-          background: #fff;
+          background: var(--color-surface);
           padding: 1.25rem;
           display: grid;
           gap: 1rem;
@@ -321,14 +321,14 @@ export default function RedemptionForm({ onClose, onSuccess }: RedemptionFormPro
           border-radius: 999px;
           padding: 0.85rem 1rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
         }
 
         .ghost-button {
-          background: #fff;
+          background: var(--color-surface);
           color: var(--color-ink);
           border: 1px solid var(--color-border) !important;
         }
@@ -372,3 +372,4 @@ function formatMethod(method: string) {
   }
   return method.toUpperCase();
 }
+

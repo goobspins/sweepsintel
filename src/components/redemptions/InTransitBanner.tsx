@@ -14,8 +14,8 @@ export default function InTransitBanner({ totalUsd, pendingCount }: InTransitBan
       <style>{`
         .in-transit-banner {
           border: 1px solid rgba(217, 119, 6, 0.25);
-          background: #fff7ed;
-          color: #9a3412;
+          background: rgba(245, 158, 11, 0.16);
+          color: var(--accent-yellow);
           border-radius: 1rem;
           padding: 0.95rem 1rem;
           font-weight: 700;
@@ -31,3 +31,4 @@ function formatCurrency(value: number) {
     currency: 'USD',
   }).format(value);
 }
+

@@ -78,8 +78,8 @@ export default function EmailCaptureForm({
           padding: 1.25rem;
           border: 1px solid var(--color-border);
           border-radius: 1.5rem;
-          background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(255, 255, 255, 0.95));
-          box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(31, 41, 55, 0.96));
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
         }
 
         .waitlist-copy h2 {
@@ -112,7 +112,7 @@ export default function EmailCaptureForm({
           border: none;
           border-radius: 999px;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           padding: 0.9rem 1.1rem;
           font: inherit;
           font-weight: 700;
@@ -133,3 +133,4 @@ export default function EmailCaptureForm({
     </section>
   );
 }
+

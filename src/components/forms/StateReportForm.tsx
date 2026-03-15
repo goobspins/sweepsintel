@@ -152,22 +152,23 @@ export default function StateReportForm({
 
       <style>{`
         .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.55); display:grid; align-items:end; z-index:40; padding:1rem; }
-        .modal-card { width:min(100%,34rem); margin:0 auto; border-radius:1.5rem 1.5rem 0 0; background:#fff; padding:1.25rem; display:grid; gap:1rem; }
+        .modal-card { width:min(100%,34rem); margin:0 auto; border-radius:1.5rem 1.5rem 0 0; background:var(--color-surface); padding:1.25rem; display:grid; gap:1rem; }
         .modal-header, .actions, .toggle-row { display:flex; justify-content:space-between; gap:.75rem; align-items:center; flex-wrap:wrap; }
         .modal-header h2, .error-text { margin:0; }
         .form-grid { display:grid; gap:1rem; }
         .form-grid label, .radio-group { display:grid; gap:.45rem; margin:0; font-weight:600; }
         .form-grid select, .form-grid textarea { border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem; font:inherit; }
         .toggle-button, .actions button {
-          border:none; border-radius:999px; padding:.85rem 1rem; background:#fff; color:var(--color-ink); font:inherit; font-weight:700; cursor:pointer; border:1px solid var(--color-border);
+          border:none; border-radius:999px; padding:.85rem 1rem; background:var(--color-surface); color:var(--color-ink); font:inherit; font-weight:700; cursor:pointer; border:1px solid var(--color-border);
         }
-        .toggle-button.active, .actions button:not(.ghost-button) { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+        .toggle-button.active, .actions button:not(.ghost-button) { background:var(--color-primary); color:var(--text-primary); border-color:var(--color-primary); }
         .radio-group { border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem; }
         .radio-group label { display:flex; gap:.5rem; align-items:center; font-weight:500; }
-        .ghost-button { background:#fff !important; color:var(--color-ink) !important; border:1px solid var(--color-border) !important; }
+        .ghost-button { background:var(--color-surface) !important; color:var(--color-ink) !important; border:1px solid var(--color-border) !important; }
         .error-text { color:var(--color-danger); font-weight:600; }
         @media (min-width: 768px) { .modal-backdrop { align-items:center; } .modal-card { border-radius:1.5rem; } }
       `}</style>
     </div>
   );
 }
+

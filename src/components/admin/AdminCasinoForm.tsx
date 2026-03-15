@@ -214,7 +214,7 @@ export default function AdminCasinoForm({
           padding: 1rem;
           border-radius: 1rem;
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--color-surface);
         }
         .checkbox-row { display: flex; gap: 0.6rem; align-items: center; }
         .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
@@ -223,13 +223,13 @@ export default function AdminCasinoForm({
           border-radius: 999px;
           padding: 0.85rem 1rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
         }
         .ghost-button {
-          background: #fff;
+          background: var(--color-surface);
           color: var(--color-ink);
           border: 1px solid var(--color-border);
           width: fit-content;
@@ -322,3 +322,4 @@ const fieldStyle: React.CSSProperties = {
   font: 'inherit',
   width: '100%',
 };
+

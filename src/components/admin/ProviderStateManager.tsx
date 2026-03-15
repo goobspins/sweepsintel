@@ -62,7 +62,7 @@ export default function ProviderStateManager({ rows }: ProviderStateManagerProps
           padding: 1rem;
           border-radius: 1rem;
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--color-surface);
         }
         select {
           border: 1px solid var(--color-border);
@@ -74,3 +74,4 @@ export default function ProviderStateManager({ rows }: ProviderStateManagerProps
     </div>
   );
 }
+

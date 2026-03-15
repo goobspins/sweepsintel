@@ -49,7 +49,7 @@ export default function StateMap({ states }: StateMapProps) {
                 <path
                   d={`M ${x} ${y} h ${TILE_SIZE} v ${TILE_SIZE} h -${TILE_SIZE} Z`}
                   fill={fill}
-                  stroke="#ffffff"
+                  stroke="var(--text-primary)"
                   strokeWidth="2"
                 >
                   <title>{`${state.state_name} - ${Number(state.casino_count)} casinos available`}</title>
@@ -60,7 +60,7 @@ export default function StateMap({ states }: StateMapProps) {
                   textAnchor="middle"
                   fontSize="11"
                   fontWeight="700"
-                  fill="#111827"
+                  fill="var(--text-primary)"
                 >
                   {tile.code}
                 </text>
@@ -84,19 +84,19 @@ export default function StateMap({ states }: StateMapProps) {
 
       <style>{`
         .desktop-map { display:none; overflow:auto; }
-        .desktop-map svg { width:100%; height:auto; border-radius:1rem; background:#f8fafc; padding:1rem; }
+        .desktop-map svg { width:100%; height:auto; border-radius:1rem; background:var(--bg-secondary); padding:1rem; }
         .mobile-list { display:grid; gap:.75rem; }
         .state-row {
           display:flex; justify-content:space-between; gap:.75rem; align-items:center;
           padding:1rem; border-radius:1rem; border:1px solid var(--color-border);
-          background:#fff; text-decoration:none; color:var(--color-ink);
+          background:var(--color-surface); text-decoration:none; color:var(--color-ink);
         }
         .status-pill {
           border-radius:999px; padding:.35rem .7rem; font-weight:700; white-space:nowrap;
         }
-        .legal { background:#ecfdf5; color:#166534; }
-        .warning { background:#fff7ed; color:#9a3412; }
-        .danger { background:#fef2f2; color:#991b1b; }
+        .legal { background:rgba(16, 185, 129, 0.16); color:var(--accent-green); }
+        .warning { background:rgba(245, 158, 11, 0.16); color:var(--accent-yellow); }
+        .danger { background:rgba(239, 68, 68, 0.16); color:var(--accent-red); }
         @media (min-width: 768px) {
           .desktop-map { display:block; }
           .mobile-list { display:none; }
@@ -107,9 +107,9 @@ export default function StateMap({ states }: StateMapProps) {
 }
 
 function getStateFill(state: StateRow) {
-  if (!state.sweepstakes_legal) return '#fecaca';
-  if (Number(state.pullout_count) > 0) return '#fed7aa';
-  return '#bbf7d0';
+  if (!state.sweepstakes_legal) return 'rgba(239, 68, 68, 0.32)';
+  if (Number(state.pullout_count) > 0) return 'rgba(245, 158, 11, 0.32)';
+  return 'rgba(16, 185, 129, 0.28)';
 }
 
 function getStateTone(state: StateRow) {
@@ -123,3 +123,4 @@ function getStateLabel(state: StateRow) {
   if (Number(state.pullout_count) > 0) return 'Restricted';
   return 'Legal ✓';
 }
+

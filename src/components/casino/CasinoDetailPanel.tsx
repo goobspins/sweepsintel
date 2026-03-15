@@ -15,11 +15,11 @@ interface CasinoDetailPanelProps {
 }
 
 const badgeColors: Record<string, string> = {
-  none: '#16A34A',
-  low: '#16A34A',
-  medium: '#D97706',
-  high: '#DC2626',
-  unknown: '#6B7280',
+  none: 'var(--accent-green)',
+  low: 'var(--accent-green)',
+  medium: 'var(--accent-yellow)',
+  high: 'var(--accent-red)',
+  unknown: 'var(--text-muted)',
 };
 
 export default function CasinoDetailPanel({
@@ -80,7 +80,7 @@ export default function CasinoDetailPanel({
           padding: 1rem;
           border: 1px solid var(--color-border);
           border-radius: 1.2rem;
-          background: #fff;
+          background: var(--color-surface);
         }
 
         .detail-row dt {
@@ -99,7 +99,7 @@ export default function CasinoDetailPanel({
 
 function badge(value: string | null) {
   const normalized = value ?? 'unknown';
-  const color = badgeColors[normalized] ?? '#6B7280';
+  const color = badgeColors[normalized] ?? 'var(--text-muted)';
 
   return (
     <span
@@ -118,3 +118,4 @@ function badge(value: string | null) {
     </span>
   );
 }
+

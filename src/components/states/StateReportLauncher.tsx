@@ -37,13 +37,14 @@ export default function StateReportLauncher({
       <style>{`
         .launch-button {
           border:none; border-radius:999px; padding:.85rem 1rem; background:var(--color-primary);
-          color:#fff; font:inherit; font-weight:700; cursor:pointer;
+          color:var(--text-primary); font:inherit; font-weight:700; cursor:pointer;
         }
         .toast {
           position:sticky; top:1rem; z-index:20; justify-self:start; padding:.85rem 1rem;
-          border-radius:999px; font-weight:700; background:#ecfdf5; color:#065f46; margin-bottom:1rem;
+          border-radius:999px; font-weight:700; background:rgba(16, 185, 129, 0.16); color:var(--accent-green); margin-bottom:1rem;
         }
       `}</style>
     </>
   );
 }
+

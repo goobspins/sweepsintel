@@ -25,11 +25,11 @@ interface CasinoCardProps {
 }
 
 const riskColors: Record<string, string> = {
-  none: '#16A34A',
-  low: '#16A34A',
-  medium: '#D97706',
-  high: '#DC2626',
-  unknown: '#6B7280',
+  none: 'var(--accent-green)',
+  low: 'var(--accent-green)',
+  medium: 'var(--accent-yellow)',
+  high: 'var(--accent-red)',
+  unknown: 'var(--text-muted)',
 };
 
 export default function CasinoCard({
@@ -85,8 +85,8 @@ export default function CasinoCard({
         padding: '1rem',
         borderRadius: '1.5rem',
         border: '1px solid var(--color-border)',
-        background: '#fff',
-        boxShadow: '0 16px 40px rgba(15, 23, 42, 0.06)',
+        background: 'var(--color-surface)',
+        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.22)',
       }}
     >
       <div
@@ -134,7 +134,7 @@ export default function CasinoCard({
       >
         <span
           style={{
-            color: riskColors[casino.promoban_risk] ?? '#6B7280',
+            color: riskColors[casino.promoban_risk] ?? 'var(--text-muted)',
             fontWeight: 700,
             textTransform: 'capitalize',
           }}
@@ -156,3 +156,4 @@ export default function CasinoCard({
     </article>
   );
 }
+

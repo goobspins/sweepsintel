@@ -11,7 +11,7 @@ export default function LiveGamesIndicator({
         display: 'inline-flex',
         alignItems: 'center',
         gap: '0.35rem',
-        color: hasLiveGames ? '#16A34A' : '#6B7280',
+        color: hasLiveGames ? 'var(--accent-green)' : 'var(--text-muted)',
         fontWeight: 600,
       }}
     >
@@ -20,3 +20,4 @@ export default function LiveGamesIndicator({
     </span>
   );
 }
+

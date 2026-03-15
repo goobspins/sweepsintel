@@ -106,14 +106,14 @@ export default function ReportQueue({ bans, states, resets }: ReportQueueProps) 
           border: 1px solid var(--color-border);
           border-radius: 999px;
           padding: 0.75rem 0.95rem;
-          background: #fff;
+          background: var(--color-surface);
           font: inherit;
           cursor: pointer;
         }
         .tabs .active, .actions button:first-child {
           background: var(--color-primary);
           border-color: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font-weight: 700;
         }
         .ghost { color: var(--color-ink); }
@@ -123,10 +123,11 @@ export default function ReportQueue({ bans, states, resets }: ReportQueueProps) 
           padding: 1rem;
           border-radius: 1rem;
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--color-surface);
         }
         .queue-row p { margin: 0; line-height: 1.55; }
       `}</style>
     </div>
   );
 }
+

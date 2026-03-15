@@ -25,10 +25,11 @@ export default function RedemptionTimeStats({
         Based on {stats.sampleCount} community redemptions.
       </p>
       {stats.trendWarning ? (
-        <p style={{ margin: 0, color: '#D97706', fontWeight: 700 }}>
+        <p style={{ margin: 0, color: 'var(--accent-yellow)', fontWeight: 700 }}>
           Processing times appear to be increasing recently.
         </p>
       ) : null}
     </div>
   );
 }
+

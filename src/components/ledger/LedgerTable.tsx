@@ -259,14 +259,14 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
           border-radius: 999px;
           padding: 0.85rem 1rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
         }
 
         .ghost-button {
-          background: #fff;
+          background: var(--color-surface);
           color: var(--color-ink);
           border: 1px solid var(--color-border);
         }
@@ -277,7 +277,7 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
           border-radius: 999px;
           padding: 0.85rem 1rem;
           font: inherit;
-          background: #fff;
+          background: var(--color-surface);
         }
 
         .table-wrap {
@@ -308,8 +308,8 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
           box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
         }
 
-        .toast-success { background: #ecfdf5; color: #065f46; }
-        .toast-error { background: #fef2f2; color: #991b1b; }
+        .toast-success { background: rgba(16, 185, 129, 0.16); color: var(--accent-green); }
+        .toast-error { background: rgba(239, 68, 68, 0.16); color: var(--accent-red); }
       `}</style>
     </div>
   );
@@ -325,3 +325,4 @@ function formatCurrency(value: number) {
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
 }
+

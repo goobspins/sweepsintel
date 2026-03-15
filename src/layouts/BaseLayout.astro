@@ -20,29 +20,43 @@ const {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#2563EB" />
+    <meta name="theme-color" content="#111827" />
     <link rel="manifest" href="/manifest.json" />
     <style>
-      :root {
-        color-scheme: light;
-        --color-primary: #2563EB;
-        --color-success: #16A34A;
-        --color-warning: #D97706;
-        --color-danger: #DC2626;
-        --color-muted: #6B7280;
-        --color-ink: #111827;
-        --color-surface: #ffffff;
-        --color-border: #E5E7EB;
-        --color-border-subtle: rgba(229, 231, 235, 0.75);
+      :root,
+      html[data-theme='dark'] {
+        color-scheme: dark;
+        --bg-primary: #111827;
+        --bg-secondary: #1f2937;
+        --bg-tertiary: #374151;
+        --text-primary: #f3f4f6;
+        --text-secondary: #d1d5db;
+        --text-muted: #9ca3af;
+        --border: #374151;
+        --accent-green: #10b981;
+        --accent-red: #ef4444;
+        --accent-yellow: #f59e0b;
+        --accent-blue: #3b82f6;
+        --progress-gradient: linear-gradient(90deg, #ef4444, #f59e0b, #10b981, #3b82f6);
+        --color-primary: var(--accent-blue);
+        --color-success: var(--accent-green);
+        --color-warning: var(--accent-yellow);
+        --color-danger: var(--accent-red);
+        --color-muted: var(--text-muted);
+        --color-ink: var(--text-primary);
+        --color-surface: var(--bg-secondary);
+        --color-surface-secondary: var(--bg-tertiary);
+        --color-border: var(--border);
+        --color-border-subtle: rgba(156, 163, 175, 0.24);
         --page-bg:
-          radial-gradient(circle at top, rgba(37, 99, 235, 0.08), transparent 28%),
-          linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+          radial-gradient(circle at top, rgba(59, 130, 246, 0.12), transparent 30%),
+          linear-gradient(180deg, var(--bg-primary) 0%, #0b1220 100%);
       }
 
       * {
@@ -65,6 +79,25 @@ const {
         color: var(--color-primary);
       }
 
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: var(--text-primary);
+      }
+
+      input,
+      select,
+      textarea {
+        background: var(--bg-primary);
+        border: 1px solid var(--color-border);
+      }
+
+      ::placeholder {
+        color: var(--text-muted);
+      }
+
       main {
         min-height: calc(100vh - 140px);
       }
@@ -84,7 +117,7 @@ const {
         border-radius: 1.5rem;
         border: 1px solid var(--color-border);
         background: var(--color-surface);
-        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
       }
 
       .section-title {
@@ -112,3 +145,4 @@ const {
     </script>
   </body>
 </html>
+

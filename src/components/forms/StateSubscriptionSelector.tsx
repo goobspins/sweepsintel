@@ -37,7 +37,7 @@ export default function StateSubscriptionSelector({
       <style>{`
         .subscription-selector {
           display:grid; gap:.65rem; max-height:16rem; overflow:auto; padding:.85rem;
-          border:1px solid var(--color-border); border-radius:1rem; background:#fff;
+          border:1px solid var(--color-border); border-radius:1rem; background:var(--color-surface);
         }
         .subscription-option {
           display:flex; gap:.6rem; align-items:center; color:var(--color-ink);
@@ -46,3 +46,4 @@ export default function StateSubscriptionSelector({
     </div>
   );
 }
+

@@ -107,7 +107,7 @@ export default function NotificationComposer({
           padding: 1rem;
           border-radius: 1rem;
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--color-surface);
         }
         label { display: grid; gap: 0.4rem; }
         input, textarea, select {
@@ -124,7 +124,7 @@ export default function NotificationComposer({
           border-radius: 999px;
           padding: 0.85rem 1rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
@@ -133,3 +133,4 @@ export default function NotificationComposer({
     </form>
   );
 }
+

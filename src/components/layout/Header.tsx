@@ -36,8 +36,8 @@ export default function Header({
         top: 0,
         zIndex: 20,
         backdropFilter: 'blur(18px)',
-        background: 'rgba(248, 250, 252, 0.92)',
-        borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
+        background: 'rgba(17, 24, 39, 0.92)',
+        borderBottom: '1px solid var(--color-border)',
       }}
     >
       <div
@@ -62,7 +62,7 @@ export default function Header({
               alignItems: 'center',
               gap: '0.75rem',
               textDecoration: 'none',
-              color: '#0f172a',
+              color: 'var(--color-ink)',
             }}
           >
             <span
@@ -74,8 +74,8 @@ export default function Header({
                 width: '2.25rem',
                 height: '2.25rem',
                 borderRadius: '0.85rem',
-                background: 'linear-gradient(135deg, #0f766e 0%, #0f172a 100%)',
-                color: '#fff',
+                background: 'linear-gradient(135deg, var(--accent-green) 0%, var(--accent-blue) 100%)',
+                color: 'var(--text-primary)',
                 fontSize: '1rem',
               }}
             >
@@ -116,7 +116,7 @@ export default function Header({
                   <span
                     style={{
                       display: 'none',
-                      color: '#475569',
+                      color: 'var(--text-secondary)',
                       fontSize: '0.92rem',
                     }}
                     className="desktop-email"
@@ -130,8 +130,8 @@ export default function Header({
                     style={{
                       border: 'none',
                       borderRadius: '999px',
-                      background: '#0f172a',
-                      color: '#fff',
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-primary)',
                       padding: '0.7rem 1rem',
                       cursor: 'pointer',
                       fontWeight: 600,
@@ -145,8 +145,8 @@ export default function Header({
                   href="/login"
                   style={{
                     borderRadius: '999px',
-                    background: '#0f172a',
-                    color: '#fff',
+                    background: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)',
                     padding: '0.7rem 1rem',
                     textDecoration: 'none',
                     fontWeight: 600,
@@ -161,9 +161,9 @@ export default function Header({
                 aria-expanded={mobileOpen}
                 aria-label="Toggle navigation"
                 style={{
-                  border: '1px solid rgba(15, 23, 42, 0.12)',
-                  background: '#fff',
-                  color: '#0f172a',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
                   borderRadius: '0.85rem',
                   width: '2.75rem',
                   height: '2.75rem',
@@ -180,7 +180,7 @@ export default function Header({
           <div
             style={{
               marginTop: '1rem',
-              borderTop: '1px solid rgba(15, 23, 42, 0.08)',
+              borderTop: '1px solid var(--color-border)',
               paddingTop: '1rem',
               display: 'grid',
               gap: '0.85rem',
@@ -189,7 +189,7 @@ export default function Header({
             {user ? (
               <div
                 style={{
-                  color: '#475569',
+                  color: 'var(--text-secondary)',
                   fontSize: '0.92rem',
                   padding: '0 0.25rem',
                 }}
@@ -216,3 +216,4 @@ export default function Header({
     </header>
   );
 }
+

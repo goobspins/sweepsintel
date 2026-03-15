@@ -11,10 +11,10 @@ interface GameAvailabilityTableProps {
 }
 
 const confidenceColors: Record<string, string> = {
-  high: '#16A34A',
-  medium: '#D97706',
+  high: 'var(--accent-green)',
+  medium: 'var(--accent-yellow)',
   low: '#F97316',
-  unverified: '#6B7280',
+  unverified: 'var(--text-muted)',
 };
 
 export default function GameAvailabilityTable({
@@ -66,8 +66,8 @@ export default function GameAvailabilityTable({
                     display: 'inline-flex',
                     padding: '0.3rem 0.55rem',
                     borderRadius: '999px',
-                    background: `${confidenceColors[game.confidence] ?? '#6B7280'}1A`,
-                    color: confidenceColors[game.confidence] ?? '#6B7280',
+                    background: `${confidenceColors[game.confidence] ?? 'var(--text-muted)'}1A`,
+                    color: confidenceColors[game.confidence] ?? 'var(--text-muted)',
                     fontWeight: 700,
                     textTransform: 'capitalize',
                   }}
@@ -82,3 +82,4 @@ export default function GameAvailabilityTable({
     </div>
   );
 }
+

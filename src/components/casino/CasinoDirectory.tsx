@@ -25,11 +25,11 @@ interface CasinoDirectoryProps {
 const tierOptions: CasinoTier[] = ['S', 'A', 'B', 'C'];
 const riskOptions = ['none', 'low', 'medium', 'high'];
 const riskColors: Record<string, string> = {
-  none: '#16A34A',
-  low: '#16A34A',
-  medium: '#D97706',
-  high: '#DC2626',
-  unknown: '#6B7280',
+  none: 'var(--accent-green)',
+  low: 'var(--accent-green)',
+  medium: 'var(--accent-yellow)',
+  high: 'var(--accent-red)',
+  unknown: 'var(--text-muted)',
 };
 
 export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
@@ -234,7 +234,7 @@ export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
                     <td>
                       <span
                         style={{
-                          color: riskColors[casino.promoban_risk] ?? '#6B7280',
+                          color: riskColors[casino.promoban_risk] ?? 'var(--text-muted)',
                           fontWeight: 700,
                           textTransform: 'capitalize',
                         }}
@@ -275,7 +275,7 @@ export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
 
         .chip {
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--color-surface);
           color: var(--color-muted);
           border-radius: 999px;
           padding: 0.7rem 0.95rem;
@@ -288,7 +288,7 @@ export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
         .chip-active {
           background: var(--color-primary);
           border-color: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
         }
 
         .table-toolbar {
@@ -325,13 +325,13 @@ export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
           padding: 2rem;
           text-align: center;
           color: var(--color-muted);
-          background: rgba(255, 255, 255, 0.75);
+          background: rgba(55, 65, 81, 0.42);
         }
 
         .desktop-table {
           width: 100%;
           border-collapse: collapse;
-          background: #fff;
+          background: var(--color-surface);
           border: 1px solid var(--color-border);
           border-radius: 1.5rem;
           overflow: hidden;
@@ -369,3 +369,4 @@ export default function CasinoDirectory({ casinos }: CasinoDirectoryProps) {
     </section>
   );
 }
+

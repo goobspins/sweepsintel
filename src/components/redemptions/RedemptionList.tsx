@@ -263,7 +263,7 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
           border-radius: 999px;
           padding: 0.85rem 1rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
@@ -277,14 +277,14 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
         }
 
         .filter-chip {
-          background: #fff;
+          background: var(--color-surface);
           color: var(--color-muted);
           border: 1px solid var(--color-border);
         }
 
         .filter-chip.active {
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           border-color: var(--color-primary);
         }
 
@@ -299,7 +299,7 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
           padding: 1rem;
           border: 1px solid var(--color-border);
           border-radius: 1.25rem;
-          background: #fff;
+          background: var(--color-surface);
         }
 
         .stats-grid {
@@ -313,7 +313,7 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
           gap: 0.25rem;
           padding: 0.8rem;
           border-radius: 1rem;
-          background: #f8fafc;
+          background: var(--bg-secondary);
         }
 
         .status-pill {
@@ -325,26 +325,26 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
           white-space: nowrap;
         }
 
-        .status-pending { background: #fff7ed; color: #9a3412; }
-        .status-received { background: #ecfdf5; color: #166534; }
-        .status-cancelled { background: #f3f4f6; color: #4b5563; }
-        .status-rejected { background: #fef2f2; color: #991b1b; }
-        .status-draft { background: #eff6ff; color: #1d4ed8; }
+        .status-pending { background: rgba(245, 158, 11, 0.16); color: var(--accent-yellow); }
+        .status-received { background: rgba(16, 185, 129, 0.16); color: var(--accent-green); }
+        .status-cancelled { background: rgba(55, 65, 81, 0.8); color: var(--text-secondary); }
+        .status-rejected { background: rgba(239, 68, 68, 0.16); color: var(--accent-red); }
+        .status-draft { background: rgba(59, 130, 246, 0.16); color: var(--accent-blue); }
 
         .ghost-button {
-          background: #fff !important;
+          background: var(--color-surface) !important;
           color: var(--color-ink) !important;
           border: 1px solid var(--color-border) !important;
         }
 
         .danger-button {
-          background: #dc2626 !important;
+          background: var(--accent-red) !important;
         }
 
         .warning-banner {
           border: 1px solid rgba(217, 119, 6, 0.25);
-          background: #fff7ed;
-          color: #9a3412;
+          background: rgba(245, 158, 11, 0.16);
+          color: var(--accent-yellow);
           border-radius: 1rem;
           padding: 0.85rem 1rem;
           font-weight: 600;
@@ -365,11 +365,11 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
           padding: 0.85rem 1rem;
           border-radius: 999px;
           font-weight: 700;
-          box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+          box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
         }
 
-        .toast-success { background: #ecfdf5; color: #065f46; }
-        .toast-error { background: #fef2f2; color: #991b1b; }
+        .toast-success { background: rgba(16, 185, 129, 0.16); color: var(--accent-green); }
+        .toast-error { background: rgba(239, 68, 68, 0.16); color: var(--accent-red); }
       `}</style>
     </div>
   );
@@ -416,3 +416,4 @@ function relativeTime(timestamp: string) {
   if (Math.abs(diffMs) >= hourMs) return formatter.format(Math.round(diffMs / hourMs), 'hour');
   return formatter.format(Math.round(diffMs / minuteMs), 'minute');
 }
+

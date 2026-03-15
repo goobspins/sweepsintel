@@ -137,16 +137,17 @@ export default function PushOptIn({
         .actions { display:flex; gap:.65rem; flex-wrap:wrap; }
         .actions button {
           border:none; border-radius:999px; padding:.8rem 1rem; background:var(--color-primary);
-          color:#fff; font:inherit; font-weight:700; cursor:pointer;
+          color:var(--text-primary); font:inherit; font-weight:700; cursor:pointer;
         }
         .actions .ghost {
-          border:1px solid var(--color-border); background:#fff; color:var(--color-ink);
+          border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-ink);
         }
         .toast {
-          justify-self:start; padding:.7rem .9rem; border-radius:999px; background:#ecfdf5;
-          color:#065f46; font-weight:700;
+          justify-self:start; padding:.7rem .9rem; border-radius:999px; background:rgba(16, 185, 129, 0.16);
+          color:var(--accent-green); font-weight:700;
         }
       `}</style>
     </section>
   );
 }
+

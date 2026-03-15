@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { getTierStyles } from '../../lib/casino-tier';
 
 const riskColors: Record<string, string> = {
-  none: '#16A34A',
-  low: '#16A34A',
-  medium: '#D97706',
-  high: '#DC2626',
-  unknown: '#6B7280',
+  none: 'var(--accent-green)',
+  low: 'var(--accent-green)',
+  medium: 'var(--accent-yellow)',
+  high: 'var(--accent-red)',
+  unknown: 'var(--text-muted)',
 };
 
 interface StateCardProps {
@@ -82,7 +82,7 @@ export default function StateCard({
         <span className="tier-badge">Tier {casino.tier}</span>
       </div>
       <div className="meta-row">
-        <span style={{ color: riskColors[casino.promoban_risk] ?? '#6B7280', fontWeight: 700 }}>
+        <span style={{ color: riskColors[casino.promoban_risk] ?? 'var(--text-muted)', fontWeight: 700 }}>
           {casino.promoban_risk} risk
         </span>
       </div>
@@ -90,7 +90,7 @@ export default function StateCard({
       <style>{`
         .state-card {
           display:grid; gap:.75rem; padding:1rem; border-radius:1.25rem;
-          border:1px solid var(--color-border); background:#fff;
+          border:1px solid var(--color-border); background:var(--color-surface);
         }
         .state-card-head, .meta-row {
           display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; flex-wrap:wrap;
@@ -107,3 +107,4 @@ export default function StateCard({
     </article>
   );
 }
+

@@ -167,21 +167,21 @@ export default function CasinoRow({
           padding: 1rem;
           border-radius: 1.25rem;
           border: 1px solid var(--color-border);
-          background: #fff;
-          box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+          background: var(--color-surface);
+          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
         }
 
         .row-available {
           border-left: 6px solid var(--color-success);
-          background: rgba(22, 163, 74, 0.05);
+          background: rgba(16, 185, 129, 0.1);
         }
 
         .row-claimed {
-          background: rgba(148, 163, 184, 0.08);
+          background: rgba(59, 130, 246, 0.08);
         }
 
         .row-no-daily {
-          background: rgba(148, 163, 184, 0.06);
+          background: rgba(55, 65, 81, 0.5);
           color: var(--color-muted);
         }
 
@@ -237,18 +237,18 @@ export default function CasinoRow({
         .claim-button {
           border: none;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           cursor: pointer;
         }
 
         .claimed-badge {
-          background: rgba(22, 163, 74, 0.12);
+          background: rgba(16, 185, 129, 0.14);
           color: var(--color-success);
         }
 
         .remove-button {
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--bg-primary);
           color: var(--color-muted);
           cursor: pointer;
         }
@@ -267,3 +267,4 @@ export default function CasinoRow({
     </article>
   );
 }
+

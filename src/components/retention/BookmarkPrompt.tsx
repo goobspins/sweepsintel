@@ -109,7 +109,7 @@ export default function BookmarkPrompt({
         .copy p, .copy strong { margin:0; }
         .copy p { color:var(--color-muted); line-height:1.6; }
         .actions button {
-          border:none; border-radius:999px; padding:.8rem 1rem; background:#fff;
+          border:none; border-radius:999px; padding:.8rem 1rem; background:var(--color-surface);
           color:var(--color-ink); font:inherit; font-weight:700; cursor:pointer;
           border:1px solid var(--color-border);
         }
@@ -117,3 +117,4 @@ export default function BookmarkPrompt({
     </section>
   );
 }
+

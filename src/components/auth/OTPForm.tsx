@@ -111,10 +111,10 @@ export default function OTPForm({
         width: '100%',
         maxWidth: '28rem',
         borderRadius: '1.5rem',
-        background: '#fff',
-        border: '1px solid rgba(15, 23, 42, 0.08)',
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--color-border)',
         padding: '1.4rem',
-        boxShadow: '0 24px 60px rgba(15, 23, 42, 0.12)',
+        boxShadow: '0 24px 60px rgba(0, 0, 0, 0.32)',
       }}
     >
       <div style={{ display: 'grid', gap: '0.45rem', marginBottom: '1rem' }}>
@@ -123,12 +123,12 @@ export default function OTPForm({
             margin: 0,
             fontSize: '1.35rem',
             letterSpacing: '-0.03em',
-            color: '#0f172a',
+            color: 'var(--text-primary)',
           }}
         >
           {title}
         </h2>
-        <p style={{ margin: 0, color: '#475569', lineHeight: 1.5 }}>
+        <p style={{ margin: 0, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
           {description}
         </p>
       </div>
@@ -138,8 +138,8 @@ export default function OTPForm({
           style={{
             marginBottom: '0.9rem',
             borderRadius: '0.9rem',
-            background: '#ecfdf5',
-            color: '#065f46',
+            background: 'rgba(16, 185, 129, 0.14)',
+            color: 'var(--accent-green)',
             padding: '0.8rem 0.9rem',
           }}
         >
@@ -152,8 +152,8 @@ export default function OTPForm({
           style={{
             marginBottom: '0.9rem',
             borderRadius: '0.9rem',
-            background: '#fef2f2',
-            color: '#991b1b',
+            background: 'rgba(239, 68, 68, 0.14)',
+            color: 'var(--accent-red)',
             padding: '0.8rem 0.9rem',
           }}
         >
@@ -163,7 +163,7 @@ export default function OTPForm({
 
       {step === 'email' ? (
         <form onSubmit={sendCode} style={{ display: 'grid', gap: '0.85rem' }}>
-          <label style={{ display: 'grid', gap: '0.45rem', color: '#334155' }}>
+          <label style={{ display: 'grid', gap: '0.45rem', color: 'var(--text-secondary)' }}>
             <span>Email</span>
             <input
               type="email"
@@ -173,7 +173,8 @@ export default function OTPForm({
               required
               style={{
                 borderRadius: '0.95rem',
-                border: '1px solid rgba(15, 23, 42, 0.14)',
+                border: '1px solid var(--color-border)',
+                background: 'var(--bg-primary)',
                 padding: '0.9rem 1rem',
                 fontSize: '1rem',
               }}
@@ -185,8 +186,8 @@ export default function OTPForm({
             style={{
               border: 'none',
               borderRadius: '999px',
-              background: '#0f172a',
-              color: '#fff',
+              background: 'var(--accent-blue)',
+              color: 'var(--text-primary)',
               padding: '0.9rem 1.1rem',
               fontWeight: 700,
               cursor: 'pointer',
@@ -197,7 +198,7 @@ export default function OTPForm({
         </form>
       ) : (
         <form onSubmit={verifyCode} style={{ display: 'grid', gap: '0.85rem' }}>
-          <label style={{ display: 'grid', gap: '0.45rem', color: '#334155' }}>
+          <label style={{ display: 'grid', gap: '0.45rem', color: 'var(--text-secondary)' }}>
             <span>6-digit code</span>
             <input
               type="text"
@@ -212,7 +213,8 @@ export default function OTPForm({
               required
               style={{
                 borderRadius: '0.95rem',
-                border: '1px solid rgba(15, 23, 42, 0.14)',
+                border: '1px solid var(--color-border)',
+                background: 'var(--bg-primary)',
                 padding: '0.9rem 1rem',
                 fontSize: '1.1rem',
                 letterSpacing: '0.35em',
@@ -225,8 +227,8 @@ export default function OTPForm({
             style={{
               border: 'none',
               borderRadius: '999px',
-              background: '#0f172a',
-              color: '#fff',
+              background: 'var(--accent-blue)',
+              color: 'var(--text-primary)',
               padding: '0.9rem 1.1rem',
               fontWeight: 700,
               cursor: 'pointer',
@@ -245,7 +247,7 @@ export default function OTPForm({
             style={{
               border: 'none',
               background: 'transparent',
-              color: '#0f172a',
+              color: 'var(--text-primary)',
               cursor: 'pointer',
               textAlign: 'left',
               padding: 0,
@@ -258,3 +260,4 @@ export default function OTPForm({
     </section>
   );
 }
+

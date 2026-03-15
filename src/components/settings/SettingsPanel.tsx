@@ -267,12 +267,12 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         .field span { font-weight:700; }
         .field select {
           border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem;
-          font:inherit; background:#fff;
+          font:inherit; background:var(--color-surface);
         }
         .casino-settings-list { display:grid; gap:.75rem; }
         .casino-setting-row {
           display:flex; justify-content:space-between; gap:1rem; align-items:center; flex-wrap:wrap;
-          border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem; background:#fff;
+          border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem; background:var(--color-surface);
         }
         .casino-setting-copy { display:grid; gap:.25rem; }
         .casino-link { color:var(--color-ink); text-decoration:none; font-weight:700; }
@@ -281,18 +281,19 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         .actions { display:flex; gap:.75rem; flex-wrap:wrap; }
         .actions button {
           border:none; border-radius:999px; padding:.85rem 1rem; background:var(--color-primary);
-          color:#fff; font:inherit; font-weight:700; cursor:pointer;
+          color:var(--text-primary); font:inherit; font-weight:700; cursor:pointer;
         }
         .ghost-button {
-          background:#fff !important; color:var(--color-ink) !important; border:1px solid var(--color-border) !important;
+          background:var(--color-surface) !important; color:var(--color-ink) !important; border:1px solid var(--color-border) !important;
         }
         .toast {
           position:sticky; top:1rem; z-index:20; justify-self:center; padding:.85rem 1rem;
           border-radius:999px; font-weight:700;
         }
-        .toast-success { background:#ecfdf5; color:#065f46; }
-        .toast-error { background:#fef2f2; color:#991b1b; }
+        .toast-success { background:rgba(16, 185, 129, 0.16); color:var(--accent-green); }
+        .toast-error { background:rgba(239, 68, 68, 0.16); color:var(--accent-red); }
       `}</style>
     </section>
   );
 }
+

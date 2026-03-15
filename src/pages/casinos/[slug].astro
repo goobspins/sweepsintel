@@ -263,13 +263,13 @@ const directUrl =
         </div>
 
         {profileData.hasBanUptick ? (
-          <div style="padding:1rem;border-radius:1rem;background:rgba(217,119,6,.12);color:#92400E;font-weight:700;">
+          <div style="padding:1rem;border-radius:1rem;background:rgba(245,158,11,.14);color:var(--accent-yellow);font-weight:700;">
             Elevated ban activity reported in the last 7 days.
           </div>
         ) : null}
 
         {redemptionStats.trendWarning ? (
-          <div style="padding:1rem;border-radius:1rem;background:rgba(217,119,6,.12);color:#92400E;font-weight:700;">
+          <div style="padding:1rem;border-radius:1rem;background:rgba(245,158,11,.14);color:var(--accent-yellow);font-weight:700;">
             Processing times appear to be increasing recently.
           </div>
         ) : null}
@@ -293,7 +293,7 @@ const directUrl =
         Providers: {profileData.providers.length > 0 ? profileData.providers.map((provider) => provider.name).join(', ') : 'None listed'}
       </p>
       {currentCasino.has_live_games ? (
-        <div style="padding:1rem;border-radius:1rem;background:rgba(217,119,6,.12);color:#92400E;font-weight:700;">
+        <div style="padding:1rem;border-radius:1rem;background:rgba(245,158,11,.14);color:var(--accent-yellow);font-weight:700;">
           Live game providers log multi-account connections at the same table. Separate devices and IPs are required.
         </div>
       ) : null}
@@ -311,7 +311,7 @@ const directUrl =
         {profileData.intelItems.map((item) => (
           <article
             key={item.id}
-            style="padding:1rem;border:1px solid var(--color-border);border-radius:1.25rem;background:#fff;"
+            style="padding:1rem;border:1px solid var(--color-border);border-radius:1.25rem;background:var(--color-surface);"
           >
             <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
               <strong>{item.title}</strong>
@@ -323,8 +323,8 @@ const directUrl =
               <span>Disputed: {item.dispute_count}</span>
               {user ? (
                 <>
-                  <button type="button" disabled style="border:1px solid var(--color-border);background:#fff;border-radius:999px;padding:.55rem .8rem;">Confirm</button>
-                  <button type="button" disabled style="border:1px solid var(--color-border);background:#fff;border-radius:999px;padding:.55rem .8rem;">Dispute</button>
+                  <button type="button" disabled style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:999px;padding:.55rem .8rem;">Confirm</button>
+                  <button type="button" disabled style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:999px;padding:.55rem .8rem;">Dispute</button>
                 </>
               ) : null}
             </div>
@@ -352,12 +352,12 @@ const directUrl =
         Available in {stateSummary.available.length} states.
       </p>
       {stateSummary.restricted.length > 0 ? (
-        <p style="margin:0;color:#92400E;font-weight:700;">
+        <p style="margin:0;color:var(--accent-yellow);font-weight:700;">
           Restricted: {stateSummary.restricted.map((state) => state.state_code).join(', ')}
         </p>
       ) : null}
       {stateSummary.pulledOut.length > 0 ? (
-        <p style="margin:0;color:#92400E;font-weight:700;">
+        <p style="margin:0;color:var(--accent-yellow);font-weight:700;">
           Pulled out: {stateSummary.pulledOut.map((state) => state.state_code).join(', ')}
         </p>
       ) : null}

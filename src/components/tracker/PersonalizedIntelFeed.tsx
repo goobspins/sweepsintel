@@ -10,13 +10,13 @@ interface PersonalizedIntelFeedProps {
 }
 
 const badgeColors: Record<string, string> = {
-  free_sc: '#16A34A',
-  promo_code: '#2563EB',
-  flash_sale: '#2563EB',
+  free_sc: 'var(--accent-green)',
+  promo_code: 'var(--accent-blue)',
+  flash_sale: 'var(--accent-blue)',
   playthrough_deal: '#7C3AED',
-  platform_warning: '#D97706',
-  state_intel: '#D97706',
-  general_tip: '#6B7280',
+  platform_warning: 'var(--accent-yellow)',
+  state_intel: 'var(--accent-yellow)',
+  general_tip: 'var(--text-muted)',
 };
 
 export default function PersonalizedIntelFeed({
@@ -47,8 +47,8 @@ export default function PersonalizedIntelFeed({
                 <span
                   className="intel-badge"
                   style={{
-                    background: `${badgeColors[item.item_type] ?? '#6B7280'}1A`,
-                    color: badgeColors[item.item_type] ?? '#6B7280',
+                    background: `${badgeColors[item.item_type] ?? 'var(--text-muted)'}1A`,
+                    color: badgeColors[item.item_type] ?? 'var(--text-muted)',
                   }}
                 >
                   {item.item_type.replace(/_/g, ' ')}
@@ -116,7 +116,7 @@ export default function PersonalizedIntelFeed({
           padding: 1rem;
           border-radius: 1rem;
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--color-surface);
         }
 
         .intel-topline,
@@ -146,14 +146,14 @@ export default function PersonalizedIntelFeed({
           border-radius: 999px;
           padding: 0.62rem 0.9rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
         }
 
         .intel-actions .secondary {
-          background: #fff;
+          background: var(--bg-primary);
           color: var(--color-ink);
           border: 1px solid var(--color-border);
         }
@@ -177,3 +177,4 @@ function formatExpiry(expiresAt: string, nowTs: number) {
   const hours = Math.floor(minutes / 60);
   return { label: `Expires in ${hours}h`, color: 'var(--color-warning)' };
 }
+

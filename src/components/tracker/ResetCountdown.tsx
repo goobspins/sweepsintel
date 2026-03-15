@@ -58,3 +58,4 @@ export default function ResetCountdown({
 
   return <span style={{ color: tone, fontWeight: 700 }}>{text}</span>;
 }
+

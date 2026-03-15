@@ -17,15 +17,15 @@ interface FlagQueueProps {
 }
 
 const flagColors: Record<string, string> = {
-  potential_pullout: '#DC2626',
-  ban_surge: '#D97706',
-  redemption_slowdown: '#D97706',
-  data_anomaly: '#6B7280',
-  new_casino_signal: '#2563EB',
+  potential_pullout: 'var(--accent-red)',
+  ban_surge: 'var(--accent-yellow)',
+  redemption_slowdown: 'var(--accent-yellow)',
+  data_anomaly: 'var(--text-muted)',
+  new_casino_signal: 'var(--accent-blue)',
   premium_content_candidate: '#7C3AED',
-  positive_redemption: '#16A34A',
+  positive_redemption: 'var(--accent-green)',
   game_availability_change: '#EA580C',
-  broken_platform_feature: '#DC2626',
+  broken_platform_feature: 'var(--accent-red)',
 };
 
 export default function FlagQueue({ flags }: FlagQueueProps) {
@@ -146,8 +146,8 @@ export default function FlagQueue({ flags }: FlagQueueProps) {
             <span
               className="badge"
               style={{
-                background: `${flagColors[flag.flag_type] ?? '#6B7280'}1A`,
-                color: flagColors[flag.flag_type] ?? '#6B7280',
+                background: `${flagColors[flag.flag_type] ?? 'var(--text-muted)'}1A`,
+                color: flagColors[flag.flag_type] ?? 'var(--text-muted)',
               }}
             >
               {flag.flag_type.replace(/_/g, ' ')}
@@ -180,7 +180,7 @@ export default function FlagQueue({ flags }: FlagQueueProps) {
           padding: 1rem;
           border-radius: 1rem;
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--color-surface);
         }
         .selected { box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
         .row-topline, .actions {
@@ -211,7 +211,7 @@ export default function FlagQueue({ flags }: FlagQueueProps) {
           margin: 0;
           padding: 0.9rem;
           border-radius: 0.85rem;
-          background: #f8fafc;
+          background: var(--bg-secondary);
           white-space: pre-wrap;
           font-family: ui-monospace, monospace;
         }
@@ -220,13 +220,13 @@ export default function FlagQueue({ flags }: FlagQueueProps) {
           border-radius: 999px;
           padding: 0.75rem 0.95rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
         }
         .actions .ghost {
-          background: #fff;
+          background: var(--color-surface);
           color: var(--color-ink);
           border: 1px solid var(--color-border);
         }
@@ -235,8 +235,8 @@ export default function FlagQueue({ flags }: FlagQueueProps) {
           bottom: 1rem;
           padding: 0.85rem 1rem;
           border-radius: 999px;
-          background: #0f172a;
-          color: #fff;
+          background: var(--bg-primary);
+          color: var(--text-primary);
           width: fit-content;
           justify-self: end;
         }
@@ -244,3 +244,4 @@ export default function FlagQueue({ flags }: FlagQueueProps) {
     </div>
   );
 }
+

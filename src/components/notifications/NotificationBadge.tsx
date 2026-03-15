@@ -58,10 +58,10 @@ export default function NotificationBadge({ user }: NotificationBadgeProps) {
         width: '2.5rem',
         height: '2.5rem',
         borderRadius: '999px',
-        border: '1px solid rgba(15, 23, 42, 0.12)',
-        color: '#0f172a',
+        border: '1px solid var(--color-border)',
+        color: 'var(--text-primary)',
         textDecoration: 'none',
-        background: '#fff',
+        background: 'var(--bg-secondary)',
         position: 'relative',
       }}
     >
@@ -78,8 +78,8 @@ export default function NotificationBadge({ user }: NotificationBadgeProps) {
             minWidth: '1.1rem',
             height: '1.1rem',
             borderRadius: '999px',
-            background: '#ef4444',
-            color: '#fff',
+            background: 'var(--accent-red)',
+            color: 'var(--text-primary)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -94,3 +94,4 @@ export default function NotificationBadge({ user }: NotificationBadgeProps) {
     </a>
   );
 }
+

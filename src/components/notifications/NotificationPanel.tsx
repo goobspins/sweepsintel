@@ -156,12 +156,12 @@ export default function NotificationPanel({
         .panel-header p, .row-copy p, .row-copy strong { margin:0; }
         .ghost-button {
           border:1px solid var(--color-border); border-radius:999px; padding:.85rem 1rem;
-          background:#fff; color:var(--color-ink); font:inherit; font-weight:700; cursor:pointer;
+          background:var(--color-surface); color:var(--color-ink); font:inherit; font-weight:700; cursor:pointer;
         }
         .notification-list { display:grid; gap:.85rem; }
         .notification-row {
           width:100%; text-align:left; border:1px solid var(--color-border); border-radius:1.25rem;
-          background:#fff; padding:1rem; cursor:pointer;
+          background:var(--color-surface); padding:1rem; cursor:pointer;
         }
         .notification-row.unread {
           border-color:rgba(37, 99, 235, 0.25); background:rgba(37, 99, 235, 0.04);
@@ -178,8 +178,8 @@ export default function NotificationPanel({
           position:sticky; top:1rem; z-index:20; justify-self:center; padding:.85rem 1rem;
           border-radius:999px; font-weight:700;
         }
-        .toast-success { background:#ecfdf5; color:#065f46; }
-        .toast-error { background:#fef2f2; color:#991b1b; }
+        .toast-success { background:rgba(16, 185, 129, 0.16); color:var(--accent-green); }
+        .toast-error { background:rgba(239, 68, 68, 0.16); color:var(--accent-red); }
         @media (max-width: 767px) { .notification-row { display:grid; } }
       `}</style>
     </section>
@@ -202,3 +202,4 @@ function formatRelative(timestamp: string) {
   if (Math.abs(diffMs) >= hourMs) return formatter.format(Math.round(diffMs / hourMs), 'hour');
   return formatter.format(Math.round(diffMs / minuteMs), 'minute');
 }
+

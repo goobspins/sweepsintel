@@ -20,10 +20,10 @@ interface DiscordIntelQueueProps {
 }
 
 const confidenceColors: Record<string, string> = {
-  high: '#16A34A',
-  medium: '#D97706',
+  high: 'var(--accent-green)',
+  medium: 'var(--accent-yellow)',
   low: '#EA580C',
-  unverified: '#6B7280',
+  unverified: 'var(--text-muted)',
 };
 
 export default function DiscordIntelQueue({ items }: DiscordIntelQueueProps) {
@@ -89,8 +89,8 @@ export default function DiscordIntelQueue({ items }: DiscordIntelQueueProps) {
             <span
               className="badge"
               style={{
-                background: `${confidenceColors[item.confidence] ?? '#6B7280'}1A`,
-                color: confidenceColors[item.confidence] ?? '#6B7280',
+                background: `${confidenceColors[item.confidence] ?? 'var(--text-muted)'}1A`,
+                color: confidenceColors[item.confidence] ?? 'var(--text-muted)',
               }}
             >
               {item.confidence}
@@ -130,7 +130,7 @@ export default function DiscordIntelQueue({ items }: DiscordIntelQueueProps) {
           padding: 1rem;
           border-radius: 1rem;
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--color-surface);
         }
         .selected { box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
         .row-topline, .actions {
@@ -161,7 +161,7 @@ export default function DiscordIntelQueue({ items }: DiscordIntelQueueProps) {
           margin: 0;
           padding: 0.9rem;
           border-radius: 0.85rem;
-          background: #f8fafc;
+          background: var(--bg-secondary);
           white-space: pre-wrap;
           font-family: ui-monospace, monospace;
         }
@@ -170,13 +170,13 @@ export default function DiscordIntelQueue({ items }: DiscordIntelQueueProps) {
           border-radius: 999px;
           padding: 0.75rem 0.95rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
         }
         .actions .ghost {
-          background: #fff;
+          background: var(--color-surface);
           color: var(--color-ink);
           border: 1px solid var(--color-border);
         }
@@ -185,8 +185,8 @@ export default function DiscordIntelQueue({ items }: DiscordIntelQueueProps) {
           bottom: 1rem;
           padding: 0.85rem 1rem;
           border-radius: 999px;
-          background: #0f172a;
-          color: #fff;
+          background: var(--bg-primary);
+          color: var(--text-primary);
           width: fit-content;
           justify-self: end;
         }
@@ -215,3 +215,4 @@ function renderExpiry(expiresAt: string | null) {
 
   return `Expires in ${Math.floor(minutes / 60)}h`;
 }
+

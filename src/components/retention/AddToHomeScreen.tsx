@@ -99,12 +99,13 @@ export default function AddToHomeScreen({ blocked = false }: AddToHomeScreenProp
         .actions { display:flex; gap:.65rem; flex-wrap:wrap; }
         .actions button {
           border:none; border-radius:999px; padding:.8rem 1rem; background:var(--color-primary);
-          color:#fff; font:inherit; font-weight:700; cursor:pointer;
+          color:var(--text-primary); font:inherit; font-weight:700; cursor:pointer;
         }
         .actions .ghost {
-          border:1px solid var(--color-border); background:#fff; color:var(--color-ink);
+          border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-ink);
         }
       `}</style>
     </section>
   );
 }
+

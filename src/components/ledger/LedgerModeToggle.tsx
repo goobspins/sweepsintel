@@ -100,7 +100,7 @@ export default function LedgerModeToggle({
           border: 1px solid var(--color-border);
           border-radius: 999px;
           padding: 0.75rem 1rem;
-          background: #fff;
+          background: var(--color-surface);
           color: var(--color-ink);
           font: inherit;
           font-weight: 700;
@@ -109,7 +109,7 @@ export default function LedgerModeToggle({
 
         .options .active {
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           border-color: var(--color-primary);
         }
 
@@ -122,3 +122,4 @@ export default function LedgerModeToggle({
     </div>
   );
 }
+

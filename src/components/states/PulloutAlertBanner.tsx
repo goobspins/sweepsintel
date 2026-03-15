@@ -30,7 +30,7 @@ export default function PulloutAlertBanner({
       <style>{`
         .alert-banner {
           display:grid; gap:.75rem; padding:1rem; border-radius:1rem;
-          background:#fff7ed; border:1px solid rgba(217, 119, 6, 0.25); color:#9A3412;
+          background:rgba(245, 158, 11, 0.16); border:1px solid rgba(217, 119, 6, 0.25); color:var(--accent-yellow);
         }
         .alert-row {
           display:flex; justify-content:space-between; gap:.75rem; flex-wrap:wrap; align-items:flex-start;
@@ -39,3 +39,4 @@ export default function PulloutAlertBanner({
     </section>
   );
 }
+

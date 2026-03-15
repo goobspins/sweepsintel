@@ -55,12 +55,12 @@ export default function Nav({ currentPath = '/', mobile = false, user }: NavProp
             key={item.href}
             href={item.href}
             style={{
-              color: active ? '#0f172a' : '#475569',
+              color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
               textDecoration: 'none',
               fontWeight: active ? 700 : 500,
               padding: mobile ? '0.7rem 0.85rem' : '0.45rem 0.25rem',
               borderRadius: '0.75rem',
-              background: active ? 'rgba(148, 163, 184, 0.16)' : 'transparent',
+              background: active ? 'rgba(59, 130, 246, 0.14)' : 'transparent',
             }}
           >
             {item.label}
@@ -70,3 +70,4 @@ export default function Nav({ currentPath = '/', mobile = false, user }: NavProp
     </nav>
   );
 }
+

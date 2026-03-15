@@ -110,8 +110,8 @@ export default function AffiliateCTA({
         .cta-button {
           width: fit-content;
           padding: 0.9rem 1.2rem;
-          background: ${shouldAffiliate ? 'var(--color-primary)' : '#fff'};
-          color: ${shouldAffiliate ? '#fff' : 'var(--color-ink)'};
+          background: ${shouldAffiliate ? 'var(--color-primary)' : 'var(--bg-primary)'};
+          color: ${shouldAffiliate ? 'var(--text-primary)' : 'var(--color-ink)'};
           border: 1px solid ${shouldAffiliate ? 'var(--color-primary)' : 'var(--color-border)'};
         }
 
@@ -122,7 +122,7 @@ export default function AffiliateCTA({
           right: 1rem;
           padding: 1rem 1.2rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           box-shadow: 0 20px 40px rgba(37, 99, 235, 0.25);
           z-index: 30;
         }
@@ -136,3 +136,4 @@ export default function AffiliateCTA({
     </>
   );
 }
+

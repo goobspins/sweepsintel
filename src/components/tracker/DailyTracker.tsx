@@ -665,7 +665,7 @@ export default function DailyTracker({
           display: inline-flex;
           margin-top: 0.35rem;
           border-radius: 999px;
-          background: rgba(37, 99, 235, 0.08);
+          background: rgba(59, 130, 246, 0.14);
           color: var(--color-primary);
           padding: 0.3rem 0.7rem;
           font-weight: 700;
@@ -697,7 +697,7 @@ export default function DailyTracker({
           border-radius: 999px;
           padding: 0.85rem 1rem;
           background: var(--color-primary);
-          color: #fff;
+          color: var(--text-primary);
           font: inherit;
           font-weight: 700;
           cursor: pointer;
@@ -713,7 +713,7 @@ export default function DailyTracker({
           padding: 0.8rem 0.95rem;
           border-radius: 1rem;
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--bg-primary);
           font: inherit;
           cursor: pointer;
         }
@@ -725,7 +725,7 @@ export default function DailyTracker({
           border: 1px dashed var(--color-border);
           border-radius: 1.2rem;
           color: var(--color-muted);
-          background: rgba(255, 255, 255, 0.6);
+          background: rgba(55, 65, 81, 0.35);
         }
 
         .empty-state p {
@@ -749,7 +749,7 @@ export default function DailyTracker({
           padding: 1rem;
           border-radius: 1.2rem;
           border: 1px solid var(--color-border);
-          background: #fff;
+          background: var(--color-surface);
         }
 
         .suggestion-copy {
@@ -768,7 +768,7 @@ export default function DailyTracker({
         }
 
         .suggestion-actions .ghost {
-          background: #fff;
+          background: var(--bg-primary);
           color: var(--color-ink);
           border: 1px solid var(--color-border);
         }
@@ -781,17 +781,17 @@ export default function DailyTracker({
           padding: 0.85rem 1rem;
           border-radius: 999px;
           font-weight: 700;
-          box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+          box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
         }
 
         .toast-success {
-          background: #ecfdf5;
-          color: #065f46;
+          background: rgba(16, 185, 129, 0.16);
+          color: var(--accent-green);
         }
 
         .toast-error {
-          background: #fef2f2;
-          color: #991b1b;
+          background: rgba(239, 68, 68, 0.16);
+          color: var(--accent-red);
         }
       `}</style>
     </div>
@@ -987,3 +987,4 @@ function formatUsdEstimate(
 
   return (sc / ratio).toFixed(0);
 }
+

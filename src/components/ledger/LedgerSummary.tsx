@@ -74,7 +74,7 @@ export default function LedgerSummary({ summary, ledgerMode }: LedgerSummaryProp
           gap: 0.35rem;
           padding: 0.95rem;
           border-radius: 1rem;
-          background: #f8fafc;
+          background: var(--bg-secondary);
         }
 
         .summary-grid strong,
@@ -130,3 +130,4 @@ function formatCurrency(value: number) {
 function formatSc(value: number) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
 }
+
