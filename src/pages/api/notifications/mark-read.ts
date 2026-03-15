@@ -1,13 +1,11 @@
 import type { APIRoute } from 'astro';
 
-import { methodNotAllowed } from '../../../lib/api';
 
 import { isHttpError, requireAuth } from '../../../lib/auth';
 import { query } from '../../../lib/db';
 
 export const prerender = false;
 
-export const GET: APIRoute = async () => methodNotAllowed(['POST']);
 
 
 

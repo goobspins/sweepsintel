@@ -32,6 +32,21 @@ type SearchResult = {
   source: string;
 };
 
+async function readApiResponse(response: Response) {
+  const contentType = response.headers.get('Content-Type') ?? '';
+  const rawText = await response.text();
+
+  if (contentType.includes('application/json')) {
+    try {
+      return rawText ? JSON.parse(rawText) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+}
+
 export default function DailyTracker({
   user,
   initialData,
@@ -74,7 +89,7 @@ export default function DailyTracker({
           `/api/tracker/search?q=${encodeURIComponent(searchTerm.trim())}`,
           { signal: controller.signal },
         );
-        const data = await response.json();
+        const data = await readApiResponse(response);
         setSearchResults(data.results ?? []);
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -142,8 +157,8 @@ export default function DailyTracker({
   }, [casinos, claimMap, nowTs, user.timezone]);
 
   async function refreshTracker() {
-    const response = await fetch('/api/tracker/status');
-    const data = await response.json();
+      const response = await fetch('/api/tracker/status');
+    const data = await readApiResponse(response);
     if (!response.ok) {
       throw new Error(data.error ?? 'Unable to refresh tracker.');
     }
@@ -161,7 +176,7 @@ export default function DailyTracker({
     setSuggestionsLoading(true);
     try {
       const response = await fetch('/api/tracker/suggestions');
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to load suggestions.');
       }
@@ -206,7 +221,7 @@ export default function DailyTracker({
           sc_amount: scAmount,
         }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to save claim.');
       }
@@ -255,7 +270,7 @@ export default function DailyTracker({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ casino_id: casino.casinoId }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to remove casino.');
       }
@@ -288,7 +303,7 @@ export default function DailyTracker({
           fire_affiliate: fireAffiliate,
         }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to add casino.');
       }
@@ -360,7 +375,7 @@ export default function DailyTracker({
             : { casino_name: target, fire_affiliate: false },
         ),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to add casino.');
       }
@@ -387,7 +402,7 @@ export default function DailyTracker({
         method: 'POST',
         body: formData,
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to import casinos.');
       }
@@ -432,7 +447,7 @@ export default function DailyTracker({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ item_id: itemId, reaction }),
       });
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to save reaction.');
       }

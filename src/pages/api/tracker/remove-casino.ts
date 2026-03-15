@@ -1,9 +1,9 @@
 import type { APIRoute } from 'astro';
 
-import { methodNotAllowed } from '../../../lib/api';
-
 import { isHttpError, requireAuth } from '../../../lib/auth';
 import { removeCasinoFromTracker } from '../../../lib/tracker';
+
+export const prerender = false;
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -11,8 +11,6 @@ function json(data: unknown, status = 200) {
     headers: { 'Content-Type': 'application/json' },
   });
 }
-
-export const GET: APIRoute = async () => methodNotAllowed(['POST']);
 
 export const POST: APIRoute = async ({ request }) => {
   try {
