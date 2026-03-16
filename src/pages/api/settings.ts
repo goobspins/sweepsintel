@@ -19,8 +19,10 @@ async function loadSettings(userId: string) {
       timezone: string | null;
       home_state: string | null;
       ledger_mode: 'simple' | 'advanced' | null;
+      daily_goal_usd: number | string | null;
+      weekly_goal_usd: number | string | null;
     }>(
-      `SELECT timezone, home_state, ledger_mode
+      `SELECT timezone, home_state, ledger_mode, daily_goal_usd, weekly_goal_usd
       FROM user_settings
       WHERE user_id = $1
       LIMIT 1`,
@@ -45,12 +47,18 @@ async function loadSettings(userId: string) {
     timezone: 'America/New_York',
     home_state: null,
     ledger_mode: 'simple' as const,
+    daily_goal_usd: 5,
+    weekly_goal_usd: null,
   };
 
   return {
     timezone: settings.timezone ?? 'America/New_York',
     home_state: settings.home_state,
     ledger_mode: settings.ledger_mode ?? 'simple',
+    daily_goal_usd:
+      settings.daily_goal_usd === null ? 5 : Number(settings.daily_goal_usd) || 5,
+    weekly_goal_usd:
+      settings.weekly_goal_usd === null ? null : Number(settings.weekly_goal_usd) || null,
     state_subscriptions: subscriptionRows.map((row) => row.state_code),
     states,
   };
@@ -95,6 +103,14 @@ export const POST: APIRoute = async ({ request }) => {
           ),
         )
       : null;
+    const dailyGoalUsd =
+      body?.daily_goal_usd === null || body?.daily_goal_usd === undefined || body?.daily_goal_usd === ''
+        ? null
+        : Number(body.daily_goal_usd);
+    const weeklyGoalUsd =
+      body?.weekly_goal_usd === null || body?.weekly_goal_usd === undefined || body?.weekly_goal_usd === ''
+        ? null
+        : Number(body.weekly_goal_usd);
 
     await transaction(async (tx) => {
       await tx.query(
@@ -102,9 +118,18 @@ export const POST: APIRoute = async ({ request }) => {
         SET timezone = COALESCE($2, timezone),
             home_state = COALESCE($3, home_state),
             ledger_mode = COALESCE($4, ledger_mode),
+            daily_goal_usd = COALESCE($5, daily_goal_usd),
+            weekly_goal_usd = $6,
             updated_at = NOW()
         WHERE user_id = $1`,
-        [user.userId, timezone, homeState, ledgerMode],
+        [
+          user.userId,
+          timezone,
+          homeState,
+          ledgerMode,
+          Number.isFinite(dailyGoalUsd) && dailyGoalUsd !== null ? dailyGoalUsd : null,
+          Number.isFinite(weeklyGoalUsd) ? weeklyGoalUsd : null,
+        ],
       );
 
       if (stateSubscriptions) {
@@ -133,3 +158,4 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to save settings.' }, 500);
   }
 };
+

@@ -14,6 +14,8 @@ interface SettingsPanelProps {
     timezone: string;
     home_state: string | null;
     ledger_mode: 'simple' | 'advanced';
+    daily_goal_usd?: number | null;
+    weekly_goal_usd?: number | null;
     state_subscriptions: string[];
     states: Array<{ state_code: string; state_name: string }>;
     vapid_public_key: string;
@@ -60,6 +62,12 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
   const [timezone, setTimezone] = useState(initialSettings.timezone);
   const [homeState, setHomeState] = useState(initialSettings.home_state ?? '');
   const [ledgerMode, setLedgerMode] = useState<'simple' | 'advanced'>(initialSettings.ledger_mode);
+  const [dailyGoalUsd, setDailyGoalUsd] = useState(
+    initialSettings.daily_goal_usd?.toString() ?? '5',
+  );
+  const [weeklyGoalUsd, setWeeklyGoalUsd] = useState(
+    initialSettings.weekly_goal_usd?.toString() ?? '',
+  );
   const [stateSubscriptions, setStateSubscriptions] = useState(initialSettings.state_subscriptions);
   const [pushOptIn, setPushOptIn] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
@@ -90,6 +98,38 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSettings() {
+      try {
+        const response = await fetch('/api/settings');
+        const data = await response.json();
+        if (!response.ok || cancelled) {
+          return;
+        }
+
+        setTimezone(data.timezone ?? 'America/New_York');
+        setHomeState(data.home_state ?? '');
+        setLedgerMode(data.ledger_mode === 'advanced' ? 'advanced' : 'simple');
+        setDailyGoalUsd(
+          typeof data.daily_goal_usd === 'number' ? String(data.daily_goal_usd) : '5',
+        );
+        setWeeklyGoalUsd(
+          typeof data.weekly_goal_usd === 'number' ? String(data.weekly_goal_usd) : '',
+        );
+        setStateSubscriptions(Array.isArray(data.state_subscriptions) ? data.state_subscriptions : []);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    void loadSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function saveSettings() {
     setSaving(true);
     setToast(null);
@@ -101,6 +141,8 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
           timezone,
           home_state: homeState || null,
           ledger_mode: ledgerMode,
+          daily_goal_usd: dailyGoalUsd === '' ? 5 : Number(dailyGoalUsd),
+          weekly_goal_usd: weeklyGoalUsd === '' ? null : Number(weeklyGoalUsd),
           state_subscriptions: stateSubscriptions,
         }),
       });
@@ -112,6 +154,8 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
       setTimezone(data.timezone);
       setHomeState(data.home_state ?? '');
       setLedgerMode(data.ledger_mode);
+      setDailyGoalUsd(typeof data.daily_goal_usd === 'number' ? String(data.daily_goal_usd) : '5');
+      setWeeklyGoalUsd(typeof data.weekly_goal_usd === 'number' ? String(data.weekly_goal_usd) : '');
       setStateSubscriptions(data.state_subscriptions ?? []);
     } catch (error) {
       console.error(error);
@@ -217,6 +261,33 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
       </div>
 
       <div className="field">
+        <span>Goals</span>
+        <div className="goal-grid">
+          <label className="goal-field">
+            <span>Daily SC Goal (USD)</span>
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={dailyGoalUsd}
+              onChange={(event) => setDailyGoalUsd(event.target.value)}
+            />
+          </label>
+          <label className="goal-field">
+            <span>Weekly SC Goal (USD)</span>
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={weeklyGoalUsd}
+              onChange={(event) => setWeeklyGoalUsd(event.target.value)}
+              placeholder="Optional"
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="field">
         <span>State Subscriptions</span>
         <StateSubscriptionSelector
           states={initialSettings.states}
@@ -287,6 +358,13 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
           border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem;
           font:inherit; background:var(--color-surface);
         }
+        .goal-grid { display:grid; gap:.75rem; grid-template-columns:repeat(2, minmax(0, 1fr)); }
+        .goal-field { display:grid; gap:.4rem; }
+        .goal-field span { font-weight:700; color:var(--text-secondary); }
+        .goal-field input {
+          border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem;
+          font:inherit; background:var(--color-surface); color:var(--text-primary);
+        }
         .casino-settings-list { display:grid; gap:.75rem; }
         .casino-setting-row {
           display:flex; justify-content:space-between; gap:1rem; align-items:center; flex-wrap:wrap;
@@ -310,6 +388,7 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         }
         .toast-success { background:rgba(16, 185, 129, 0.16); color:var(--accent-green); }
         .toast-error { background:rgba(239, 68, 68, 0.16); color:var(--accent-red); }
+        @media (max-width: 720px) { .goal-grid { grid-template-columns:1fr; } }
       `}</style>
     </section>
   );

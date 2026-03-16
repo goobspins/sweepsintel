@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { DateTime } from 'luxon';
 
 import type { SessionUser } from '../../lib/auth';
-import { computeNextReset } from '../../lib/reset';
+import { computeFixedResetPeriodStart } from '../../lib/reset';
 import type { TrackerCasinoRow, TrackerStatusData } from '../../lib/tracker';
 
 type ToastState =
@@ -87,7 +87,7 @@ const DEFAULT_PURCHASE_DRAFT: PurchaseDraft = {
 const MODE_META: Record<ActionMode, { label: string; saveLabel: string; accent: string; endpoint: string }> = {
   daily: { label: 'Daily', saveLabel: 'Save', accent: 'var(--accent-green)', endpoint: '/api/tracker/claim' },
   adjust: { label: 'Adjust', saveLabel: 'Save Adj', accent: 'var(--accent-yellow)', endpoint: '/api/ledger/entry' },
-  spins: { label: 'Spins', saveLabel: 'Save Spins', accent: 'var(--accent-blue)', endpoint: '/api/tracker/free-sc' },
+  spins: { label: 'Free Spins', saveLabel: 'Save Free Spins', accent: 'var(--accent-blue)', endpoint: '/api/tracker/free-sc' },
 };
 
 async function readApiResponse(response: Response) {
@@ -113,6 +113,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const [modeByCasino, setModeByCasino] = useState<Record<number, ActionMode>>({});
   const [amountByCasino, setAmountByCasino] = useState<Record<number, string>>({});
   const [noteByCasino, setNoteByCasino] = useState<Record<number, string>>({});
+  const [inputErrorByCasino, setInputErrorByCasino] = useState<Record<number, string>>({});
   const [purchaseOpenByCasino, setPurchaseOpenByCasino] = useState<Record<number, boolean>>({});
   const [purchaseDraftByCasino, setPurchaseDraftByCasino] = useState<Record<number, PurchaseDraft>>({});
   const [pendingKey, setPendingKey] = useState<string | null>(null);
@@ -180,6 +181,16 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
     return purchaseDraftByCasino[casinoId] ?? DEFAULT_PURCHASE_DRAFT;
   }
 
+  function setPurchaseDraft(casinoId: number, patch: Partial<PurchaseDraft>) {
+    setPurchaseDraftByCasino((current) => ({
+      ...current,
+      [casinoId]: {
+        ...getPurchaseDraft(casinoId),
+        ...patch,
+      },
+    }));
+  }
+
   async function refreshTracker() {
     const response = await fetch('/api/tracker/status');
     const data = await readApiResponse(response);
@@ -195,14 +206,22 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
     const note = (noteByCasino[casino.casinoId] ?? '').trim();
     const saveKey = `${mode}:${casino.casinoId}`;
 
-    if (scAmount !== null && (!Number.isFinite(scAmount) || scAmount < 0)) {
+    if (scAmount !== null && !Number.isFinite(scAmount)) {
       setToast({ tone: 'error', message: 'Enter a valid SC amount.' });
+      return;
+    }
+    if ((mode === 'daily' || mode === 'spins') && scAmount !== null && scAmount < 0) {
+      setInputErrorByCasino((current) => ({
+        ...current,
+        [casino.casinoId]: 'Use Adjust mode to subtract',
+      }));
       return;
     }
     if (mode !== 'daily' && scAmount === null) {
       setToast({ tone: 'error', message: 'SC amount is required.' });
       return;
     }
+    setInputErrorByCasino((current) => ({ ...current, [casino.casinoId]: '' }));
 
     setPendingKey(saveKey);
     try {
@@ -253,7 +272,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
 
       setAmountByCasino((current) => ({ ...current, [casino.casinoId]: '' }));
       if (mode !== 'daily') setNoteByCasino((current) => ({ ...current, [casino.casinoId]: '' }));
-      setToast({ tone: 'success', message: mode === 'daily' ? `${casino.name} saved.` : mode === 'adjust' ? `${casino.name} adjustment saved.` : `${casino.name} spins saved.` });
+      setToast({ tone: 'success', message: mode === 'daily' ? `${casino.name} saved.` : mode === 'adjust' ? `${casino.name} adjustment saved.` : `${casino.name} free spins saved.` });
     } catch (error) {
       console.error(error);
       if (mode === 'daily') await refreshTracker().catch((refreshError) => console.error(refreshError));
@@ -330,9 +349,8 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         </button>
         {!momentumCollapsed ? (
           <div className="momentum-body">
-            <div className="period-toggle" role="tablist" aria-label="Momentum period">
-              <button type="button" className="period-button period-active">Daily</button>
-              <button type="button" className="period-button" onClick={() => setToast({ tone: 'success', message: 'Weekly view coming soon.' })}>Weekly</button>
+            <div className="period-toggle" aria-label="Momentum period">
+              <span className="period-button period-active">Daily</span>
             </div>
             <div className="momentum-inline-kpis" aria-label="Momentum highlights">
               <div className="momentum-chip">
@@ -378,9 +396,11 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
               const purchaseDraft = getPurchaseDraft(casino.casinoId);
               const actionPending = pendingKey === `${mode}:${casino.casinoId}`;
               const purchasePending = pendingKey === `purchase:${casino.casinoId}`;
+              const statusDisplay = getCasinoStatusDisplay(casino, user.timezone, nowTs);
+              const inputError = inputErrorByCasino[casino.casinoId];
 
               return (
-                <article key={casino.casinoId} id={`casino-${casino.casinoId}`} className="casino-row">
+                <article key={casino.casinoId} id={`casino-${casino.casinoId}`} className={`casino-row ${statusDisplay.isDue ? 'casino-row-due' : ''}`}>
                   <div className="casino-main">
                     <div className="casino-copy">
                       <div className="casino-heading">
@@ -390,8 +410,17 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
                         ) : null}
                       </div>
                       <div className="casino-meta">
-                        {casino.noDailyReward ? <span className="muted">No daily reward</span> : <ResetLine casino={casino} userTimezone={user.timezone} nowTs={nowTs} />}
-                        {casino.lastClaimedAt ? <span className="muted">Last {formatLastClaim(casino.lastClaimedAt, user.timezone)}</span> : null}
+                        {casino.noDailyReward ? (
+                          <span className="muted">No daily reward</span>
+                        ) : (
+                          <div className="status-stack">
+                            <div className="status-primary">
+                              {statusDisplay.isDue ? <span className="due-pill">DUE</span> : null}
+                              <span className={statusDisplay.primaryClassName}>{statusDisplay.primary}</span>
+                            </div>
+                            {statusDisplay.secondary ? <span className={statusDisplay.secondaryClassName}>{statusDisplay.secondary}</span> : null}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="action-stack">
@@ -410,10 +439,24 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
                         <button type="button" className={`buy-button ${purchaseOpen ? 'buy-button-open' : ''}`} onClick={() => setPurchaseOpenByCasino((current) => ({ ...current, [casino.casinoId]: !purchaseOpen }))}>+ Buy</button>
                       </div>
                       <div className="entry-row">
-                        <input inputMode="decimal" placeholder="SC amount" value={amountByCasino[casino.casinoId] ?? ''} onChange={(event) => setAmountByCasino((current) => ({ ...current, [casino.casinoId]: event.target.value }))} disabled={actionPending || (mode === 'daily' && casino.status !== 'available')} />
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          min={mode === 'adjust' ? undefined : 0}
+                          placeholder="SC amount"
+                          value={amountByCasino[casino.casinoId] ?? ''}
+                          onChange={(event) => {
+                            setAmountByCasino((current) => ({ ...current, [casino.casinoId]: event.target.value }));
+                            if (inputError) {
+                              setInputErrorByCasino((current) => ({ ...current, [casino.casinoId]: '' }));
+                            }
+                          }}
+                          disabled={actionPending || (mode === 'daily' && casino.status !== 'available')}
+                        />
                         {mode !== 'daily' ? <input placeholder="Description" value={noteByCasino[casino.casinoId] ?? ''} onChange={(event) => setNoteByCasino((current) => ({ ...current, [casino.casinoId]: event.target.value }))} disabled={actionPending} /> : null}
                         <button type="button" className="save-button" style={{ background: meta.accent }} onClick={() => void handleSave(casino)} disabled={actionPending || (mode === 'daily' && casino.status !== 'available')}>{actionPending ? 'Saving...' : meta.saveLabel}</button>
                       </div>
+                      {inputError ? <div className="entry-error">{inputError}</div> : null}
                     </div>
                   </div>
                   {purchaseOpen ? (
@@ -552,6 +595,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .section-copy { margin: 0; }
         .casino-list { display: grid; gap: 0.85rem; }
         .casino-row { display: grid; gap: 0.9rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.52); scroll-margin-top: 7rem; }
+        .casino-row-due { border-left: 3px solid var(--accent-green); }
         .casino-row:target { border-color: rgba(59, 130, 246, 0.52); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18), 0 18px 40px rgba(2, 6, 23, 0.38); }
         .casino-main { display: flex; gap: 1rem; justify-content: space-between; align-items: center; }
         .casino-copy { display: grid; gap: 0.45rem; min-width: 0; }
@@ -559,6 +603,13 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .casino-link { color: var(--text-primary); text-decoration: none; font-size: 1.08rem; font-weight: 800; letter-spacing: -0.03em; }
         .tier-badge { display: inline-flex; min-width: 2rem; justify-content: center; border-radius: 999px; padding: 0.25rem 0.55rem; font-size: 0.78rem; font-weight: 800; border: 1px solid transparent; }
         .casino-meta { display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center; font-size: 0.92rem; }
+        .status-stack { display: grid; gap: 0.18rem; }
+        .status-primary { display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap; }
+        .status-available { color: var(--text-primary); font-weight: 700; }
+        .status-claimed, .status-countdown { color: var(--text-secondary); font-weight: 700; }
+        .status-secondary { color: var(--text-muted); font-size: 0.84rem; }
+        .status-secondary-amber { color: var(--accent-yellow); font-size: 0.84rem; font-weight: 700; }
+        .due-pill { display: inline-flex; align-items: center; padding: 0.22rem 0.55rem; border-radius: 999px; background: var(--accent-green); color: #fff; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
         .action-stack { display: grid; gap: 0.7rem; width: min(100%, 560px); justify-items: end; }
         .mode-toggle, .entry-row, .purchase-actions { display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
         .mode-pill, .buy-button, .save-button, .ghost-button, .purchase-save { border-radius: 999px; font-weight: 700; cursor: pointer; }
@@ -566,6 +617,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .buy-button-open { color: var(--accent-blue); border-color: var(--accent-blue); }
         .entry-row input, .purchase-grid input { border-radius: 0.85rem; border: 1px solid var(--color-border); background: var(--bg-primary); color: var(--text-primary); padding: 0.72rem 0.82rem; min-width: 0; }
         .entry-row input { min-width: 140px; flex: 1 1 140px; }
+        .entry-error { color: var(--accent-red); font-size: 0.84rem; font-weight: 700; justify-self: end; }
         .save-button, .purchase-save { border: none; color: #0b1220; padding: 0.74rem 1rem; }
         .save-button:disabled, .purchase-save:disabled, .mode-pill:disabled, .buy-button:disabled, .ghost-button:disabled { cursor: not-allowed; opacity: 0.65; }
         .purchase-panel { display: grid; gap: 0.75rem; padding-top: 0.9rem; border-top: 1px solid var(--color-border); }
@@ -608,43 +660,9 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   );
 }
 
-function ResetLine({ casino, userTimezone, nowTs }: { casino: CasinoRowModel; userTimezone: string; nowTs: number }) {
-  const summary = computeNextReset(
-    {
-      reset_mode: casino.resetMode,
-      reset_time_local: casino.resetTimeLocal,
-      reset_timezone: casino.resetTimezone,
-      reset_interval_hours: casino.resetIntervalHours,
-      last_claimed_at: casino.lastClaimedAt,
-    },
-    userTimezone,
-  );
-
-  let text = summary?.label ?? 'Reset time unknown';
-  let color = 'var(--text-muted)';
-
-  if (casino.status === 'available') {
-    text = 'Available now';
-    color = 'var(--accent-green)';
-  } else if (casino.status === 'claimed' && summary?.nextResetAt) {
-    const next = DateTime.fromISO(summary.nextResetAt).setZone(userTimezone);
-    if (next.isValid) {
-      const minutes = Math.max(0, Math.ceil(next.diff(DateTime.fromMillis(nowTs), 'minutes').minutes));
-      const hours = Math.floor(minutes / 60);
-      const remainder = minutes % 60;
-      text = `Next in ${hours}h ${remainder}m`;
-    }
-  } else if (casino.status === 'countdown' && summary) {
-    text = `Next in ${summary.label}`;
-  }
-
-  return <span style={{ color, fontWeight: 700 }}>{text}</span>;
-}
-
 function buildCasinoRowModel(casino: TrackerCasinoRow, claims: string[], nowTs: number): CasinoRowModel {
-  const todayClaimedAt = casino.today_claimed_at;
-  const lastClaimedAt = todayClaimedAt ?? claims[0] ?? null;
-  const status = casino.no_daily_reward ? 'no-daily' : todayClaimedAt ? 'claimed' : isAvailableNow(casino, lastClaimedAt, nowTs) ? 'available' : 'countdown';
+  const lastClaimedAt = claims[0] ?? casino.today_claimed_at ?? null;
+  const status = getCasinoStatus(casino, lastClaimedAt, nowTs);
   return {
     casinoId: casino.casino_id,
     name: casino.name,
@@ -662,16 +680,31 @@ function buildCasinoRowModel(casino: TrackerCasinoRow, claims: string[], nowTs: 
   };
 }
 
-function isAvailableNow(casino: TrackerCasinoRow, lastClaimedAt: string | null, nowTs: number) {
-  const now = DateTime.fromMillis(nowTs);
-  if (casino.reset_mode === 'fixed') {
-    if (!casino.reset_time_local || !casino.reset_timezone) return false;
-    const [hour, minute] = casino.reset_time_local.split(':').map(Number);
-    const reset = now.setZone(casino.reset_timezone).set({ hour, minute, second: 0, millisecond: 0 });
-    return now.setZone(casino.reset_timezone) >= reset;
+function getCasinoStatus(casino: TrackerCasinoRow, lastClaimedAt: string | null, nowTs: number): CasinoStatus {
+  if (casino.no_daily_reward) {
+    return 'no-daily';
   }
-  if (!lastClaimedAt) return true;
-  return DateTime.fromISO(lastClaimedAt).plus({ hours: casino.reset_interval_hours ?? 24 }) <= now;
+
+  if (!lastClaimedAt) {
+    return 'available';
+  }
+
+  const nextResetAt = getNextResetAt(
+    {
+      resetMode: casino.reset_mode,
+      resetTimeLocal: casino.reset_time_local,
+      resetTimezone: casino.reset_timezone,
+      resetIntervalHours: casino.reset_interval_hours ?? 24,
+      lastClaimedAt,
+    },
+    nowTs,
+  );
+
+  if (!nextResetAt) {
+    return 'countdown';
+  }
+
+  return nextResetAt <= DateTime.fromMillis(nowTs).toUTC() ? 'available' : 'claimed';
 }
 
 function statusRank(status: CasinoStatus) {
@@ -684,17 +717,89 @@ function statusRank(status: CasinoStatus) {
 function nextResetSortValue(casino: CasinoRowModel, userTimezone: string) {
   if (casino.status === 'no-daily' || casino.status === 'claimed') return Number.MAX_SAFE_INTEGER;
   if (casino.status === 'available') return 0;
-  if (casino.resetMode === 'fixed' && casino.resetTimeLocal && casino.resetTimezone) {
-    const [hour, minute] = casino.resetTimeLocal.split(':').map(Number);
-    const now = DateTime.now().setZone(casino.resetTimezone);
-    let next = now.set({ hour, minute, second: 0, millisecond: 0 });
-    if (now >= next) next = next.plus({ days: 1 });
-    return next.setZone(userTimezone).toMillis();
-  }
-  if (casino.lastClaimedAt) {
-    return DateTime.fromISO(casino.lastClaimedAt).plus({ hours: casino.resetIntervalHours ?? 24 }).toMillis();
+  const nextResetAt = getNextResetAt(casino, Date.now());
+  if (nextResetAt) {
+    return nextResetAt.setZone(userTimezone).toMillis();
   }
   return 0;
+}
+
+function getNextResetAt(
+  casino: Pick<CasinoRowModel, 'resetMode' | 'resetTimeLocal' | 'resetTimezone' | 'resetIntervalHours' | 'lastClaimedAt'>,
+  nowTs: number,
+) {
+  const now = DateTime.fromMillis(nowTs);
+
+  if (casino.resetMode === 'fixed') {
+    const currentPeriodStart = computeFixedResetPeriodStart(
+      {
+        reset_time_local: casino.resetTimeLocal,
+        reset_timezone: casino.resetTimezone,
+        reset_interval_hours: casino.resetIntervalHours,
+      },
+      now,
+    );
+
+    if (!currentPeriodStart) {
+      return null;
+    }
+
+    return currentPeriodStart.plus({ hours: casino.resetIntervalHours || 24 }).toUTC();
+  }
+
+  if (!casino.lastClaimedAt) {
+    return null;
+  }
+
+  const lastClaim = DateTime.fromISO(casino.lastClaimedAt);
+  if (!lastClaim.isValid) {
+    return null;
+  }
+
+  return lastClaim.plus({ hours: casino.resetIntervalHours || 24 }).toUTC();
+}
+
+function getCasinoStatusDisplay(casino: CasinoRowModel, userTimezone: string, nowTs: number) {
+  const nextResetAt = getNextResetAt(casino, nowTs);
+  const lastClaimLabel = casino.lastClaimedAt ? formatLastClaim(casino.lastClaimedAt, userTimezone) : null;
+
+  if (casino.status === 'available') {
+    return {
+      isDue: true,
+      primary: 'Available now',
+      primaryClassName: 'status-available',
+      secondary: nextResetAt ? `Resets in ${formatCountdownFrom(nextResetAt, nowTs, userTimezone)}` : null,
+      secondaryClassName: 'status-secondary-amber',
+    };
+  }
+
+  if (casino.status === 'claimed') {
+    return {
+      isDue: false,
+      primary: nextResetAt ? `Next in ${formatCountdownFrom(nextResetAt, nowTs, userTimezone)}` : 'Next reset unavailable',
+      primaryClassName: 'status-claimed',
+      secondary: lastClaimLabel ? `Last ${lastClaimLabel}` : null,
+      secondaryClassName: 'status-secondary',
+    };
+  }
+
+  if (casino.status === 'countdown') {
+    return {
+      isDue: false,
+      primary: nextResetAt ? `Available in ${formatCountdownFrom(nextResetAt, nowTs, userTimezone)}` : 'Available later',
+      primaryClassName: 'status-countdown',
+      secondary: null,
+      secondaryClassName: 'status-secondary',
+    };
+  }
+
+  return {
+    isDue: false,
+    primary: 'No daily reward',
+    primaryClassName: 'status-countdown',
+    secondary: null,
+    secondaryClassName: 'status-secondary',
+  };
 }
 
 function getTierBadgeStyle(tier: string) {
@@ -758,7 +863,19 @@ function buildSpotlightFacts(casino: DashboardDiscoveryCasino) {
 
 function formatLastClaim(value: string, timezone: string) {
   const dt = DateTime.fromISO(value).setZone(timezone);
-  return dt.isValid ? dt.toFormat("MMM d, h:mm a") : 'claimed recently';
+  return dt.isValid ? dt.toFormat("MMM d, h:mm a") : null;
+}
+
+function formatCountdownFrom(nextResetAt: DateTime, nowTs: number, userTimezone: string) {
+  const next = nextResetAt.setZone(userTimezone);
+  if (!next.isValid) {
+    return 'unknown';
+  }
+
+  const minutes = Math.max(0, Math.ceil(next.diff(DateTime.fromMillis(nowTs).setZone(userTimezone), 'minutes').minutes));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return `${hours}h ${remainder}m`;
 }
 
 function toNumber(value: number | string | null | undefined, fallback = 0) {
