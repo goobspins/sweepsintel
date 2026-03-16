@@ -244,6 +244,12 @@ if (user) {
             AND ($1::int[] IS NULL OR NOT (c.id = ANY($1::int[])))
             AND (
               $2::text IS NULL
+              OR NOT EXISTS (
+                SELECT 1
+                FROM casino_state_availability csa_any
+                WHERE csa_any.state_code = $2
+                  AND csa_any.status IN ('available', 'operates_despite_restrictions')
+              )
               OR EXISTS (
                 SELECT 1
                 FROM casino_state_availability csa

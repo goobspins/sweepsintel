@@ -134,6 +134,7 @@ export const POST: APIRoute = async ({ request }) => {
       typeof body?.timezone === 'string' && body.timezone.trim()
         ? body.timezone.trim()
         : null;
+    const hasHomeState = hasOwn('home_state');
     const homeState =
       typeof body?.home_state === 'string' && body.home_state.trim()
         ? body.home_state.trim().toUpperCase()
@@ -178,17 +179,18 @@ export const POST: APIRoute = async ({ request }) => {
       await tx.query(
         `UPDATE user_settings
         SET timezone = COALESCE($2, timezone),
-            home_state = COALESCE($3, home_state),
-            ledger_mode = COALESCE($4, ledger_mode),
-            daily_goal_usd = COALESCE($5, daily_goal_usd),
-            weekly_goal_usd = CASE WHEN $6::boolean THEN $7 ELSE weekly_goal_usd END,
-            kpi_cards = COALESCE($8::jsonb, kpi_cards),
-            momentum_style = COALESCE($9::jsonb, momentum_style),
+            home_state = CASE WHEN $3::boolean THEN $4 ELSE home_state END,
+            ledger_mode = COALESCE($5, ledger_mode),
+            daily_goal_usd = COALESCE($6, daily_goal_usd),
+            weekly_goal_usd = CASE WHEN $7::boolean THEN $8 ELSE weekly_goal_usd END,
+            kpi_cards = COALESCE($9::jsonb, kpi_cards),
+            momentum_style = COALESCE($10::jsonb, momentum_style),
             updated_at = NOW()
         WHERE user_id = $1`,
         [
           user.userId,
           timezone,
+          hasHomeState,
           homeState,
           ledgerMode,
           dailyGoalUsd === undefined
