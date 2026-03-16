@@ -41,8 +41,9 @@ export default function Nav({ currentPath = '/', mobile = false, user }: NavProp
       style={{
         display: 'flex',
         flexDirection: mobile ? 'column' : 'row',
-        gap: mobile ? '0.4rem' : '1rem',
+        gap: mobile ? '0.4rem' : '0.7rem',
         alignItems: mobile ? 'stretch' : 'center',
+        flexWrap: mobile ? 'nowrap' : 'wrap',
       }}
     >
       {items.map((item) => {
@@ -58,9 +59,11 @@ export default function Nav({ currentPath = '/', mobile = false, user }: NavProp
               color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
               textDecoration: 'none',
               fontWeight: active ? 700 : 500,
-              padding: mobile ? '0.7rem 0.85rem' : '0.45rem 0.25rem',
+              fontSize: mobile ? '1rem' : '0.92rem',
+              padding: mobile ? '0.7rem 0.85rem' : '0.45rem 0.2rem',
               borderRadius: '0.75rem',
               background: active ? 'rgba(59, 130, 246, 0.14)' : 'transparent',
+              whiteSpace: 'nowrap',
             }}
           >
             {item.label}

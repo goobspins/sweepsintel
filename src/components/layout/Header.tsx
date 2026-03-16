@@ -42,7 +42,7 @@ export default function Header({
     >
       <div
           style={{
-              maxWidth: 'var(--content-max-width)',
+              maxWidth: 'var(--header-max-width)',
               margin: '0 auto',
               padding: '1rem var(--content-gutter)',
             }}
@@ -170,6 +170,7 @@ export default function Header({
                 onClick={() => setMobileOpen((open) => !open)}
                 aria-expanded={mobileOpen}
                 aria-label="Toggle navigation"
+                className="mobile-nav-toggle"
                 style={{
                   border: '1px solid var(--color-border)',
                   background: 'var(--bg-secondary)',
@@ -219,8 +220,20 @@ export default function Header({
             flex: 1 1 auto;
           }
 
+          .mobile-nav-toggle {
+            display: none !important;
+          }
+        }
+
+        @media (min-width: 1280px) {
           .desktop-email {
             display: inline !important;
+          }
+        }
+
+        @media (max-width: 1279px) {
+          .desktop-email {
+            display: none !important;
           }
         }
       `}</style>
