@@ -1,13 +1,15 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionUser } from '../lib/auth';
 
-export const prerender = true;
+export const prerender = false;
 
 const myPrizeAffiliateUrl = 'https://myprize.us/invite/goobspins';
+const user = await getSessionUser(Astro.request);
 ---
 
-<BaseLayout title="Getting Started | SweepsIntel" user={null} currentPath={Astro.url.pathname}>
-  <div class="guide-shell">
+<BaseLayout title="Getting Started | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
     <article class="guide-body">
       <h1>How to Start Earning with Sweepstakes Casinos</h1>
 
@@ -132,12 +134,6 @@ const myPrizeAffiliateUrl = 'https://myprize.us/invite/goobspins';
   </script>
 
   <style>
-    .guide-shell {
-      width: min(100%, 960px);
-      margin: 0 auto;
-      padding: 2rem 1rem 4rem;
-    }
-
     .guide-body {
       max-width: 720px;
       margin: 0 auto;
