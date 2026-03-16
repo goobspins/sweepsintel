@@ -46,3 +46,4 @@ export const GET: APIRoute = async ({ request, url }) => {
     return json({ error: 'Unable to search casinos.' }, 500);
   }
 };
+

@@ -60,3 +60,4 @@ function mapIntelTypeToFlagType(itemType: string) {
 }
 
 
+

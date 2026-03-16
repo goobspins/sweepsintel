@@ -104,3 +104,4 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to auto-publish intel.' }, 500);
   }
 };
+

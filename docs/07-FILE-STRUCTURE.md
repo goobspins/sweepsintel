@@ -68,7 +68,8 @@ src/
     auth.ts                       -- OTP generation, session validation, middleware, admin check
     affiliate.ts                  -- link resolution + click logging
     email.ts                      -- Resend abstraction
-    reset.ts                      -- reset time calculation (Luxon)
+    reset.ts                      -- reset time calculation (Luxon), uses reset_mode not streak_mode
+    casino-tier.ts                -- CasinoTier type (S/A/B/C), normalizeTier(), getTierStyles(), compareCasinoTiers()
     balance.ts                    -- SC balance calculation
     redemption-stats.ts           -- median/p80/trend aggregation
     notifications.ts              -- create + fan out user_notifications
@@ -112,6 +113,7 @@ src/
         claim.ts
         status.ts
         add-casino.ts            -- search/add casino to tracker (creates user_casino_settings row; creates user_suggested casino row if no match; optionally fires affiliate click + logs to clicks table when fire_affiliate=true — see Section 2 "Join" CTA spec)
+        casino-settings.ts  -- POST: update per-casino user settings (no_daily_reward toggle). Payload: { casino_id, no_daily_reward: boolean }
         bulk-import.ts           -- POST .txt/.csv file upload → parse casino names → run add-casino logic per line → return summary. Edge cases: max file size 1MB, UTF-8 encoding, handle both CRLF and LF line endings, strip leading/trailing whitespace per line, skip blank lines, case-insensitive ILIKE match against casinos.name, skip duplicates silently (already in tracker), no affiliate clicks fired during bulk import. Return JSON summary: { added: number, matched_existing: number, created_suggested: number, skipped_duplicate: number }
       redemptions/
         submit.ts
@@ -148,6 +150,8 @@ src/
         ingest.ts                -- API-key gated ingest endpoint for monitoring pipeline
         game-availability.ts     -- API-key gated endpoint for game availability signals (batch UPSERT into casino_game_availability, auto-flag on 2+ negative signals)
         react.ts                 -- POST confirm/dispute reaction on published intel item (auth required, one per user per item, updates discord_intel_reactions + denormalized counts on discord_intel_items)
+  scripts/
+    import-casinos.ts            -- CLI script: imports casino data from JSON/CSV into DB. Upserts casinos by slug, parses comma-separated live_game_providers into game_providers + casino_live_game_providers junction table. Idempotent. Usage: npx tsx src/scripts/import-casinos.ts --file data.json
   content/
     casinos/                     -- MDX files (11 drafted, 52 remaining)
     config.ts                    -- Zod schema (extend with new fields)

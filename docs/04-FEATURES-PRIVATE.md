@@ -18,12 +18,12 @@ Casinos where the user has a `user_casino_settings` row with `removed_at IS NULL
 
 **Bulk import:** Users can upload a `.txt` or `.csv` file with casino names (one per line) to add multiple casinos to their tracker at once. `POST /api/tracker/bulk-import` accepts a file upload, parses each line, and runs the same add-casino logic per name: match existing → create `user_casino_settings`; no match → create `user_suggested` casino + `user_casino_settings`. Return a summary: "Added 8 casinos to tracker. 3 matched existing profiles, 5 are new suggestions pending review." This is critical for power users who track 10-20+ casinos — adding them one by one is a bounce-worthy activation barrier. Skip blank lines and duplicates. If a casino is already in the user's tracker (`removed_at IS NULL`), skip it silently.
 
-**Default sort:** Available-now casinos float to the top (reset has passed, not yet claimed today). Below those: ascending time-to-reset (soonest expiring first). Claimed-today casinos sink to the bottom with a ✓. This ensures the most urgent action is always at top.
+**Default sort:** Available-now casinos float to the top (reset has passed, not yet claimed today). Below those: ascending time-to-reset (soonest expiring first). Claimed-today casinos sink to the bottom with a ✓. Casinos with `no_daily_reward = true` sort after claimed casinos (last in the list). This ensures the most urgent action is always at top.
 
 **User can drag-reorder** their casinos to override the default sort. Drag order persists in `user_casino_settings.sort_order`. When sort_order is set for at least one casino, use sort_order as primary key (with available-now still floating above locked rows). A "Reset sort" option restores default time-based sort.
 
 **Per casino row:**
-- Casino name (clickable → casino profile, not affiliate link for joined users)
+- Casino name (clickable — routes through affiliate gate: no ledger entry → affiliate_link_url in new tab with click logged; ledger entry exists → claim_url in new tab with tracking params stripped; fallback → casino profile page. See `getTrackerDestination()` in `src/lib/affiliate.ts`.)
 - Reset countdown (see logic below)
 - Streak counter if `casinos.has_streaks = true`
 - Today's claim status
@@ -46,6 +46,14 @@ No SC entry required from the user. The button label changes to "✓ Claimed" an
 Both paths commit the claim, reset the timer, continue the streak. "No SC today" logs `sc_amount = 0`. Entering a number and tabbing/blurring commits it. No explicit save button — the action is the commitment. After commit, inline collapses and the row moves to the bottom of the section with "✓ Claimed" label.
 
 **The "No SC today" case is important:** The user DID claim — their clock resets, their streak continues — they just received zero SC. This is NOT the same as failing to claim (which would produce a gap in `daily_bonus_claims` and break the streak for casinos with `has_streaks = true`). The distinction must be tracked, not inferred.
+
+**No daily reward toggle:** Users can mark any casino as "no daily reward" via a per-casino toggle in Settings (`user_casino_settings.no_daily_reward`). When enabled:
+- The claim button and reset countdown are hidden
+- A muted "No daily reward" label replaces the countdown area
+- The row uses subdued styling (lower visual priority)
+- The casino still appears in Section 1 for balance/redemption tracking purposes
+- Sort position: after all claimable casinos (available → countdown → claimed → no-daily)
+This is a user-level preference, not a casino attribute — other users may still claim dailies at the same casino. Toggle is available at `POST /api/tracker/casino-settings` with `{ casino_id, no_daily_reward: boolean }`.
 
 **Streak break detection:** For casinos with `has_streaks = true`, if the gap between `last_claim.claimed_at` and the next available window exceeds 48 hours (generous buffer), the streak counter resets to 0. Display this on the row.
 
@@ -81,8 +89,8 @@ ORDER BY sort_sc DESC NULLS LAST
 
 Replicate `computeCasinoResetSummary` from `Casino/web/lib/v2/casinoReset.ts` in `src/lib/reset.ts`.
 
-- `streak_mode = 'fixed'`: parse `reset_time_local` as `HH:MM`, use `reset_timezone` as IANA zone. Compute today's reset moment. If current time is past it, next reset is tomorrow at the same time. If before it, next reset is today. Luxon handles DST automatically.
-- `streak_mode = 'rolling'`: next available = `last_claim.claimed_at + 24 hours`. If no prior claim: "Available now."
+- `reset_mode = 'fixed'`: parse `reset_time_local` as `HH:MM`, use `reset_timezone` as IANA zone. Compute today's reset moment. If current time is past it, next reset is tomorrow at the same time. If before it, next reset is today. Luxon handles DST automatically.
+- `reset_mode = 'rolling'`: next available = `last_claim.claimed_at + reset_interval_hours` (defaults to 24 hours if unset). If no prior claim: "Available now." Casinos with sub-daily cycles (e.g. `reset_interval_hours = 6`) will show multiple claim opportunities per day.
 - Unknown mode: "Reset time unknown — check the casino site." Link to submit a reset time suggestion.
 
 User timezone from `user_settings.timezone`. Never infer from IP.

@@ -42,3 +42,4 @@ const casinosCollection = defineCollection({
 export const collections = {
   casinos: casinosCollection,
 };
+

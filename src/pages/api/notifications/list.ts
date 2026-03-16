@@ -66,3 +66,4 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to load notifications.' }, 500);
   }
 };
+

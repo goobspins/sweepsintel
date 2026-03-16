@@ -73,3 +73,4 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to load ledger summary.' }, 500);
   }
 };
+

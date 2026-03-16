@@ -10,12 +10,12 @@ CREATE TABLE casinos (
   id SERIAL PRIMARY KEY,
   slug VARCHAR(50) UNIQUE NOT NULL,
   name VARCHAR(100) NOT NULL,
-  tier INT DEFAULT 2,                           -- 1=top tier, 2=solid, 3=marginal
-  rating DECIMAL(3,1),
+  tier VARCHAR(1) DEFAULT 'B',                   -- 'S'=elite, 'A'=strong, 'B'=solid, 'C'=marginal
   claim_url TEXT,                               -- direct URL to daily bonus claim page
-  streak_mode VARCHAR(20) DEFAULT 'rolling',    -- 'rolling' | 'fixed'
+  reset_mode VARCHAR(20) DEFAULT 'rolling',      -- 'rolling' (resets X hours after last claim) | 'fixed' (resets at wall-clock time daily)
   reset_time_local VARCHAR(5),                  -- HH:MM string for fixed mode
   reset_timezone VARCHAR(50),                   -- IANA timezone e.g. 'America/New_York'
+  reset_interval_hours INT NOT NULL DEFAULT 24, -- hours between rolling resets. 24 for most casinos, 6 for casinos with sub-daily reset cycles. Only affects rolling mode — fixed mode uses wall-clock reset_time_local.
   has_streaks BOOLEAN DEFAULT FALSE,
   sc_to_usd_ratio DECIMAL(6,4) DEFAULT 1.0,    -- SC per $1 USD
   parent_company VARCHAR(100),                  -- e.g. 'VGW', 'PriorityPlay'
@@ -24,18 +24,13 @@ CREATE TABLE casinos (
   hardban_risk VARCHAR(20) DEFAULT 'unknown',   -- 'none' | 'low' | 'medium' | 'high' | 'unknown'
   family_ban_propagation BOOLEAN DEFAULT FALSE, -- ban at one family member = ban at all
   ban_confiscates_funds BOOLEAN DEFAULT FALSE,  -- does a ban void your SC/USD balance?
-  promoban_triggers TEXT,                       -- directional notes only, kept vague intentionally
-  ban_notes TEXT,                               -- additional ban context
-  -- Playthrough
-  playthrough_multiplier DECIMAL(4,2),          -- e.g. 1.0 for full-value, 0.5 for slots-only
-  playthrough_notes TEXT,                       -- game-specific rules, exceptions
+  -- (promoban_triggers, ban_notes, playthrough_multiplier, playthrough_notes removed — too reductive for complex real-world rules; editorial content in MDX instead)
   -- Daily bonus display (platform-level descriptor for unjoined casino cards)
   daily_bonus_desc VARCHAR(100),                -- e.g. "~100-500 SC/day depending on tier" — admin-edited, not user-specific
   daily_bonus_sc_avg INT,                       -- admin-set seed value for sorting the "not joined" section in tracker. Overridden by real aggregated user claim data once available — see tracker Section 2 sort logic.
   -- Cross-wash / live games
   has_live_games BOOLEAN DEFAULT FALSE,
-  cw_direction VARCHAR(20),                     -- 'to_only' | 'from_only' | 'either' | null (intra-family SC transfer direction)
-  cw_notes TEXT,                                -- live game cross-wash notes, bet sizing context (premium content, paywalled)
+  -- (cw_direction and cw_notes removed — cross-wash strategy belongs in editorial MDX content)
   -- Redemption
   redemption_speed_desc VARCHAR(100),           -- human-readable e.g. "24-48hr ACH"
   redemption_fee_desc VARCHAR(100),             -- e.g. "Free ACH, $5 crypto"
@@ -49,7 +44,7 @@ CREATE TABLE casinos (
   source VARCHAR(20) DEFAULT 'admin',           -- 'admin' (curated, has profile) | 'user_suggested' (created when user adds an unrecognized casino to their tracker — no profile yet)
   is_excluded BOOLEAN DEFAULT FALSE,            -- if true: never surfaces in Section 2, directory, or affiliate CTAs. Users can still personally track it. Dylan's editorial veto.
   -- Meta
-  notes TEXT,
+  -- (notes TEXT removed — general notes belong in editorial MDX content)
   last_updated_at TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP DEFAULT NOW()
 );
@@ -173,6 +168,7 @@ CREATE TABLE user_casino_settings (
   typical_daily_sc DECIMAL(8,2),     -- user's own expected daily SC at this casino
   personal_notes TEXT,
   sort_order INT,                    -- user-defined sort position in tracker top section (drag-reorder)
+  no_daily_reward BOOLEAN NOT NULL DEFAULT FALSE, -- user-level toggle: when true, hides claim button and countdown for this casino. Casino still appears in tracker for balance/redemption tracking. Does NOT affect casino-level data — another user may still claim dailies at the same casino.
   added_at TIMESTAMP DEFAULT NOW(),
   removed_at TIMESTAMP,              -- soft-delete: when set, casino is hidden from Section 1 but row is preserved. Re-adding the casino nulls this field and restores sort_order. SCOPE: soft-delete ONLY affects this row. Associated data (daily_bonus_claims, ledger_entries, redemptions, discord_intel_reactions) is NEVER deleted or filtered by removed_at. Those rows persist for analytics, P/L, and redemption stats. The only query that checks removed_at is the Section 1/Section 2 split on the tracker page.
   UNIQUE(user_id, casino_id)

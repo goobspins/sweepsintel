@@ -98,3 +98,4 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to send reset reminders.' }, 500);
   }
 };
+

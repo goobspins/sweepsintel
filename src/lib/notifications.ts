@@ -112,3 +112,4 @@ export async function createNotificationsForSegment(
 
   await query(sql, fullParams);
 }
+

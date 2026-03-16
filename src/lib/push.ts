@@ -174,3 +174,4 @@ export async function sendPushToSegment(
 
   return sendToSubscriptions(subscriptions, payload);
 }
+

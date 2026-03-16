@@ -67,3 +67,4 @@ export async function getBalanceBreakdown(userId: string): Promise<BalanceBreakd
     available_sc: Number(row.available_sc ?? 0),
   }));
 }
+

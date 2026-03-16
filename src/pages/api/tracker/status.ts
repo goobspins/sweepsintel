@@ -25,3 +25,4 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to load tracker status.' }, 500);
   }
 };
+

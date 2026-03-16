@@ -96,3 +96,4 @@ export function getTrackerDestination(
 
   return { kind: 'profile', href: `/casinos/${casino.slug}` };
 }
+

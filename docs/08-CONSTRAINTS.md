@@ -12,7 +12,9 @@
 - Admin routes check `user_settings.is_admin = true`. No other mechanism grants admin access.
 - Community volatility reports use `trust_score_at_report` for weighting. Never show individual reports attributed to a user (only aggregated consensus).
 - `reset_time_local` is a VARCHAR(5) HH:MM string. Not a TIME type.
-- `streak_mode` values are `'rolling'` and `'fixed'`. Not `'rolling_24h'` or `'fixed_time'`.
+- `reset_mode` values are `'rolling'` and `'fixed'`. Not `'rolling_24h'` or `'fixed_time'`. (Renamed from `streak_mode` — the old name confused reset behavior with streak tracking.)
+- `reset_interval_hours` defaults to 24. Rolling mode countdown uses this value (not hardcoded 24). Fixed mode ignores it — fixed resets use wall-clock time.
+- Node 20 is pinned via `.nvmrc`, `.node-version`, and `engines` in `package.json`. Vercel serverless functions run Node 20.
 
 **Transaction boundaries — these operations MUST be atomic (single DB transaction, rollback on any failure):**
 - **Claim flow:** `daily_bonus_claims` INSERT + `ledger_entries` INSERT. If ledger entry fails, claim must not persist. Both or neither.

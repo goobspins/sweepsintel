@@ -83,3 +83,4 @@ export const GET: APIRoute = async ({ request, url }) => {
     return json({ error: 'Unable to load ledger entries.' }, 500);
   }
 };
+

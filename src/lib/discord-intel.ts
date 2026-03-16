@@ -178,3 +178,4 @@ export async function publishIntelItem(itemId: number, options?: { autoPublished
 export async function discardIntelItem(itemId: number) {
   await query('DELETE FROM discord_intel_items WHERE id = $1', [itemId]);
 }
+

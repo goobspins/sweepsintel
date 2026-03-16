@@ -19,3 +19,4 @@ export function hashReporterIp(request: Request) {
     .update(getRequestIp(request))
     .digest('hex');
 }
+

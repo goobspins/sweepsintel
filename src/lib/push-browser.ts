@@ -96,3 +96,4 @@ export async function disablePushNotifications() {
     throw new Error(data.error ?? 'Unable to disable push notifications.');
   }
 }
+

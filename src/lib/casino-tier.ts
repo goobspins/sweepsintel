@@ -39,7 +39,7 @@ export function getTierStyles(tierValue: string) {
   if (tier === 'C') {
     return {
       background: 'rgba(148, 163, 184, 0.14)',
-      color: '#475569',
+      color: 'var(--text-secondary)',
     };
   }
 
@@ -48,3 +48,4 @@ export function getTierStyles(tierValue: string) {
     color: '#0F172A',
   };
 }
+

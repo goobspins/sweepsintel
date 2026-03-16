@@ -33,3 +33,4 @@ export const GET: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to load unread count.' }, 500);
   }
 };
+

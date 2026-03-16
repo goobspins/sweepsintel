@@ -20,3 +20,4 @@ export async function sendOTP(email: string, otp: string) {
     text: `Your SweepsIntel login code is ${otp}.\n\nThis code expires in 15 minutes.`,
   });
 }
+
