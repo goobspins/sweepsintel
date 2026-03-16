@@ -380,7 +380,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
               const purchasePending = pendingKey === `purchase:${casino.casinoId}`;
 
               return (
-                <article key={casino.casinoId} className="casino-row">
+                <article key={casino.casinoId} id={`casino-${casino.casinoId}`} className="casino-row">
                   <div className="casino-main">
                     <div className="casino-copy">
                       <div className="casino-heading">
@@ -551,7 +551,8 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .kpi-subvalue { color: var(--text-secondary); font-size: 1rem; font-weight: 600; }
         .section-copy { margin: 0; }
         .casino-list { display: grid; gap: 0.85rem; }
-        .casino-row { display: grid; gap: 0.9rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.52); }
+        .casino-row { display: grid; gap: 0.9rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.52); scroll-margin-top: 7rem; }
+        .casino-row:target { border-color: rgba(59, 130, 246, 0.52); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18), 0 18px 40px rgba(2, 6, 23, 0.38); }
         .casino-main { display: flex; gap: 1rem; justify-content: space-between; align-items: center; }
         .casino-copy { display: grid; gap: 0.45rem; min-width: 0; }
         .casino-heading { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }

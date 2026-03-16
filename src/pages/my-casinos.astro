@@ -1,0 +1,156 @@
+---
+import SessionGate from '../components/auth/SessionGate';
+import MyCasinosBoard from '../components/my-casinos/MyCasinosBoard';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionUser } from '../lib/auth';
+import { query } from '../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+
+let initialData = {
+  casinos: [],
+};
+
+if (user) {
+  const casinoRows = await query<{
+    casino_id: number;
+    name: string;
+    slug: string;
+    tier: string | null;
+    notes: string | null;
+    claim_url: string | null;
+    affiliate_link_url: string | null;
+    sc_to_usd_ratio: number | string | null;
+    sc_balance: number | string | null;
+    total_invested_usd: number | string | null;
+    total_redeemed_usd: number | string | null;
+    net_pl_usd: number | string | null;
+    last_activity_at: string | null;
+  }>(
+    `SELECT
+      ucs.casino_id,
+      c.name,
+      c.slug,
+      c.tier_label AS tier,
+      COALESCE(ucs.notes, ucs.personal_notes) AS notes,
+      c.claim_url,
+      c.affiliate_link_url,
+      c.sc_to_usd_ratio,
+      COALESCE(SUM(COALESCE(le.sc_amount, 0)), 0) AS sc_balance,
+      COALESCE(SUM(CASE WHEN le.entry_type = 'purchase' THEN ABS(COALESCE(le.usd_amount, 0)) ELSE 0 END), 0) AS total_invested_usd,
+      COALESCE(SUM(CASE WHEN le.entry_type = 'redeem_confirmed' THEN COALESCE(le.usd_amount, 0) ELSE 0 END), 0) AS total_redeemed_usd,
+      COALESCE(SUM(COALESCE(le.usd_amount, 0)), 0) AS net_pl_usd,
+      MAX(COALESCE(le.entry_at, le.entry_date::timestamptz)) AS last_activity_at
+    FROM user_casino_settings ucs
+    JOIN casinos c ON c.id = ucs.casino_id
+    LEFT JOIN ledger_entries le
+      ON le.user_id = ucs.user_id
+      AND le.casino_id = ucs.casino_id
+    WHERE ucs.user_id = $1
+      AND ucs.removed_at IS NULL
+    GROUP BY
+      ucs.casino_id,
+      c.name,
+      c.slug,
+      c.tier_label,
+      ucs.notes,
+      ucs.personal_notes,
+      c.claim_url,
+      c.affiliate_link_url,
+      c.sc_to_usd_ratio`,
+    [user.userId],
+  );
+
+  const casinoIds = casinoRows.map((row) => row.casino_id);
+  const recentEntriesRows =
+    casinoIds.length > 0
+      ? await query<{
+          casino_id: number;
+          id: number;
+          entry_type: string;
+          sc_amount: number | string | null;
+          usd_amount: number | string | null;
+          notes: string | null;
+          entry_at: string | null;
+        }>(
+          `SELECT
+            ranked.casino_id,
+            ranked.id,
+            ranked.entry_type,
+            ranked.sc_amount,
+            ranked.usd_amount,
+            ranked.notes,
+            ranked.entry_at
+          FROM (
+            SELECT
+              le.casino_id,
+              le.id,
+              le.entry_type,
+              le.sc_amount,
+              le.usd_amount,
+              le.notes,
+              COALESCE(le.entry_at, le.entry_date::timestamptz) AS entry_at,
+              ROW_NUMBER() OVER (
+                PARTITION BY le.casino_id
+                ORDER BY COALESCE(le.entry_at, le.entry_date::timestamptz) DESC
+              ) AS row_num
+            FROM ledger_entries le
+            WHERE le.user_id = $1
+              AND le.casino_id = ANY($2::int[])
+          ) ranked
+          WHERE ranked.row_num <= 10
+          ORDER BY ranked.casino_id ASC, ranked.entry_at DESC`,
+          [user.userId, casinoIds],
+        )
+      : [];
+
+  const recentEntriesByCasino = new Map<number, typeof recentEntriesRows>();
+  for (const row of recentEntriesRows) {
+    const current = recentEntriesByCasino.get(row.casino_id) ?? [];
+    current.push(row);
+    recentEntriesByCasino.set(row.casino_id, current);
+  }
+
+  initialData = {
+    casinos: casinoRows.map((row) => ({
+      casino_id: row.casino_id,
+      name: row.name,
+      slug: row.slug,
+      tier: row.tier,
+      notes: row.notes ?? '',
+      claim_url: row.claim_url,
+      visit_url: row.claim_url ?? row.affiliate_link_url,
+      sc_balance: Number(row.sc_balance ?? 0),
+      usd_value: Number(row.sc_balance ?? 0) * Number(row.sc_to_usd_ratio ?? 1),
+      total_invested_usd: Number(row.total_invested_usd ?? 0),
+      total_redeemed_usd: Number(row.total_redeemed_usd ?? 0),
+      net_pl_usd: Number(row.net_pl_usd ?? 0),
+      last_activity_at: row.last_activity_at,
+      recent_entries: (recentEntriesByCasino.get(row.casino_id) ?? []).map((entry) => ({
+        id: entry.id,
+        entry_type: entry.entry_type,
+        sc_amount: entry.sc_amount === null ? null : Number(entry.sc_amount),
+        usd_amount: entry.usd_amount === null ? null : Number(entry.usd_amount),
+        notes: entry.notes,
+        entry_at: entry.entry_at,
+      })),
+    })),
+  };
+}
+---
+
+<BaseLayout title="My Casinos | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <SessionGate
+      client:load
+      user={user}
+      redirectTo="/my-casinos"
+      title="Log in to view your casino portfolio"
+      description="See every tracked casino at a glance, with balances, P/L, last activity, and your operating notes."
+    >
+      {user ? <MyCasinosBoard client:load initialData={initialData} /> : null}
+    </SessionGate>
+  </div>
+</BaseLayout>

@@ -25,6 +25,7 @@ function buildNavItems(user: SessionUser | null): NavItem[] {
   return [
     ...publicItems,
     { href: '/dashboard', label: 'Dashboard' },
+    { href: '/my-casinos', label: 'My Casinos' },
     { href: '/ledger', label: 'Ledger' },
     { href: '/redemptions', label: 'Redemptions' },
     { href: '/settings', label: 'Settings' },

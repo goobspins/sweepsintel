@@ -13,10 +13,9 @@ interface LedgerSummaryProps {
     net_pl_usd: number;
     breakdown: SummaryBreakdown[];
   };
-  ledgerMode: 'simple' | 'advanced';
 }
 
-export default function LedgerSummary({ summary, ledgerMode }: LedgerSummaryProps) {
+export default function LedgerSummary({ summary }: LedgerSummaryProps) {
   return (
     <section className="surface-card summary-card">
       <div className="summary-grid">
@@ -36,25 +35,6 @@ export default function LedgerSummary({ summary, ledgerMode }: LedgerSummaryProp
           </strong>
         </div>
       </div>
-
-      <details className="breakdown">
-        <summary>Per-casino P/L breakdown</summary>
-        <div className="breakdown-list">
-          {summary.breakdown.map((row) => (
-            <div key={row.casino_id} className="breakdown-row">
-              <div>
-                <strong>{row.casino_name}</strong>
-                {ledgerMode === 'advanced' ? (
-                  <span className="muted">Available SC: {formatSc(row.available_sc)}</span>
-                ) : null}
-              </div>
-              <strong className={row.net_usd > 0 ? 'summary-positive' : row.net_usd < 0 ? 'summary-negative' : ''}>
-                {formatCurrency(row.net_usd)}
-              </strong>
-            </div>
-          ))}
-        </div>
-      </details>
 
       <style>{`
         .summary-card {
@@ -85,31 +65,6 @@ export default function LedgerSummary({ summary, ledgerMode }: LedgerSummaryProp
         .summary-positive { color: var(--color-success); }
         .summary-negative { color: var(--color-danger); }
 
-        .breakdown summary {
-          cursor: pointer;
-          font-weight: 700;
-        }
-
-        .breakdown-list {
-          display: grid;
-          gap: 0.75rem;
-          margin-top: 1rem;
-        }
-
-        .breakdown-row {
-          display: flex;
-          justify-content: space-between;
-          gap: 0.75rem;
-          align-items: center;
-          padding-top: 0.75rem;
-          border-top: 1px solid var(--color-border);
-        }
-
-        .breakdown-row div {
-          display: grid;
-          gap: 0.25rem;
-        }
-
         @media (max-width: 767px) {
           .summary-grid {
             grid-template-columns: 1fr;
@@ -125,9 +80,5 @@ function formatCurrency(value: number) {
     style: 'currency',
     currency: 'USD',
   }).format(value);
-}
-
-function formatSc(value: number) {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
 }
 

@@ -132,7 +132,7 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
     <div className="ledger-shell">
       {toast ? <div className={`toast toast-${toast.tone}`}>{toast.message}</div> : null}
 
-      <LedgerSummary summary={summary} ledgerMode={ledgerMode} />
+      <LedgerSummary summary={summary} />
 
       <section className="surface-card ledger-card">
         <div className="toolbar">
@@ -162,7 +162,7 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
             onChange={(event) => setFilters((current) => ({ ...current, entry_type: event.target.value }))}
           >
             <option value="">All types</option>
-            {['daily', 'offer', 'winnings', 'wager', 'adjustment', 'redeem_confirmed'].map((entryType) => (
+            {['daily', 'free_sc', 'purchase', 'adjustment', 'redeem_confirmed'].map((entryType) => (
               <option key={entryType} value={entryType}>{entryType}</option>
             ))}
           </select>
