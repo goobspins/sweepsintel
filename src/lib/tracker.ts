@@ -8,7 +8,7 @@ export interface TrackerCasinoRow {
   personal_notes: string | null;
   name: string;
   slug: string;
-  tier: string;
+  tier: string | null;
   claim_url: string | null;
   reset_mode: string | null;
   reset_time_local: string | null;
@@ -69,14 +69,6 @@ export interface AddCasinoResult {
   skippedDuplicate: boolean;
 }
 
-type TrackerSchemaShape = {
-  hasNoDailyReward: boolean;
-  resetModeColumn: 'reset_mode' | 'streak_mode';
-  hasResetIntervalHours: boolean;
-};
-
-let trackerSchemaShapePromise: Promise<TrackerSchemaShape> | null = null;
-
 async function safeTrackerQuery<T>(
   label: string,
   fetcher: () => Promise<T>,
@@ -88,40 +80,6 @@ async function safeTrackerQuery<T>(
     console.error(`tracker query failed: ${label}`, error);
     return fallback;
   }
-}
-
-async function getTrackerSchemaShape(): Promise<TrackerSchemaShape> {
-  if (!trackerSchemaShapePromise) {
-    trackerSchemaShapePromise = (async () => {
-      const rows = await query<{ table_name: string; column_name: string }>(
-        `SELECT table_name, column_name
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND (
-            (table_name = 'user_casino_settings' AND column_name IN ('no_daily_reward'))
-            OR
-            (table_name = 'casinos' AND column_name IN ('reset_mode', 'streak_mode', 'reset_interval_hours'))
-          )`,
-      );
-
-      const columnSet = new Set(
-        rows.map((row) => `${row.table_name}.${row.column_name}`),
-      );
-
-      return {
-        hasNoDailyReward: columnSet.has('user_casino_settings.no_daily_reward'),
-        resetModeColumn: columnSet.has('casinos.reset_mode')
-          ? 'reset_mode'
-          : 'streak_mode',
-        hasResetIntervalHours: columnSet.has('casinos.reset_interval_hours'),
-      };
-    })().catch((error) => {
-      trackerSchemaShapePromise = null;
-      throw error;
-    });
-  }
-
-  return trackerSchemaShapePromise;
 }
 
 function toSlug(name: string) {
@@ -216,31 +174,13 @@ async function resolveCasinoById(
 }
 
 export async function getTrackerStatus(userId: string): Promise<TrackerStatusData> {
-  const schema = await safeTrackerQuery(
-    'tracker-schema-shape',
-    () => getTrackerSchemaShape(),
-    {
-      hasNoDailyReward: false,
-      resetModeColumn: 'streak_mode' as const,
-      hasResetIntervalHours: false,
-    },
-  );
-
-  const noDailyRewardSql = schema.hasNoDailyReward
-    ? 'ucs.no_daily_reward'
-    : 'false AS no_daily_reward';
-  const resetModeSql = `c.${schema.resetModeColumn} AS reset_mode`;
-  const resetIntervalHoursSql = schema.hasResetIntervalHours
-    ? 'c.reset_interval_hours'
-    : '24 AS reset_interval_hours';
-
   const casinos = await safeTrackerQuery(
     'tracked-casinos',
     () =>
       query<TrackerCasinoRow>(
         `SELECT
-          ucs.casino_id, ucs.sort_order, ${noDailyRewardSql}, ucs.typical_daily_sc, ucs.personal_notes,
-          c.name, c.slug, c.tier, c.claim_url, ${resetModeSql}, c.reset_time_local, c.reset_timezone, ${resetIntervalHoursSql},
+          ucs.casino_id, ucs.sort_order, ucs.no_daily_reward, ucs.typical_daily_sc, ucs.personal_notes,
+          c.name, c.slug, c.tier_label AS tier, c.claim_url, c.reset_mode, c.reset_time_local, c.reset_timezone, c.reset_interval_hours,
           c.has_streaks, c.sc_to_usd_ratio, c.has_affiliate_link, c.affiliate_link_url, c.source,
           c.daily_bonus_desc,
           dbc.id AS today_claim_id, dbc.sc_amount AS today_sc, dbc.claimed_at AS today_claimed_at

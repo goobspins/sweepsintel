@@ -37,7 +37,7 @@ type CasinoRowModel = {
   casinoId: number;
   name: string;
   slug: string;
-  tier: string;
+  tier: string | null;
   sortOrder: number | null;
   resetMode: string | null;
   resetTimeLocal: string | null;
@@ -346,7 +346,9 @@ export default function DashboardTracker({ user, initialData, initialSummary }: 
                     <div className="casino-copy">
                       <div className="casino-heading">
                         <a href={`/casinos/${casino.slug}`} className="casino-link">{casino.name}</a>
-                        <span className="tier-badge" style={getTierBadgeStyle(casino.tier)}>{casino.tier}</span>
+                        {casino.tier ? (
+                          <span className="tier-badge" style={getTierBadgeStyle(casino.tier)}>{casino.tier}</span>
+                        ) : null}
                       </div>
                       <div className="casino-meta">
                         {casino.noDailyReward ? <span className="muted">No daily reward</span> : <ResetLine casino={casino} userTimezone={user.timezone} nowTs={nowTs} />}
@@ -545,9 +547,9 @@ function nextResetSortValue(casino: CasinoRowModel, userTimezone: string) {
 }
 
 function getTierBadgeStyle(tier: string) {
-  if (tier === 'S') return { background: 'rgba(16, 185, 129, 0.16)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.32)' };
-  if (tier === 'A') return { background: 'rgba(59, 130, 246, 0.16)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.32)' };
-  if (tier === 'B') return { background: 'rgba(245, 158, 11, 0.16)', color: 'var(--accent-yellow)', borderColor: 'rgba(245, 158, 11, 0.32)' };
+  if (tier === 'S') return { background: 'rgba(245, 158, 11, 0.16)', color: 'var(--accent-yellow)', borderColor: 'rgba(245, 158, 11, 0.32)' };
+  if (tier === 'A') return { background: 'rgba(16, 185, 129, 0.16)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.32)' };
+  if (tier === 'B') return { background: 'rgba(59, 130, 246, 0.16)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.32)' };
   return { background: 'rgba(156, 163, 175, 0.12)', color: 'var(--text-secondary)', borderColor: 'rgba(156, 163, 175, 0.26)' };
 }
 

@@ -38,7 +38,25 @@ const COMMON_TIMEZONES = [
   'Pacific/Honolulu',
 ];
 
+function getTimezoneOptions() {
+  if (typeof Intl.supportedValuesOf !== 'function') {
+    return COMMON_TIMEZONES;
+  }
+
+  try {
+    return [
+      ...COMMON_TIMEZONES,
+      ...Intl.supportedValuesOf('timeZone')
+        .filter((value) => !COMMON_TIMEZONES.includes(value))
+        .slice(0, 50),
+    ];
+  } catch {
+    return COMMON_TIMEZONES;
+  }
+}
+
 export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
+  const timezoneOptions = getTimezoneOptions();
   const [timezone, setTimezone] = useState(initialSettings.timezone);
   const [homeState, setHomeState] = useState(initialSettings.home_state ?? '');
   const [ledgerMode, setLedgerMode] = useState<'simple' | 'advanced'>(initialSettings.ledger_mode);
@@ -173,7 +191,7 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
       <label className="field">
         <span>Timezone</span>
         <select value={timezone} onChange={(event) => setTimezone(event.target.value)}>
-          {[...COMMON_TIMEZONES, ...Intl.supportedValuesOf('timeZone').filter((value) => !COMMON_TIMEZONES.includes(value)).slice(0, 50)].map((value) => (
+          {timezoneOptions.map((value) => (
             <option key={value} value={value}>{value}</option>
           ))}
         </select>
