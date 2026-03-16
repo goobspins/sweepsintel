@@ -10,8 +10,12 @@ import {
 } from '../../../lib/auth';
 import { transaction } from '../../../lib/db';
 import { sendOTP } from '../../../lib/email';
+import { createRateLimiter } from '../../../lib/rate-limit';
 
 export const prerender = false;
+
+const emailRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 3 });
+const ipRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 10 });
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -20,13 +24,43 @@ function json(data: unknown, status = 200) {
   });
 }
 
+function getRequestIp(request: Request) {
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0]?.trim() || 'unknown';
+  }
+
+  return request.headers.get('x-real-ip')?.trim() || 'unknown';
+}
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
     const email = normalizeEmail(String(body?.email ?? ''));
+    const ipAddress = getRequestIp(request);
 
     if (!isValidEmail(email)) {
       return json({ error: 'Enter a valid email address.' }, 400);
+    }
+
+    const ipLimit = ipRateLimiter.check(ipAddress);
+    if (!ipLimit.allowed) {
+      const retryMinutes = Math.max(1, Math.ceil(ipLimit.retryAfterMs / 60_000));
+      return json(
+        { error: `Too many login attempts. Try again in ${retryMinutes} minute${retryMinutes === 1 ? '' : 's'}.` },
+        429,
+      );
+    }
+
+    const emailLimit = emailRateLimiter.check(email);
+    if (!emailLimit.allowed) {
+      const retryMinutes = Math.max(1, Math.ceil(emailLimit.retryAfterMs / 60_000));
+      return json(
+        {
+          error: `Too many login attempts for this email. Try again in ${retryMinutes} minute${retryMinutes === 1 ? '' : 's'}.`,
+        },
+        429,
+      );
     }
 
     const otp = generateOTP();
@@ -82,6 +116,3 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to send login code.' }, 500);
   }
 };
-
-
-

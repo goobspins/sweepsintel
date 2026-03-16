@@ -13,11 +13,15 @@ function getResendClient() {
 export async function sendOTP(email: string, otp: string) {
   const resend = getResendClient();
 
-  await resend.emails.send({
-    from: 'SweepsIntel <onboarding@resend.dev>',
+  const result = await resend.emails.send({
+    from: import.meta.env.EMAIL_FROM || 'SweepsIntel <onboarding@resend.dev>',
     to: email,
     subject: 'Your SweepsIntel login code',
     text: `Your SweepsIntel login code is ${otp}.\n\nThis code expires in 15 minutes.`,
   });
-}
 
+  if (result.error) {
+    console.error('Resend API error:', result.error);
+    throw new Error(`Email delivery failed: ${result.error.message}`);
+  }
+}
