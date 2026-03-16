@@ -936,8 +936,8 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
       </div>
 
       <style>{`
-        .dashboard-shell { display: grid; gap: 1.25rem; }
-        .dashboard-main { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
+        .dashboard-shell { display: grid; gap: 1.25rem; min-width: 0; overflow-x: clip; }
+        .dashboard-main { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr) 380px; align-items: start; min-width: 0; overflow-x: clip; }
         .momentum-card, .dashboard-section, .discovery-sidebar { padding: 1.2rem; }
         .momentum-card { padding-block: 0.85rem; }
         .momentum-card-collapsed { min-height: 48px; }
@@ -988,8 +988,8 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           border-color: rgba(59, 130, 246, 0.35);
           background: rgba(59, 130, 246, 0.12);
         }
-        .dashboard-section { display: grid; gap: 1rem; max-height: calc(100vh - 165px); overflow-y: auto; }
-        .search-shell { position: relative; }
+        .dashboard-section { display: grid; gap: 1rem; max-height: calc(100vh - 165px); overflow-y: auto; min-width: 0; }
+        .search-shell { position: relative; min-width: 0; }
         .search-input {
           width: 100%;
           border: 1px solid var(--color-border);
@@ -1034,13 +1034,13 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .search-empty { display: grid; gap: 0.2rem; padding: 0.7rem 0.8rem; color: var(--text-secondary); }
         .search-suggest { color: var(--text-muted); font-size: 0.88rem; }
         .add-typed-button { border: 1px dashed var(--color-border); border-radius: 0.95rem; background: transparent; color: var(--text-primary); padding: 0.8rem 0.9rem; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
-        .casino-list { display: grid; gap: 0.85rem; }
+        .casino-list { display: grid; gap: 0.85rem; min-width: 0; }
         .casino-row { display: grid; gap: 0.9rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.52); scroll-margin-top: 7rem; }
         .casino-list .casino-row:nth-child(odd) { background: rgba(17, 24, 39, 0.38); }
         .casino-list .casino-row:nth-child(even) { background: rgba(17, 24, 39, 0.52); }
         .casino-row-due { border-left: 3px solid var(--accent-green); }
         .casino-row:target { border-color: rgba(59, 130, 246, 0.52); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18), 0 18px 40px rgba(2, 6, 23, 0.38); }
-        .casino-main { display: flex; gap: 1rem; justify-content: space-between; align-items: center; }
+        .casino-main { display: flex; gap: 1rem; justify-content: space-between; align-items: center; min-width: 0; }
         .casino-copy { display: grid; gap: 0.45rem; min-width: 0; }
         .casino-heading { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
         .casino-link { color: var(--text-primary); text-decoration: none; font-size: 1.08rem; font-weight: 800; letter-spacing: -0.03em; }
@@ -1053,7 +1053,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .status-secondary { color: var(--text-muted); font-size: 0.84rem; }
         .status-secondary-amber { color: var(--accent-yellow); font-size: 0.84rem; font-weight: 700; }
         .due-pill { display: inline-flex; align-items: center; padding: 0.22rem 0.55rem; border-radius: 999px; background: var(--accent-green); color: #fff; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
-        .action-stack { display: grid; gap: 0.7rem; width: min(100%, 560px); justify-items: end; }
+        .action-stack { display: grid; gap: 0.7rem; width: min(100%, 520px); justify-items: end; min-width: 0; }
         .mode-toggle, .entry-row, .purchase-actions { display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
         .mode-pill, .buy-button, .save-button, .ghost-button, .purchase-save { border-radius: 999px; font-weight: 700; cursor: pointer; }
         .mode-pill, .buy-button, .ghost-button { border: 1px solid var(--color-border); background: var(--bg-primary); color: var(--text-secondary); padding: 0.58rem 0.82rem; }
