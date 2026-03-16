@@ -24,7 +24,7 @@ function buildNavItems(user: SessionUser | null): NavItem[] {
 
   return [
     ...publicItems,
-    { href: '/tracker', label: 'Tracker' },
+    { href: '/dashboard', label: 'Dashboard' },
     { href: '/ledger', label: 'Ledger' },
     { href: '/redemptions', label: 'Redemptions' },
     { href: '/settings', label: 'Settings' },

@@ -1,0 +1,171 @@
+---
+import SessionGate from '../components/auth/SessionGate';
+import DashboardTracker from '../components/dashboard/DashboardTracker';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionUser } from '../lib/auth';
+import { query } from '../lib/db';
+import { getTrackerStatus } from '../lib/tracker';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+
+let initialData = {
+  casinos: [],
+  streakClaims: [],
+  alerts: [],
+  joinedCasinoIds: [],
+};
+
+let initialSummary = {
+  dailyGoalUsd: 5,
+  weeklyGoalUsd: null,
+  momentumPeriod: 'daily',
+  scEarnedToday: 0,
+  usdEarnedToday: 0,
+  purchaseCountToday: 0,
+  purchaseUsdToday: 0,
+  pendingRedemptionsCount: 0,
+  pendingRedemptionsUsd: 0,
+};
+
+let trackerError: string | null = null;
+
+async function safeDashboardQuery<T>(label: string, fetcher: () => Promise<T>, fallback: T) {
+  try {
+    return await fetcher();
+  } catch (error) {
+    console.error(`dashboard query failed: ${label}`, error);
+    return fallback;
+  }
+}
+
+if (user) {
+  try {
+    initialData = await getTrackerStatus(user.userId);
+  } catch (error) {
+    console.error('dashboard status failed', error);
+    trackerError = 'Your session is valid, but dashboard data could not be loaded right now.';
+  }
+
+  const [settings, earnings, purchases, pending] = await Promise.all([
+    safeDashboardQuery(
+      'settings',
+      () =>
+        query<{
+          daily_goal_usd: number | string | null;
+          weekly_goal_usd: number | string | null;
+          momentum_period: string | null;
+        }>(
+          `SELECT daily_goal_usd, weekly_goal_usd, momentum_period
+          FROM user_settings
+          WHERE user_id = $1
+          LIMIT 1`,
+          [user.userId],
+        ),
+      [],
+    ),
+    safeDashboardQuery(
+      'earnings',
+      () =>
+        query<{
+          sc_earned_today: number | string | null;
+          usd_earned_today: number | string | null;
+        }>(
+          `SELECT
+            COALESCE(SUM(COALESCE(le.sc_amount, 0)), 0) AS sc_earned_today,
+            COALESCE(SUM(COALESCE(le.sc_amount, 0) * COALESCE(c.sc_to_usd_ratio, 1)), 0) AS usd_earned_today
+          FROM ledger_entries le
+          LEFT JOIN casinos c ON c.id = le.casino_id
+          WHERE le.user_id = $1
+            AND le.entry_type IN ('daily', 'free_sc')
+            AND (COALESCE(le.entry_at, le.entry_date::timestamptz) AT TIME ZONE $2)::date = (NOW() AT TIME ZONE $2)::date`,
+          [user.userId, user.timezone],
+        ),
+      [],
+    ),
+    safeDashboardQuery(
+      'purchases',
+      () =>
+        query<{
+          purchase_count_today: number | string | null;
+          purchase_usd_today: number | string | null;
+        }>(
+          `SELECT
+            COUNT(*)::int AS purchase_count_today,
+            COALESCE(SUM(ABS(COALESCE(usd_amount, 0))), 0) AS purchase_usd_today
+          FROM ledger_entries
+          WHERE user_id = $1
+            AND entry_type = 'purchase'
+            AND (COALESCE(entry_at, entry_date::timestamptz) AT TIME ZONE $2)::date = (NOW() AT TIME ZONE $2)::date`,
+          [user.userId, user.timezone],
+        ),
+      [],
+    ),
+    safeDashboardQuery(
+      'pending',
+      () =>
+        query<{
+          pending_redemptions_count: number | string | null;
+          pending_redemptions_usd: number | string | null;
+        }>(
+          `SELECT
+            COUNT(*)::int AS pending_redemptions_count,
+            COALESCE(SUM(usd_amount), 0) AS pending_redemptions_usd
+          FROM redemptions
+          WHERE user_id = $1
+            AND status = 'pending'`,
+          [user.userId],
+        ),
+      [],
+    ),
+  ]);
+
+  const settingsRow = settings[0];
+  const earningsRow = earnings[0];
+  const purchasesRow = purchases[0];
+  const pendingRow = pending[0];
+
+  initialSummary = {
+    dailyGoalUsd: Number(settingsRow?.daily_goal_usd ?? 5),
+    weeklyGoalUsd:
+      settingsRow?.weekly_goal_usd === null || settingsRow?.weekly_goal_usd === undefined
+        ? null
+        : Number(settingsRow.weekly_goal_usd),
+    momentumPeriod: settingsRow?.momentum_period === 'weekly' ? 'weekly' : 'daily',
+    scEarnedToday: Number(earningsRow?.sc_earned_today ?? 0),
+    usdEarnedToday: Number(earningsRow?.usd_earned_today ?? 0),
+    purchaseCountToday: Number(purchasesRow?.purchase_count_today ?? 0),
+    purchaseUsdToday: Number(purchasesRow?.purchase_usd_today ?? 0),
+    pendingRedemptionsCount: Number(pendingRow?.pending_redemptions_count ?? 0),
+    pendingRedemptionsUsd: Number(pendingRow?.pending_redemptions_usd ?? 0),
+  };
+}
+---
+
+<BaseLayout title="Dashboard | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <SessionGate
+      client:load
+      user={user}
+      redirectTo="/dashboard"
+      title="Save your dashboard"
+      description="Enter your email the first time you want to save dashboard data."
+    >
+      {user && trackerError ? (
+        <section class="surface-card" style="padding: 1.25rem; display: grid; gap: 0.75rem;">
+          <h1 class="section-title" style="font-size: 1.5rem; margin: 0;">Dashboard unavailable</h1>
+          <p class="muted" style="margin: 0; line-height: 1.6;">{trackerError}</p>
+        </section>
+      ) : null}
+      {user ? (
+        <DashboardTracker
+          client:load
+          user={user}
+          initialData={initialData}
+          initialSummary={initialSummary}
+        />
+      ) : null}
+    </SessionGate>
+  </div>
+</BaseLayout>
