@@ -145,6 +145,16 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   }, []);
 
   useEffect(() => {
+    if (initialData.casinos.length === 0) {
+      return;
+    }
+
+    void refreshTracker().catch((error) => {
+      console.error(error);
+    });
+  }, []);
+
+  useEffect(() => {
     const saved = window.localStorage.getItem('dashboard:momentum-collapsed');
     if (saved === 'true') setMomentumCollapsed(true);
   }, []);
