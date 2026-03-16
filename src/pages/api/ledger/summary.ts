@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ request }) => {
           le.casino_id,
           c.name AS casino_name,
           SUM(le.usd_amount) AS net_usd,
-          SUM(le.sc_amount) AS net_sc,
+          SUM(CASE WHEN le.entry_type IN ('daily', 'free_sc', 'purchase_credit') THEN COALESCE(le.sc_amount, 0) ELSE 0 END) AS net_sc,
           COALESCE(r.pending_redemption_sc, 0) AS pending_redemption_sc
         FROM ledger_entries le
         JOIN casinos c ON c.id = le.casino_id

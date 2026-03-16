@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 
 import { invalidateCached } from '../../../lib/cache';
 import { isHttpError, requireAuth } from '../../../lib/auth';
-import { query } from '../../../lib/db';
+import { query, transaction } from '../../../lib/db';
 
 export const prerender = false;
 
@@ -59,23 +59,63 @@ export const POST: APIRoute = async ({ request }) => {
     const impliedUsd = scAmount * safeRatio;
     const marginPct = costUsd > 0 ? (impliedUsd - costUsd) / costUsd : null;
 
-    const rows = await query(
-      `INSERT INTO ledger_entries (
-        user_id,
-        casino_id,
-        entry_type,
-        sc_amount,
-        usd_amount,
-        promo_code,
-        notes,
-        margin_pct
-      ) VALUES ($1, $2, 'purchase', $3, $4, $5, $6, $7)
-      RETURNING id, casino_id, entry_type, sc_amount, usd_amount, promo_code, notes, margin_pct, entry_at`,
-      [user.userId, casinoId, scAmount, -costUsd, promoCode, notes, marginPct],
-    );
+    const entry = await transaction(async (tx) => {
+      const purchaseRows = await tx.query<{
+        id: number;
+        casino_id: number;
+        entry_type: string;
+        sc_amount: number | string | null;
+        usd_amount: number | string | null;
+        promo_code: string | null;
+        notes: string | null;
+        margin_pct: number | string | null;
+        entry_at: string;
+      }>(
+        `INSERT INTO ledger_entries (
+          user_id,
+          casino_id,
+          entry_type,
+          sc_amount,
+          usd_amount,
+          promo_code,
+          notes,
+          margin_pct
+        ) VALUES ($1, $2, 'purchase', $3, $4, $5, $6, $7)
+        RETURNING id, casino_id, entry_type, sc_amount, usd_amount, promo_code, notes, margin_pct, entry_at`,
+        [user.userId, casinoId, scAmount, -costUsd, promoCode, notes, marginPct],
+      );
+
+      const purchaseEntry = purchaseRows[0];
+
+      const creditRows = await tx.query<{ id: number }>(
+        `INSERT INTO ledger_entries (
+          user_id,
+          casino_id,
+          entry_type,
+          sc_amount,
+          usd_amount,
+          notes,
+          linked_entry_id
+        ) VALUES ($1, $2, 'purchase_credit', $3, 0, 'SC from purchase', $4)
+        RETURNING id`,
+        [user.userId, casinoId, scAmount, purchaseEntry.id],
+      );
+
+      await tx.query(
+        `UPDATE ledger_entries
+        SET linked_entry_id = $2
+        WHERE id = $1`,
+        [purchaseEntry.id, creditRows[0].id],
+      );
+
+      return {
+        ...purchaseEntry,
+        linked_entry_id: creditRows[0].id,
+      };
+    });
 
     invalidateCached(`ledger-summary:${user.userId}`);
-    return json({ success: true, entry: rows[0] }, 201);
+    return json({ success: true, entry }, 201);
   } catch (error) {
     if (isHttpError(error)) {
       return json({ error: error.message }, error.status === 302 ? 401 : error.status);

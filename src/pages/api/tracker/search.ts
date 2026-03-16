@@ -25,15 +25,16 @@ export const GET: APIRoute = async ({ request, url }) => {
       id: number;
       name: string;
       slug: string;
+      tier: string | null;
       source: string;
     }>(
-      `SELECT id, name, slug, source
-      FROM casinos
+      `SELECT c.id, c.name, c.slug, c.tier_label AS tier, c.source
+      FROM casinos c
       WHERE name ILIKE $1
       ORDER BY
-        CASE WHEN source = 'admin' THEN 0 ELSE 1 END,
-        name ASC
-      LIMIT 8`,
+        CASE WHEN c.source = 'admin' THEN 0 ELSE 1 END,
+        c.name ASC
+      LIMIT 5`,
       [`%${term}%`],
     );
 

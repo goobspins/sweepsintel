@@ -24,6 +24,7 @@ if (user) {
     notes: string | null;
     source_redemption_id: number | null;
     source_claim_id: number | null;
+    linked_entry_id: number | null;
     link_id: string | null;
     entry_at: string;
     entry_date: string;
@@ -39,6 +40,7 @@ if (user) {
       le.notes,
       le.source_redemption_id,
       le.source_claim_id,
+      le.linked_entry_id,
       le.link_id,
       le.entry_at,
       le.entry_date
@@ -62,7 +64,7 @@ if (user) {
         le.casino_id,
         c.name AS casino_name,
         SUM(le.usd_amount) AS net_usd,
-        SUM(le.sc_amount) AS net_sc,
+        SUM(CASE WHEN le.entry_type IN ('daily', 'free_sc', 'purchase_credit') THEN COALESCE(le.sc_amount, 0) ELSE 0 END) AS net_sc,
         COALESCE(r.pending_redemption_sc, 0) AS pending_redemption_sc
       FROM ledger_entries le
       JOIN casinos c ON c.id = le.casino_id

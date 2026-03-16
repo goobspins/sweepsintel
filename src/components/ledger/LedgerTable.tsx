@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import LedgerSummary from './LedgerSummary';
 import ManualEntryForm from './ManualEntryForm';
@@ -14,9 +14,17 @@ interface LedgerEntryRow {
   notes: string | null;
   source_redemption_id: number | null;
   source_claim_id: number | null;
+  linked_entry_id: number | null;
   link_id: string | null;
   entry_at: string;
   entry_date: string;
+}
+
+interface DisplayLedgerEntryRow extends LedgerEntryRow {
+  display_type: string;
+  display_sc_amount: number | null;
+  display_usd_amount: number | null;
+  display_notes: string | null;
 }
 
 interface LedgerSummaryData {
@@ -58,6 +66,7 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
     date_from: '',
     date_to: '',
   });
+  const displayEntries = useMemo(() => groupLedgerEntries(entries), [entries]);
 
   useEffect(() => {
     if (!toast) {
@@ -162,7 +171,7 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
             onChange={(event) => setFilters((current) => ({ ...current, entry_type: event.target.value }))}
           >
             <option value="">All types</option>
-            {['daily', 'free_sc', 'purchase', 'adjustment', 'redeem_confirmed'].map((entryType) => (
+            {['daily', 'free_sc', 'purchase', 'purchase_credit', 'adjustment', 'redeem_confirmed'].map((entryType) => (
               <option key={entryType} value={entryType}>{entryType}</option>
             ))}
           </select>
@@ -194,15 +203,15 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
               </tr>
             </thead>
             <tbody>
-              {entries.map((entry) => (
+              {displayEntries.map((entry) => (
                 <tr key={entry.id}>
                   <td>{new Date(entry.entry_at).toLocaleDateString()}</td>
                   <td>{entry.casino_name}</td>
-                  <td>{entry.entry_type}</td>
-                  {ledgerMode === 'advanced' ? <td>{entry.sc_amount === null ? '--' : formatNumber(entry.sc_amount)}</td> : null}
-                  <td>{entry.usd_amount === null ? '--' : formatCurrency(entry.usd_amount)}</td>
+                  <td>{entry.display_type}</td>
+                  {ledgerMode === 'advanced' ? <td>{entry.display_sc_amount === null ? '--' : formatNumber(entry.display_sc_amount)}</td> : null}
+                  <td>{entry.display_usd_amount === null ? '--' : formatCurrency(entry.display_usd_amount)}</td>
                   {ledgerMode === 'advanced' ? <td>{entry.link_id ?? '--'}</td> : null}
-                  <td>{entry.notes ?? '--'}</td>
+                  <td>{entry.display_notes ?? '--'}</td>
                 </tr>
               ))}
             </tbody>
@@ -313,6 +322,50 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
       `}</style>
     </div>
   );
+}
+
+function groupLedgerEntries(entries: LedgerEntryRow[]): DisplayLedgerEntryRow[] {
+  const byId = new Map(entries.map((entry) => [entry.id, entry]));
+  const skipped = new Set<number>();
+  const grouped: DisplayLedgerEntryRow[] = [];
+
+  for (const entry of entries) {
+    if (skipped.has(entry.id)) {
+      continue;
+    }
+
+    if (entry.entry_type === 'purchase' && entry.linked_entry_id) {
+      const linked = byId.get(entry.linked_entry_id);
+      if (linked?.entry_type === 'purchase_credit') {
+        skipped.add(linked.id);
+        grouped.push({
+          ...entry,
+          display_type: 'purchase',
+          display_sc_amount: linked.sc_amount,
+          display_usd_amount: entry.usd_amount,
+          display_notes: `Purchase: ${formatCurrency(entry.usd_amount ?? 0)} USD → +${formatNumber(linked.sc_amount ?? 0)} SC`,
+        });
+        continue;
+      }
+    }
+
+    if (entry.entry_type === 'purchase_credit' && entry.linked_entry_id) {
+      const linked = byId.get(entry.linked_entry_id);
+      if (linked?.entry_type === 'purchase') {
+        continue;
+      }
+    }
+
+    grouped.push({
+      ...entry,
+      display_type: entry.entry_type,
+      display_sc_amount: entry.sc_amount,
+      display_usd_amount: entry.usd_amount,
+      display_notes: entry.notes,
+    });
+  }
+
+  return grouped;
 }
 
 function formatCurrency(value: number) {

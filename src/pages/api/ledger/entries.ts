@@ -56,6 +56,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         le.notes,
         le.source_redemption_id,
         le.source_claim_id,
+        le.linked_entry_id,
         le.link_id,
         le.entry_at,
         le.entry_date

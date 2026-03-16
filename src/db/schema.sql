@@ -14,7 +14,10 @@ CREATE TYPE ledger_entry_type AS ENUM (
   'winnings',
   'wager',
   'adjustment',
-  'redeem_confirmed'
+  'redeem_confirmed',
+  'purchase',
+  'free_sc',
+  'purchase_credit'
 );
 
 CREATE TYPE notification_type AS ENUM (
@@ -246,6 +249,7 @@ CREATE TABLE ledger_entries (
   notes TEXT,
   source_redemption_id INT REFERENCES redemptions(id),
   source_claim_id INT REFERENCES daily_bonus_claims(id),
+  linked_entry_id INT REFERENCES ledger_entries(id) ON DELETE SET NULL,
   link_id VARCHAR(255),
   entry_at TIMESTAMP DEFAULT NOW(),
   entry_date DATE DEFAULT CURRENT_DATE
@@ -253,6 +257,7 @@ CREATE TABLE ledger_entries (
 
 CREATE INDEX idx_ledger_user_casino_date ON ledger_entries(user_id, casino_id, entry_date DESC);
 CREATE INDEX idx_ledger_user_type ON ledger_entries(user_id, entry_type);
+CREATE INDEX idx_ledger_linked_entry_id ON ledger_entries(linked_entry_id);
 CREATE INDEX idx_ledger_link_id ON ledger_entries(link_id);
 
 CREATE TABLE user_settings (

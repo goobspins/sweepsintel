@@ -14,6 +14,7 @@ export async function getAvailableSc(userId: string, casinoId: number): Promise<
         FROM ledger_entries
         WHERE user_id = $1
           AND casino_id = $2
+          AND entry_type IN ('daily', 'free_sc', 'purchase_credit')
       ), 0) - COALESCE((
         SELECT SUM(sc_amount)
         FROM redemptions
@@ -48,6 +49,7 @@ export async function getBalanceBreakdown(userId: string): Promise<BalanceBreakd
       SELECT casino_id, SUM(sc_amount) AS net_sc
       FROM ledger_entries
       WHERE user_id = $1
+        AND entry_type IN ('daily', 'free_sc', 'purchase_credit')
       GROUP BY casino_id
     ) le ON le.casino_id = c.id
     LEFT JOIN (

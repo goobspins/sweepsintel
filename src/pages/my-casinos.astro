@@ -40,7 +40,7 @@ if (user) {
       c.claim_url,
       c.affiliate_link_url,
       c.sc_to_usd_ratio,
-      COALESCE(SUM(COALESCE(le.sc_amount, 0)), 0) AS sc_balance,
+      COALESCE(SUM(CASE WHEN le.entry_type IN ('daily', 'free_sc', 'purchase_credit') THEN COALESCE(le.sc_amount, 0) ELSE 0 END), 0) AS sc_balance,
       COALESCE(SUM(CASE WHEN le.entry_type = 'purchase' THEN ABS(COALESCE(le.usd_amount, 0)) ELSE 0 END), 0) AS total_invested_usd,
       COALESCE(SUM(CASE WHEN le.entry_type = 'redeem_confirmed' THEN COALESCE(le.usd_amount, 0) ELSE 0 END), 0) AS total_redeemed_usd,
       COALESCE(SUM(COALESCE(le.usd_amount, 0)), 0) AS net_pl_usd,

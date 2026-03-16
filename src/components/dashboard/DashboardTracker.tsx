@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DateTime } from 'luxon';
 
 import type { SessionUser } from '../../lib/auth';
@@ -42,6 +42,13 @@ type DashboardDiscoveryCasino = {
 type DashboardDiscovery = {
   homeState: string | null;
   casinos: DashboardDiscoveryCasino[];
+};
+
+type DashboardSearchResult = {
+  id: number;
+  name: string;
+  slug: string;
+  tier: string | null;
 };
 
 type DashboardTrackerProps = {
@@ -118,6 +125,14 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const [purchaseDraftByCasino, setPurchaseDraftByCasino] = useState<Record<number, PurchaseDraft>>({});
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [momentumCollapsed, setMomentumCollapsed] = useState(false);
+  const [goalEditing, setGoalEditing] = useState(false);
+  const [goalDraft, setGoalDraft] = useState(() => initialSummary.dailyGoalUsd.toFixed(2));
+  const [goalSaving, setGoalSaving] = useState(false);
+  const goalCancelRef = useRef(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<DashboardSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowTs(Date.now()), 60_000);
@@ -138,6 +153,41 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
     const timeout = window.setTimeout(() => setToast(null), 2800);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    setGoalDraft(summary.dailyGoalUsd.toFixed(2));
+  }, [summary.dailyGoalUsd]);
+
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (trimmed.length < 2) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      setSearchOpen(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const response = await fetch(`/api/tracker/search?q=${encodeURIComponent(trimmed)}`);
+        const data = await readApiResponse(response);
+        if (!response.ok) {
+          throw new Error(data.error ?? 'Unable to search casinos.');
+        }
+        setSearchResults((data.results ?? []).slice(0, 5));
+        setSearchOpen(true);
+      } catch (error) {
+        console.error(error);
+        setSearchResults([]);
+        setSearchOpen(true);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
 
   const claimMap = useMemo(() => {
     const map = new Map<number, string[]>();
@@ -170,8 +220,14 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const dailyGoalUsd = summary.dailyGoalUsd || 5;
   const overGoalUsd = Math.max(0, summary.usdEarnedToday - dailyGoalUsd);
   const progressPct = dailyGoalUsd > 0 ? Math.min(100, (summary.usdEarnedToday / dailyGoalUsd) * 100) : 0;
+  const progressLabel = `${Math.round(progressPct)}%`;
   const spotlightCasino = discovery.casinos[0] ?? null;
   const compactDiscovery = discovery.casinos.slice(1);
+  const trackedCasinoIds = useMemo(() => new Set(casinos.map((casino) => casino.casino_id)), [casinos]);
+  const visibleSearchResults = useMemo(
+    () => searchResults.filter((casino) => !trackedCasinoIds.has(casino.id)),
+    [searchResults, trackedCasinoIds],
+  );
 
   function getMode(casinoId: number): ActionMode {
     return modeByCasino[casinoId] ?? 'daily';
@@ -197,6 +253,65 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
     if (!response.ok) throw new Error(data.error ?? 'Unable to refresh dashboard.');
     setCasinos(data.casinos ?? []);
     setStreakClaims(data.streakClaims ?? []);
+  }
+
+  async function saveDailyGoal(nextGoal: number) {
+    setGoalSaving(true);
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ daily_goal_usd: nextGoal }),
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Unable to save goal.');
+      }
+      setSummary((current) => ({ ...current, dailyGoalUsd: Number(data.daily_goal_usd ?? nextGoal) }));
+      setGoalEditing(false);
+      setToast({ tone: 'success', message: 'Daily goal updated.' });
+    } catch (error) {
+      console.error(error);
+      setToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to save goal.' });
+    } finally {
+      setGoalSaving(false);
+    }
+  }
+
+  async function handleGoalCommit() {
+    const nextGoal = Number(goalDraft);
+    if (!Number.isFinite(nextGoal) || nextGoal < 0) {
+      setToast({ tone: 'error', message: 'Enter a valid daily goal.' });
+      setGoalDraft(summary.dailyGoalUsd.toFixed(2));
+      setGoalEditing(false);
+      return;
+    }
+    await saveDailyGoal(nextGoal);
+  }
+
+  async function handleAddCasino(casinoId: number, casinoName: string) {
+    setPendingKey(`add:${casinoId}`);
+    try {
+      const response = await fetch('/api/tracker/add-casino', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ casino_id: casinoId }),
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Unable to add casino.');
+      }
+      await refreshTracker();
+      setSearchQuery('');
+      setSearchResults([]);
+      setSearchOpen(false);
+      setToast({ tone: 'success', message: `${casinoName} added to dashboard.` });
+    } catch (error) {
+      console.error(error);
+      setToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to add casino.' });
+    } finally {
+      setPendingKey(null);
+    }
   }
 
   async function handleSave(casino: CasinoRowModel) {
@@ -328,25 +443,87 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
     <div className="dashboard-shell">
       {toast ? <div className={`toast toast-${toast.tone}`}>{toast.message}</div> : null}
       <section className="surface-card momentum-card">
-        <button type="button" className="momentum-toggle" onClick={() => setMomentumCollapsed((current) => !current)}>
+        <div
+          className="momentum-toggle"
+          role="button"
+          tabIndex={0}
+          onClick={() => setMomentumCollapsed((current) => !current)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setMomentumCollapsed((current) => !current);
+            }
+          }}
+        >
           <div className="momentum-head">
             <div>
               <div className="eyebrow">Momentum</div>
               <h1 className="section-title momentum-title">Daily target</h1>
             </div>
             <div className="momentum-summary">
-              <span>${summary.usdEarnedToday.toFixed(2)} / ${dailyGoalUsd.toFixed(2)}</span>
+              <span className="goal-fraction">
+                ${summary.usdEarnedToday.toFixed(2)} /{' '}
+                {goalEditing ? (
+                  <input
+                    className="goal-input"
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={goalDraft}
+                    autoFocus
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => setGoalDraft(event.target.value)}
+                    onBlur={() => {
+                      if (goalCancelRef.current) {
+                        goalCancelRef.current = false;
+                        return;
+                      }
+                      void handleGoalCommit();
+                    }}
+                    onKeyDown={(event) => {
+                      event.stopPropagation();
+                      if (event.key === 'Enter') {
+                        void handleGoalCommit();
+                      } else if (event.key === 'Escape') {
+                        goalCancelRef.current = true;
+                        setGoalDraft(summary.dailyGoalUsd.toFixed(2));
+                        setGoalEditing(false);
+                      }
+                    }}
+                    disabled={goalSaving}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="goal-edit-button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setGoalDraft(summary.dailyGoalUsd.toFixed(2));
+                      setGoalEditing(true);
+                    }}
+                  >
+                    ${dailyGoalUsd.toFixed(2)}
+                    <span className="goal-edit-hint">edit</span>
+                  </button>
+                )}
+              </span>
               <span className="collapse-indicator">{momentumCollapsed ? 'Expand' : 'Collapse'}</span>
             </div>
           </div>
-          <div className="progress-track" aria-hidden="true">
-            <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+          <div className="progress-row">
+            <div className="progress-track" aria-hidden="true">
+              <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+              {progressPct >= 15 ? <span className="progress-label progress-label-inline">{progressLabel}</span> : null}
+            </div>
+            {progressPct < 15 ? <span className="progress-label progress-label-side">{progressLabel}</span> : null}
           </div>
           <div className="momentum-foot">
-            <span className="muted">{summary.scEarnedToday.toFixed(2)} SC captured today</span>
-            {overGoalUsd > 0 ? <span className="over-goal">+${overGoalUsd.toFixed(2)} over goal</span> : <span className="muted">${(dailyGoalUsd - summary.usdEarnedToday).toFixed(2)} to go</span>}
+            <span className="momentum-captured">{summary.scEarnedToday.toFixed(2)} SC captured today</span>
+            <span className={overGoalUsd > 0 ? 'over-goal' : 'momentum-remaining'}>
+              {overGoalUsd > 0 ? `+$${overGoalUsd.toFixed(2)} over goal` : `$${Math.max(0, dailyGoalUsd - summary.usdEarnedToday).toFixed(2)} to go`}
+            </span>
           </div>
-        </button>
+        </div>
         {!momentumCollapsed ? (
           <div className="momentum-body">
             <div className="period-toggle" aria-label="Momentum period">
@@ -384,6 +561,49 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
             <h2 className="section-title">Dashboard</h2>
             <p className="muted section-copy">{casinoRows.length} tracked casinos. Available rows float to the top.</p>
           </div>
+        </div>
+        <div className="search-shell">
+          <input
+            className="search-input"
+            type="text"
+            placeholder="Search casinos to add..."
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onFocus={() => {
+              if (searchQuery.trim().length >= 2) {
+                setSearchOpen(true);
+              }
+            }}
+          />
+          {searchOpen ? (
+            <div className="search-dropdown">
+              {searchLoading ? <div className="search-empty">Searching...</div> : null}
+              {!searchLoading && visibleSearchResults.length > 0 ? (
+                visibleSearchResults.map((result) => {
+                  const addPending = pendingKey === `add:${result.id}`;
+                  return (
+                    <div key={result.id} className="search-result">
+                      <div className="search-result-copy">
+                        <span className="search-result-name">{result.name}</span>
+                        {result.tier ? (
+                          <span className="tier-badge" style={getTierBadgeStyle(result.tier)}>{result.tier}</span>
+                        ) : null}
+                      </div>
+                      <button type="button" className="search-add" onClick={() => void handleAddCasino(result.id, result.name)} disabled={addPending}>
+                        {addPending ? 'Adding...' : 'Add'}
+                      </button>
+                    </div>
+                  );
+                })
+              ) : null}
+              {!searchLoading && searchQuery.trim().length >= 2 && visibleSearchResults.length === 0 ? (
+                <div className="search-empty">
+                  <span>No casinos found.</span>
+                  <span className="search-suggest">Suggest a casino</span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         {casinoRows.length === 0 ? (
           <div className="empty-state"><p>No casinos are being tracked yet.</p><a href="/casinos">Browse casinos</a></div>
@@ -568,15 +788,26 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
       <style>{`
         .dashboard-shell { display: grid; gap: 1.25rem; }
         .momentum-card, .dashboard-section, .discovery-section { padding: 1.2rem; }
-        .momentum-toggle { display: grid; gap: 0.9rem; width: 100%; border: none; background: transparent; color: inherit; padding: 0; text-align: left; cursor: pointer; }
+        .momentum-toggle { display: grid; gap: 0.9rem; width: 100%; background: transparent; color: inherit; padding: 0; text-align: left; cursor: pointer; }
         .momentum-head, .section-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
         .eyebrow { color: var(--text-muted); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
         .momentum-title { margin: 0.15rem 0 0; font-size: 1.55rem; }
         .momentum-summary { display: grid; gap: 0.2rem; justify-items: end; font-weight: 700; }
+        .goal-fraction { font-size: 1.05rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; }
+        .goal-edit-button { border: none; background: transparent; color: var(--text-primary); font: inherit; font-weight: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0; }
+        .goal-edit-hint { opacity: 0; color: var(--text-muted); font-size: 0.78rem; font-weight: 700; transition: opacity 140ms ease; }
+        .goal-edit-button:hover .goal-edit-hint { opacity: 1; }
+        .goal-input { width: 5rem; border-radius: 0.7rem; border: 1px solid var(--color-border); background: var(--bg-primary); color: var(--text-primary); padding: 0.35rem 0.5rem; font: inherit; font-weight: 800; }
         .collapse-indicator { color: var(--text-muted); font-size: 0.9rem; }
-        .progress-track { height: 16px; border-radius: 999px; background: var(--bg-primary); border: 1px solid var(--color-border); overflow: hidden; }
+        .progress-row { display: flex; gap: 0.55rem; align-items: center; }
+        .progress-track { position: relative; flex: 1 1 auto; height: 18px; border-radius: 999px; background: var(--bg-primary); border: 1px solid var(--color-border); overflow: hidden; }
         .progress-fill { height: 100%; border-radius: inherit; background: var(--progress-gradient); transition: width 180ms ease; }
-        .momentum-foot { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 0.95rem; }
+        .progress-label { color: #fff; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.02em; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
+        .progress-label-inline { position: absolute; inset: 0; display: grid; place-items: center; }
+        .progress-label-side { color: var(--text-primary); min-width: 2.5rem; text-align: right; }
+        .momentum-foot { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 1rem; }
+        .momentum-captured { color: var(--text-primary); font-weight: 700; }
+        .momentum-remaining { color: var(--accent-yellow); font-weight: 700; }
         .over-goal { color: var(--accent-green); font-weight: 700; }
         .momentum-body { margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
         .period-toggle { display: inline-flex; gap: 0.5rem; padding: 0.35rem; border-radius: 999px; background: var(--bg-primary); border: 1px solid var(--color-border); }
@@ -593,6 +824,44 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .kpi-pending { color: var(--accent-yellow); }
         .kpi-subvalue { color: var(--text-secondary); font-size: 1rem; font-weight: 600; }
         .section-copy { margin: 0; }
+        .search-shell { position: relative; }
+        .search-input {
+          width: 100%;
+          border: 1px solid var(--color-border);
+          border-radius: 1rem;
+          background: var(--bg-primary);
+          color: var(--text-primary);
+          padding: 0.88rem 1rem;
+          font: inherit;
+        }
+        .search-dropdown {
+          position: absolute;
+          z-index: 5;
+          top: calc(100% + 0.5rem);
+          left: 0;
+          right: 0;
+          display: grid;
+          gap: 0.35rem;
+          padding: 0.5rem;
+          border: 1px solid var(--color-border);
+          border-radius: 1rem;
+          background: var(--bg-secondary);
+          box-shadow: 0 18px 40px rgba(2, 6, 23, 0.42);
+        }
+        .search-result {
+          display: flex;
+          justify-content: space-between;
+          gap: 0.75rem;
+          align-items: center;
+          border-radius: 0.9rem;
+          padding: 0.65rem 0.7rem;
+          background: rgba(17, 24, 39, 0.45);
+        }
+        .search-result-copy { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; min-width: 0; }
+        .search-result-name { color: var(--text-primary); font-weight: 700; }
+        .search-add { border: none; border-radius: 999px; background: var(--accent-blue); color: var(--text-primary); padding: 0.58rem 0.9rem; font: inherit; font-weight: 700; cursor: pointer; }
+        .search-empty { display: grid; gap: 0.2rem; padding: 0.7rem 0.8rem; color: var(--text-secondary); }
+        .search-suggest { color: var(--text-muted); font-size: 0.88rem; }
         .casino-list { display: grid; gap: 0.85rem; }
         .casino-row { display: grid; gap: 0.9rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.52); scroll-margin-top: 7rem; }
         .casino-row-due { border-left: 3px solid var(--accent-green); }
@@ -701,7 +970,7 @@ function getCasinoStatus(casino: TrackerCasinoRow, lastClaimedAt: string | null,
   );
 
   if (!nextResetAt) {
-    return 'countdown';
+    return 'available';
   }
 
   return nextResetAt <= DateTime.fromMillis(nowTs).toUTC() ? 'available' : 'claimed';
@@ -786,7 +1055,7 @@ function getCasinoStatusDisplay(casino: CasinoRowModel, userTimezone: string, no
   if (casino.status === 'countdown') {
     return {
       isDue: false,
-      primary: nextResetAt ? `Available in ${formatCountdownFrom(nextResetAt, nowTs, userTimezone)}` : 'Available later',
+      primary: nextResetAt ? `Available in ${formatCountdownFrom(nextResetAt, nowTs, userTimezone)}` : 'Ready to claim',
       primaryClassName: 'status-countdown',
       secondary: null,
       secondaryClassName: 'status-secondary',
