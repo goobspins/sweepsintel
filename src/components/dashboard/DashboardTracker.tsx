@@ -431,7 +431,7 @@ export default function DashboardTracker({ user, initialData, initialSummary }: 
         .casino-link { color: var(--text-primary); text-decoration: none; font-size: 1.08rem; font-weight: 800; letter-spacing: -0.03em; }
         .tier-badge { display: inline-flex; min-width: 2rem; justify-content: center; border-radius: 999px; padding: 0.25rem 0.55rem; font-size: 0.78rem; font-weight: 800; border: 1px solid transparent; }
         .casino-meta { display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center; font-size: 0.92rem; }
-        .action-stack { display: grid; gap: 0.7rem; min-width: min(100%, 560px); }
+        .action-stack { display: grid; gap: 0.7rem; width: min(100%, 560px); justify-items: end; }
         .mode-toggle, .entry-row, .purchase-actions { display: flex; gap: 0.55rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
         .mode-pill, .buy-button, .save-button, .ghost-button, .purchase-save { border-radius: 999px; font-weight: 700; cursor: pointer; }
         .mode-pill, .buy-button, .ghost-button { border: 1px solid var(--color-border); background: var(--bg-primary); color: var(--text-secondary); padding: 0.58rem 0.82rem; }
@@ -450,7 +450,7 @@ export default function DashboardTracker({ user, initialData, initialSummary }: 
         .toast-success { background: rgba(16, 185, 129, 0.16); color: var(--accent-green); }
         .toast-error { background: rgba(239, 68, 68, 0.16); color: var(--accent-red); }
         @media (max-width: 1180px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .purchase-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 780px) { .casino-main { flex-direction: column; align-items: stretch; } .action-stack { min-width: 0; } .mode-toggle, .entry-row, .purchase-actions { justify-content: flex-start; } }
+        @media (max-width: 780px) { .casino-main { flex-direction: column; align-items: stretch; } .action-stack { width: 100%; justify-items: stretch; } .mode-toggle, .entry-row, .purchase-actions { justify-content: flex-start; } }
         @media (max-width: 640px) { .kpi-grid, .purchase-grid { grid-template-columns: 1fr; } .momentum-summary { justify-items: start; } .entry-row input, .purchase-grid input, .save-button, .purchase-save, .ghost-button { width: 100%; } }
       `}</style>
     </div>

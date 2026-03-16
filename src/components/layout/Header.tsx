@@ -55,48 +55,58 @@ export default function Header({
             gap: '1rem',
           }}
         >
-          <a
-            href="/"
+          <div
             style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              gap: '0.75rem',
-              textDecoration: 'none',
-              color: 'var(--color-ink)',
+              gap: '1.5rem',
+              minWidth: 0,
             }}
           >
-            <span
-              aria-hidden="true"
+            <a
+              href="/"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                width: '2.25rem',
-                height: '2.25rem',
-                borderRadius: '0.85rem',
-                background: 'linear-gradient(135deg, var(--accent-green) 0%, var(--accent-blue) 100%)',
-                color: 'var(--text-primary)',
-                fontSize: '1rem',
+                gap: '0.75rem',
+                textDecoration: 'none',
+                color: 'var(--color-ink)',
               }}
             >
-              SI
-            </span>
-            <span style={{ fontWeight: 800, letterSpacing: '-0.03em' }}>
-              SweepsIntel
-            </span>
-          </a>
+              <span
+                aria-hidden="true"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '2.25rem',
+                  height: '2.25rem',
+                  borderRadius: '0.85rem',
+                  background: 'linear-gradient(135deg, var(--accent-green) 0%, var(--accent-blue) 100%)',
+                  color: 'var(--text-primary)',
+                  fontSize: '1rem',
+                }}
+              >
+                SI
+              </span>
+              <span style={{ fontWeight: 800, letterSpacing: '-0.03em' }}>
+                SweepsIntel
+              </span>
+            </a>
+
+            <div className="desktop-nav" style={{ display: 'none', minWidth: 0 }}>
+              <Nav currentPath={currentPath} user={user} />
+            </div>
+          </div>
 
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '0.85rem',
+              marginLeft: 'auto',
             }}
           >
-            <div className="desktop-nav" style={{ display: 'none' }}>
-              <Nav currentPath={currentPath} user={user} />
-            </div>
-
             <div
               style={{
                 display: 'flex',
@@ -206,6 +216,7 @@ export default function Header({
         @media (min-width: 880px) {
           .desktop-nav {
             display: block !important;
+            flex: 1 1 auto;
           }
 
           .desktop-email {
