@@ -1091,6 +1091,28 @@ function getCasinoStatus(casino: TrackerCasinoRow, lastClaimedAt: string | null,
     return 'available';
   }
 
+  if (casino.reset_mode === 'fixed') {
+    const currentPeriodStart = computeFixedResetPeriodStart(
+      {
+        reset_time_local: casino.reset_time_local,
+        reset_timezone: casino.reset_timezone,
+        reset_interval_hours: casino.reset_interval_hours ?? 24,
+      },
+      DateTime.fromMillis(nowTs),
+    );
+
+    if (!currentPeriodStart) {
+      return 'available';
+    }
+
+    const lastClaim = DateTime.fromISO(lastClaimedAt).toUTC();
+    if (!lastClaim.isValid) {
+      return 'available';
+    }
+
+    return lastClaim >= currentPeriodStart.toUTC() ? 'claimed' : 'available';
+  }
+
   const nextResetAt = getNextResetAt(
     {
       resetMode: casino.reset_mode,
@@ -1274,7 +1296,7 @@ function formatCountdownFrom(nextResetAt: DateTime, nowTs: number, userTimezone:
     return 'unknown';
   }
 
-  const minutes = Math.max(0, Math.ceil(next.diff(DateTime.fromMillis(nowTs).setZone(userTimezone), 'minutes').minutes));
+  const minutes = Math.max(0, Math.floor(next.diff(DateTime.fromMillis(nowTs).setZone(userTimezone), 'minutes').minutes));
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
   return `${hours}h ${remainder}m`;

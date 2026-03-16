@@ -198,11 +198,15 @@ export async function getTrackerStatus(userId: string): Promise<TrackerStatusDat
           dbc.id AS today_claim_id, dbc.sc_amount AS today_sc, dbc.claimed_at AS today_claimed_at
         FROM user_casino_settings ucs
         JOIN casinos c ON c.id = ucs.casino_id
-        LEFT JOIN daily_bonus_claims dbc
-          ON dbc.user_id = ucs.user_id
-          AND dbc.casino_id = ucs.casino_id
-          AND dbc.claimed_date = CURRENT_DATE
-          AND dbc.claim_type = 'daily'
+        LEFT JOIN LATERAL (
+          SELECT id, sc_amount, claimed_at
+          FROM daily_bonus_claims
+          WHERE user_id = ucs.user_id
+            AND casino_id = ucs.casino_id
+            AND claim_type = 'daily'
+          ORDER BY claimed_at DESC
+          LIMIT 1
+        ) dbc ON true
         WHERE ucs.user_id = $1 AND ucs.removed_at IS NULL
         ORDER BY ucs.sort_order ASC NULLS LAST`,
         [userId],
