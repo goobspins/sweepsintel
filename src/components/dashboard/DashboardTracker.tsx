@@ -287,6 +287,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const compactDiscovery = discovery.casinos.slice(1);
   const trackedCasinoIds = useMemo(() => new Set(casinos.map((casino) => casino.casino_id)), [casinos]);
   const normalizedSearch = useMemo(() => normalizeCasinoName(searchQuery), [searchQuery]);
+  const useSidebarDiscovery = casinoRows.length >= 6;
   const momentumFillStyle = useMemo(
     () => ({ width: `${progressPct}%`, background: MOMENTUM_GRADIENTS[summary.momentumStyle] ?? MOMENTUM_GRADIENTS.rainbow }),
     [progressPct, summary.momentumStyle],
@@ -658,7 +659,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         ) : null}
       </section>
 
-      <div className="dashboard-main">
+      <div className={`dashboard-main ${useSidebarDiscovery ? 'dashboard-main-sidebar' : 'dashboard-main-stacked'}`}>
       <section className="surface-card dashboard-section">
         <div className="section-header">
           <div>
@@ -853,7 +854,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
       </section>
 
       {spotlightCasino ? (
-        <aside className="surface-card discovery-sidebar">
+        <aside className={`surface-card discovery-sidebar ${useSidebarDiscovery ? 'discovery-sidebar-docked' : 'discovery-sidebar-full'}`}>
           <div className="discovery-header">
             <div>
               <div className="eyebrow">Casinos you're missing</div>
@@ -945,7 +946,8 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
 
       <style>{`
         .dashboard-shell { display: grid; gap: 1.25rem; min-width: 0; overflow-x: clip; }
-        .dashboard-main { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr) 380px; align-items: start; min-width: 0; overflow-x: clip; }
+        .dashboard-main { display: grid; gap: 1.2rem; align-items: start; min-width: 0; overflow-x: clip; grid-template-columns: 1fr; }
+        .dashboard-main-sidebar { grid-template-columns: minmax(0, 1fr) 380px; }
         .momentum-card, .dashboard-section, .discovery-sidebar { padding: 1.2rem; }
         .momentum-card { padding-block: 0.85rem; }
         .momentum-card-collapsed { min-height: 48px; }
@@ -1081,13 +1083,11 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .discovery-sidebar {
           display: grid;
           gap: 1rem;
-          position: sticky;
-          top: 80px;
-          max-height: calc(100vh - 100px);
-          overflow-y: auto;
           background: rgba(17, 24, 39, 0.65);
           border-left: 1px solid var(--color-border);
         }
+        .discovery-sidebar-docked { position: sticky; top: 80px; max-height: calc(100vh - 100px); overflow-y: auto; }
+        .discovery-sidebar-full { position: static; max-height: none; overflow: visible; }
         .discovery-header { display: grid; gap: 0.35rem; }
         .discovery-spotlight { display: grid; gap: 1rem; padding: 1rem; border-radius: 1.35rem; border: 1px solid rgba(59, 130, 246, 0.24); background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(17, 24, 39, 0.58)); }
         .spotlight-copy { display: grid; gap: 0.9rem; }
@@ -1106,6 +1106,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .spotlight-secondary, .discovery-link { border: 1px solid var(--color-border); color: var(--text-primary); background: rgba(17, 24, 39, 0.42); }
         .spotlight-secondary { color: var(--text-secondary); text-decoration: none; font-weight: 700; justify-self: start; }
         .discovery-grid { display: grid; gap: 0.9rem; grid-template-columns: 1fr; }
+        .discovery-sidebar-full .discovery-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
         .discovery-card { display: grid; gap: 0.85rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.46); }
         .discovery-card-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: flex-start; }
         .discovery-card-title { color: var(--text-primary); text-decoration: none; font-size: 1rem; font-weight: 800; letter-spacing: -0.03em; }
@@ -1125,7 +1126,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .casino-row-compact .status-secondary,
         .casino-row-compact .status-secondary-amber { display: none; }
         @media (max-width: 1180px) { .purchase-grid, .spotlight-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 1024px) { .dashboard-main { grid-template-columns: 1fr; } .dashboard-section, .discovery-sidebar { max-height: none; overflow: visible; position: static; } .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 1024px) { .dashboard-main, .dashboard-main-sidebar { grid-template-columns: 1fr; } .dashboard-section, .discovery-sidebar { max-height: none; overflow: visible; position: static; } .discovery-grid, .discovery-sidebar-full .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 780px) { .momentum-strip { grid-template-columns: 1fr; } .casino-main { flex-direction: column; align-items: stretch; } .action-stack { width: 100%; justify-items: stretch; } .mode-toggle, .entry-row, .purchase-actions, .momentum-inline-kpis { justify-content: flex-start; } .momentum-body { align-items: stretch; } .momentum-summary { justify-items: start; } }
         @media (max-width: 640px) { .purchase-grid, .spotlight-facts, .discovery-grid { grid-template-columns: 1fr; } .entry-row input, .purchase-grid input, .save-button, .purchase-save, .ghost-button, .spotlight-primary, .spotlight-secondary, .discovery-link { width: 100%; } .spotlight-actions, .discovery-card-actions { grid-auto-flow: row; display: grid; } }
       `}</style>
@@ -1329,7 +1330,7 @@ function getDiscoveryHealthStyle(risk: string | null) {
 
 function getDiscoveryHealthLabel(risk: string | null) {
   if (risk === 'none' || risk === 'low') return 'Low PB Risk';
-  if (risk === 'medium') return 'Watch list';
+  if (risk === 'medium') return 'Moderate PB Risk';
   if (risk === 'high') return 'High PB Risk';
   return null;
 }
@@ -1342,8 +1343,7 @@ function getDiscoveryCardAccentStyle(tier: string | null) {
   if (tier === 'S') return { borderLeft: '3px solid var(--accent-yellow)' };
   if (tier === 'A') return { borderLeft: '3px solid var(--accent-green)' };
   if (tier === 'B') return { borderLeft: '3px solid var(--accent-blue)' };
-  if (tier === 'C') return { borderLeft: '3px solid var(--color-border)' };
-  return undefined;
+  return { borderLeft: '3px solid var(--color-border)' };
 }
 
 function hasMeaningfulValue(value: string | null) {

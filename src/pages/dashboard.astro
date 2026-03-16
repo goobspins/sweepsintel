@@ -197,7 +197,7 @@ if (user) {
   const discoveryRows = await safeDashboardQuery(
     'discovery',
     () =>
-      getCached(discoveryCacheKey, 6 * 60 * 60 * 1000, async () =>
+      getCached(discoveryCacheKey, 30 * 60 * 1000, async () =>
         query<{
           id: number;
           slug: string;
