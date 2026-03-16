@@ -1,7 +1,10 @@
 import type { APIRoute } from 'astro';
+import { DateTime } from 'luxon';
 
+import { invalidateCached } from '../../../lib/cache';
 import { isHttpError, requireAuth } from '../../../lib/auth';
 import { transaction } from '../../../lib/db';
+import { computeFixedResetPeriodStart } from '../../../lib/reset';
 
 export const prerender = false;
 
@@ -36,15 +39,92 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const result = await transaction(async (tx) => {
+      const casinoRows = await tx.query<{
+        id: number;
+        reset_mode: string | null;
+        reset_time_local: string | null;
+        reset_timezone: string | null;
+        reset_interval_hours: number | null;
+      }>(
+        `SELECT
+          id,
+          reset_mode,
+          reset_time_local,
+          reset_timezone,
+          reset_interval_hours
+        FROM casinos
+        WHERE id = $1
+        LIMIT 1`,
+        [casinoId],
+      );
+
+      const casino = casinoRows[0];
+      if (!casino) {
+        return { missingCasino: true as const };
+      }
+
+      const lastClaimRows = await tx.query<{
+        id: number;
+        claimed_at: string;
+        reset_period_start: string | null;
+      }>(
+        `SELECT id, claimed_at, reset_period_start
+        FROM daily_bonus_claims
+        WHERE user_id = $1
+          AND casino_id = $2
+          AND claim_type = $3
+        ORDER BY claimed_at DESC
+        LIMIT 1`,
+        [user.userId, casinoId, claimType],
+      );
+
+      const intervalHours =
+        typeof casino.reset_interval_hours === 'number' && casino.reset_interval_hours > 0
+          ? casino.reset_interval_hours
+          : 24;
+      const now = DateTime.now().toUTC();
+
+      let resetPeriodStart: string | null = null;
+
+      if (casino.reset_mode === 'fixed') {
+        const fixedStart = computeFixedResetPeriodStart(
+          {
+            reset_time_local: casino.reset_time_local,
+            reset_timezone: casino.reset_timezone,
+            reset_interval_hours: intervalHours,
+          },
+          now,
+        );
+
+        if (!fixedStart) {
+          return { invalidResetConfig: true as const };
+        }
+
+        resetPeriodStart = fixedStart.toUTC().toISO();
+      } else {
+        const lastClaim = lastClaimRows[0];
+        if (!lastClaim) {
+          resetPeriodStart = now.toISO();
+        } else {
+          const lastClaimAt = DateTime.fromISO(lastClaim.claimed_at).toUTC();
+          const previousPeriodStart = lastClaim.reset_period_start
+            ? DateTime.fromISO(lastClaim.reset_period_start).toUTC()
+            : lastClaimAt;
+          const nextPeriodStart = lastClaimAt.plus({ hours: intervalHours });
+          const currentPeriodStart = now < nextPeriodStart ? previousPeriodStart : nextPeriodStart;
+          resetPeriodStart = currentPeriodStart.toISO();
+        }
+      }
+
       const existing = await tx.query<{ id: number }>(
         `SELECT id
         FROM daily_bonus_claims
         WHERE user_id = $1
           AND casino_id = $2
-          AND claimed_date = CURRENT_DATE
-          AND claim_type = $3
+          AND reset_period_start = $3
+          AND claim_type = $4
         LIMIT 1`,
-        [user.userId, casinoId, claimType],
+        [user.userId, casinoId, resetPeriodStart, claimType],
       );
 
       if (existing.length > 0) {
@@ -56,10 +136,12 @@ export const POST: APIRoute = async ({ request }) => {
           user_id,
           casino_id,
           claim_type,
-          sc_amount
-        ) VALUES ($1, $2, $3, $4)
+          sc_amount,
+          reset_period_start,
+          claimed_date
+        ) VALUES ($1, $2, $3, $4, $5, CURRENT_DATE)
         RETURNING id, claimed_at`,
-        [user.userId, casinoId, claimType, scAmount],
+        [user.userId, casinoId, claimType, scAmount, resetPeriodStart],
       );
 
       const claim = claimRows[0];
@@ -83,9 +165,19 @@ export const POST: APIRoute = async ({ request }) => {
       };
     });
 
-    if (result.duplicate) {
-      return json({ error: 'You already claimed this casino today.' }, 409);
+    if ('missingCasino' in result) {
+      return json({ error: 'Casino not found.' }, 404);
     }
+
+    if ('invalidResetConfig' in result) {
+      return json({ error: 'Casino reset configuration is invalid.' }, 400);
+    }
+
+    if (result.duplicate) {
+      return json({ error: 'You already claimed this reset period.' }, 409);
+    }
+
+    invalidateCached(`ledger-summary:${user.userId}`);
 
     return json({
       success: true,

@@ -14,6 +14,47 @@ export interface ResetSummary {
   nextResetAt: string | null;
 }
 
+export function computeFixedResetPeriodStart(
+  casino: Pick<ResetCasinoInput, 'reset_time_local' | 'reset_timezone' | 'reset_interval_hours'>,
+  now = DateTime.now(),
+) {
+  if (!casino.reset_time_local || !casino.reset_timezone) {
+    return null;
+  }
+
+  const [hour, minute] = casino.reset_time_local.split(':').map(Number);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return null;
+  }
+
+  const intervalHours =
+    typeof casino.reset_interval_hours === 'number' && casino.reset_interval_hours > 0
+      ? casino.reset_interval_hours
+      : 24;
+
+  const nowInResetZone = now.setZone(casino.reset_timezone);
+  if (!nowInResetZone.isValid) {
+    return null;
+  }
+
+  let periodStart = nowInResetZone.startOf('day').set({
+    hour,
+    minute,
+    second: 0,
+    millisecond: 0,
+  });
+
+  while (periodStart > nowInResetZone) {
+    periodStart = periodStart.minus({ hours: intervalHours });
+  }
+
+  while (periodStart.plus({ hours: intervalHours }) <= nowInResetZone) {
+    periodStart = periodStart.plus({ hours: intervalHours });
+  }
+
+  return periodStart;
+}
+
 export function computeNextReset(
   casino: ResetCasinoInput,
   userTimezone: string,
