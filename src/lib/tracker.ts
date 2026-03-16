@@ -69,6 +69,16 @@ export interface AddCasinoResult {
   skippedDuplicate: boolean;
 }
 
+export function normalizeCasinoName(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/\.com|\.net/g, '')
+    .replace(/casino|sweeps|sweepstakes/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
 async function safeTrackerQuery<T>(
   label: string,
   fetcher: () => Promise<T>,
@@ -118,6 +128,7 @@ async function resolveCasinoByName(
   casinoName: string,
 ) {
   const normalized = casinoName.trim();
+  const normalizedName = normalizeCasinoName(normalized);
   const rows = await tx.query<{
     id: number;
     name: string;
@@ -135,11 +146,12 @@ async function resolveCasinoByName(
       affiliate_link_url
     FROM casinos
     WHERE LOWER(name) = LOWER($1)
+      OR normalized_name = $2
     ORDER BY
       CASE WHEN source = 'admin' THEN 0 ELSE 1 END,
       id ASC
     LIMIT 1`,
-    [normalized],
+    [normalized, normalizedName],
   );
 
   return rows[0] ?? null;
@@ -328,6 +340,7 @@ export async function addCasinoToTracker(options: {
 
     if (!casino && casinoName) {
       const trimmedName = casinoName.trim();
+      const normalizedName = normalizeCasinoName(trimmedName);
       const slug = await getUniqueSlug(tx, trimmedName);
       const createdRows = await tx.query<{
         id: number;
@@ -340,13 +353,14 @@ export async function addCasinoToTracker(options: {
         `INSERT INTO casinos (
           slug,
           name,
+          normalized_name,
           source,
           has_affiliate_link,
           is_excluded,
           reset_mode
-        ) VALUES ($1, $2, 'user_suggested', false, false, 'rolling')
+        ) VALUES ($1, $2, $3, 'user_suggested', false, false, 'rolling')
         RETURNING id, name, slug, source, has_affiliate_link, affiliate_link_url`,
-        [slug, trimmedName],
+        [slug, trimmedName, normalizedName],
       );
       casino = createdRows[0];
       createdSuggested = true;

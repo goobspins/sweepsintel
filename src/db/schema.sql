@@ -30,6 +30,7 @@ CREATE TABLE casinos (
   id SERIAL PRIMARY KEY,
   slug VARCHAR(50) UNIQUE NOT NULL,
   name VARCHAR(100) NOT NULL,
+  normalized_name VARCHAR(200),
   tier VARCHAR(1) DEFAULT 'B',
   claim_url TEXT,
   reset_mode VARCHAR(20) DEFAULT 'rolling',
@@ -411,6 +412,7 @@ CREATE INDEX idx_state_reports_pending ON state_availability_reports(id) WHERE i
 CREATE INDEX idx_reset_suggestions_pending ON reset_time_suggestions(id) WHERE status = 'pending';
 CREATE INDEX idx_admin_flags_pending ON admin_flags(id) WHERE status = 'pending';
 CREATE INDEX idx_casinos_user_suggested ON casinos(id) WHERE source = 'user_suggested';
+CREATE INDEX idx_casinos_normalized_name ON casinos(normalized_name);
 
 INSERT INTO admin_settings (key, value, updated_at)
 VALUES

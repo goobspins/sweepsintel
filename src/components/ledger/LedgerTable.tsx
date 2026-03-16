@@ -196,9 +196,8 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
                 <th>Date</th>
                 <th>Casino</th>
                 <th>Type</th>
-                {ledgerMode === 'advanced' ? <th>SC Amount</th> : null}
+                <th>SC</th>
                 <th>USD</th>
-                {ledgerMode === 'advanced' ? <th>Link ID</th> : null}
                 <th>Notes</th>
               </tr>
             </thead>
@@ -207,10 +206,13 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
                 <tr key={entry.id}>
                   <td>{new Date(entry.entry_at).toLocaleDateString()}</td>
                   <td>{entry.casino_name}</td>
-                  <td>{entry.display_type}</td>
-                  {ledgerMode === 'advanced' ? <td>{entry.display_sc_amount === null ? '--' : formatNumber(entry.display_sc_amount)}</td> : null}
-                  <td>{entry.display_usd_amount === null ? '--' : formatCurrency(entry.display_usd_amount)}</td>
-                  {ledgerMode === 'advanced' ? <td>{entry.link_id ?? '--'}</td> : null}
+                  <td>{formatEntryType(entry.display_type)}</td>
+                  <td className={getAmountTone(entry.display_sc_amount)}>
+                    {entry.display_sc_amount === null ? '--' : formatSignedNumber(entry.display_sc_amount)}
+                  </td>
+                  <td className={getAmountTone(entry.display_usd_amount)}>
+                    {entry.display_usd_amount === null ? '--' : formatCurrency(entry.display_usd_amount)}
+                  </td>
                   <td>{entry.display_notes ?? '--'}</td>
                 </tr>
               ))}
@@ -306,6 +308,9 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
           vertical-align: top;
         }
 
+        .amount-positive { color: var(--accent-green); font-weight: 700; }
+        .amount-negative { color: var(--accent-red); font-weight: 700; }
+
         .toast {
           position: sticky;
           top: 1rem;
@@ -343,7 +348,7 @@ function groupLedgerEntries(entries: LedgerEntryRow[]): DisplayLedgerEntryRow[] 
           display_type: 'purchase',
           display_sc_amount: linked.sc_amount,
           display_usd_amount: entry.usd_amount,
-          display_notes: `Purchase: ${formatCurrency(entry.usd_amount ?? 0)} USD → +${formatNumber(linked.sc_amount ?? 0)} SC`,
+          display_notes: `Purchase: ${formatCurrency(entry.usd_amount ?? 0)} USD -> +${formatNumber(linked.sc_amount ?? 0)} SC`,
         });
         continue;
       }
@@ -372,10 +377,30 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
+    signDisplay: 'exceptZero',
   }).format(value);
 }
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
+}
+
+function formatSignedNumber(value: number) {
+  const prefix = value > 0 ? '+' : '';
+  return `${prefix}${formatNumber(value)}`;
+}
+
+function formatEntryType(value: string) {
+  if (value === 'free_sc') return 'Free Spins';
+  if (value === 'redeem_confirmed') return 'Redemption';
+  if (value === 'purchase') return 'Purchase';
+  if (value === 'adjustment') return 'Adjust';
+  if (value === 'daily') return 'Daily';
+  return value.replace(/_/g, ' ');
+}
+
+function getAmountTone(value: number | null) {
+  if (value === null || value === 0) return '';
+  return value > 0 ? 'amount-positive' : 'amount-negative';
 }
 

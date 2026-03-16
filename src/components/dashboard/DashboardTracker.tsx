@@ -18,6 +18,8 @@ type DashboardSummary = {
   momentumPeriod: 'daily' | 'weekly';
   scEarnedToday: number;
   usdEarnedToday: number;
+  scEarnedWeek: number;
+  usdEarnedWeek: number;
   purchaseCountToday: number;
   purchaseUsdToday: number;
   pendingRedemptionsCount: number;
@@ -49,6 +51,7 @@ type DashboardSearchResult = {
   name: string;
   slug: string;
   tier: string | null;
+  source?: string;
 };
 
 type DashboardTrackerProps = {
@@ -131,8 +134,10 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const goalCancelRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<DashboardSearchResult[]>([]);
+  const [nearMatch, setNearMatch] = useState<DashboardSearchResult | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [momentumPeriod, setMomentumPeriod] = useState<'daily' | 'weekly'>(() => initialSummary.momentumPeriod ?? 'daily');
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowTs(Date.now()), 60_000);
@@ -149,6 +154,17 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   }, [momentumCollapsed]);
 
   useEffect(() => {
+    const saved = window.localStorage.getItem('si-momentum-period');
+    if (saved === 'daily' || saved === 'weekly') {
+      setMomentumPeriod(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem('si-momentum-period', momentumPeriod);
+  }, [momentumPeriod]);
+
+  useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(null), 2800);
     return () => window.clearTimeout(timeout);
@@ -162,6 +178,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
     const trimmed = searchQuery.trim();
     if (trimmed.length < 2) {
       setSearchResults([]);
+      setNearMatch(null);
       setSearchLoading(false);
       setSearchOpen(false);
       return;
@@ -176,10 +193,12 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           throw new Error(data.error ?? 'Unable to search casinos.');
         }
         setSearchResults((data.results ?? []).slice(0, 5));
+        setNearMatch(data.near_match ?? null);
         setSearchOpen(true);
       } catch (error) {
         console.error(error);
         setSearchResults([]);
+        setNearMatch(null);
         setSearchOpen(true);
       } finally {
         setSearchLoading(false);
@@ -218,16 +237,18 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   }, [casinos, claimMap, nowTs, user.timezone]);
 
   const dailyGoalUsd = summary.dailyGoalUsd || 5;
-  const overGoalUsd = Math.max(0, summary.usdEarnedToday - dailyGoalUsd);
-  const progressPct = dailyGoalUsd > 0 ? Math.min(100, (summary.usdEarnedToday / dailyGoalUsd) * 100) : 0;
+  const weeklyGoalUsd = summary.weeklyGoalUsd;
+  const isWeekly = momentumPeriod === 'weekly' && weeklyGoalUsd !== null;
+  const activeUsdEarned = isWeekly ? summary.usdEarnedWeek : summary.usdEarnedToday;
+  const activeScEarned = isWeekly ? summary.scEarnedWeek : summary.scEarnedToday;
+  const activeGoalUsd = isWeekly ? weeklyGoalUsd ?? dailyGoalUsd : dailyGoalUsd;
+  const overGoalUsd = Math.max(0, activeUsdEarned - activeGoalUsd);
+  const progressPct = activeGoalUsd > 0 ? Math.min(100, (activeUsdEarned / activeGoalUsd) * 100) : 0;
   const progressLabel = `${Math.round(progressPct)}%`;
   const spotlightCasino = discovery.casinos[0] ?? null;
   const compactDiscovery = discovery.casinos.slice(1);
   const trackedCasinoIds = useMemo(() => new Set(casinos.map((casino) => casino.casino_id)), [casinos]);
-  const visibleSearchResults = useMemo(
-    () => searchResults.filter((casino) => !trackedCasinoIds.has(casino.id)),
-    [searchResults, trackedCasinoIds],
-  );
+  const normalizedSearch = useMemo(() => normalizeCasinoName(searchQuery), [searchQuery]);
 
   function getMode(casinoId: number): ActionMode {
     return modeByCasino[casinoId] ?? 'daily';
@@ -306,6 +327,38 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
       setSearchResults([]);
       setSearchOpen(false);
       setToast({ tone: 'success', message: `${casinoName} added to dashboard.` });
+    } catch (error) {
+      console.error(error);
+      setToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to add casino.' });
+    } finally {
+      setPendingKey(null);
+    }
+  }
+
+  async function handleCreateCasino(name: string) {
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
+      setToast({ tone: 'error', message: 'Enter a casino name.' });
+      return;
+    }
+
+    setPendingKey(`create:${trimmedName}`);
+    try {
+      const response = await fetch('/api/tracker/add-casino', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ casino_name: trimmedName }),
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Unable to add casino.');
+      }
+      await refreshTracker();
+      setSearchQuery('');
+      setSearchResults([]);
+      setNearMatch(null);
+      setSearchOpen(false);
+      setToast({ tone: 'success', message: `${trimmedName} added to your tracker.` });
     } catch (error) {
       console.error(error);
       setToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to add casino.' });
@@ -458,11 +511,11 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           <div className="momentum-head">
             <div>
               <div className="eyebrow">Momentum</div>
-              <h1 className="section-title momentum-title">Daily target</h1>
+              <h1 className="section-title momentum-title">{isWeekly ? 'Weekly target' : 'Daily target'}</h1>
             </div>
             <div className="momentum-summary">
               <span className="goal-fraction">
-                ${summary.usdEarnedToday.toFixed(2)} /{' '}
+                ${activeUsdEarned.toFixed(2)} /{' '}
                 {goalEditing ? (
                   <input
                     className="goal-input"
@@ -496,14 +549,17 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
                   <button
                     type="button"
                     className="goal-edit-button"
+                    disabled={isWeekly}
+                    title={isWeekly ? 'Edit weekly goal in Settings' : undefined}
                     onClick={(event) => {
                       event.stopPropagation();
+                      if (isWeekly) return;
                       setGoalDraft(summary.dailyGoalUsd.toFixed(2));
                       setGoalEditing(true);
                     }}
                   >
-                    ${dailyGoalUsd.toFixed(2)}
-                    <span className="goal-edit-hint">edit</span>
+                    ${activeGoalUsd.toFixed(2)}
+                    {!isWeekly ? <span className="goal-edit-hint">edit</span> : null}
                   </button>
                 )}
               </span>
@@ -518,16 +574,39 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
             {progressPct < 15 ? <span className="progress-label progress-label-side">{progressLabel}</span> : null}
           </div>
           <div className="momentum-foot">
-            <span className="momentum-captured">{summary.scEarnedToday.toFixed(2)} SC captured today</span>
+            <span className="momentum-captured">
+              {activeScEarned.toFixed(2)} SC captured {isWeekly ? 'this week' : 'today'}
+            </span>
             <span className={overGoalUsd > 0 ? 'over-goal' : 'momentum-remaining'}>
-              {overGoalUsd > 0 ? `+$${overGoalUsd.toFixed(2)} over goal` : `$${Math.max(0, dailyGoalUsd - summary.usdEarnedToday).toFixed(2)} to go`}
+              {overGoalUsd > 0 ? `+$${overGoalUsd.toFixed(2)} over goal` : `$${Math.max(0, activeGoalUsd - activeUsdEarned).toFixed(2)} to go`}
             </span>
           </div>
         </div>
         {!momentumCollapsed ? (
-          <div className="momentum-body">
-            <div className="period-toggle" aria-label="Momentum period">
-              <span className="period-button period-active">Daily</span>
+          <div className="momentum-body" onClick={(event) => event.stopPropagation()}>
+            <div className="period-toggle" role="tablist" aria-label="Momentum period">
+              <button
+                type="button"
+                className={`period-button ${momentumPeriod === 'daily' ? 'period-active' : ''}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMomentumPeriod('daily');
+                }}
+              >
+                Daily
+              </button>
+              <button
+                type="button"
+                className={`period-button ${momentumPeriod === 'weekly' ? 'period-active' : ''}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMomentumPeriod('weekly');
+                }}
+                disabled={weeklyGoalUsd === null}
+                title={weeklyGoalUsd === null ? 'Set a weekly goal in Settings first' : undefined}
+              >
+                Weekly
+              </button>
             </div>
             <div className="momentum-inline-kpis" aria-label="Momentum highlights">
               <div className="momentum-chip">
@@ -577,30 +656,65 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           />
           {searchOpen ? (
             <div className="search-dropdown">
+              {nearMatch && normalizedSearch && !trackedCasinoIds.has(nearMatch.id) ? (
+                <div className="near-match-card">
+                  <span className="near-match-copy">
+                    Did you mean <strong>{nearMatch.name}</strong>?
+                  </span>
+                  <div className="near-match-actions">
+                    <button type="button" className="search-add" onClick={() => void handleAddCasino(nearMatch.id, nearMatch.name)}>
+                      Yes, use this
+                    </button>
+                    <button
+                      type="button"
+                      className="search-add search-add-ghost"
+                      onClick={() => void handleCreateCasino(searchQuery)}
+                      disabled={pendingKey === `create:${searchQuery.trim()}`}
+                    >
+                      No, add as {`"${searchQuery.trim()}"`}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               {searchLoading ? <div className="search-empty">Searching...</div> : null}
-              {!searchLoading && visibleSearchResults.length > 0 ? (
-                visibleSearchResults.map((result) => {
+              {!searchLoading && searchResults.length > 0 ? (
+                searchResults.map((result) => {
                   const addPending = pendingKey === `add:${result.id}`;
+                  const alreadyTracking = trackedCasinoIds.has(result.id);
                   return (
-                    <div key={result.id} className="search-result">
+                    <div key={result.id} className={`search-result ${alreadyTracking ? 'search-result-tracked' : ''}`}>
                       <div className="search-result-copy">
                         <span className="search-result-name">{result.name}</span>
                         {result.tier ? (
                           <span className="tier-badge" style={getTierBadgeStyle(result.tier)}>{result.tier}</span>
                         ) : null}
                       </div>
-                      <button type="button" className="search-add" onClick={() => void handleAddCasino(result.id, result.name)} disabled={addPending}>
-                        {addPending ? 'Adding...' : 'Add'}
-                      </button>
+                      {alreadyTracking ? (
+                        <span className="search-tracked">Already tracking</span>
+                      ) : (
+                        <button type="button" className="search-add" onClick={() => void handleAddCasino(result.id, result.name)} disabled={addPending}>
+                          {addPending ? 'Adding...' : 'Add'}
+                        </button>
+                      )}
                     </div>
                   );
                 })
               ) : null}
-              {!searchLoading && searchQuery.trim().length >= 2 && visibleSearchResults.length === 0 ? (
+              {!searchLoading && searchQuery.trim().length >= 2 && searchResults.length === 0 ? (
                 <div className="search-empty">
                   <span>No casinos found.</span>
                   <span className="search-suggest">Suggest a casino</span>
                 </div>
+              ) : null}
+              {!searchLoading && searchQuery.trim().length >= 2 && !nearMatch ? (
+                <button
+                  type="button"
+                  className="add-typed-button"
+                  onClick={() => void handleCreateCasino(searchQuery)}
+                  disabled={pendingKey === `create:${searchQuery.trim()}`}
+                >
+                  {pendingKey === `create:${searchQuery.trim()}` ? 'Adding...' : `Add "${searchQuery.trim()}"`}
+                </button>
               ) : null}
             </div>
           ) : null}
@@ -795,6 +909,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .momentum-summary { display: grid; gap: 0.2rem; justify-items: end; font-weight: 700; }
         .goal-fraction { font-size: 1.05rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; }
         .goal-edit-button { border: none; background: transparent; color: var(--text-primary); font: inherit; font-weight: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0; }
+        .goal-edit-button:disabled { cursor: default; opacity: 0.92; }
         .goal-edit-hint { opacity: 0; color: var(--text-muted); font-size: 0.78rem; font-weight: 700; transition: opacity 140ms ease; }
         .goal-edit-button:hover .goal-edit-hint { opacity: 1; }
         .goal-input { width: 5rem; border-radius: 0.7rem; border: 1px solid var(--color-border); background: var(--bg-primary); color: var(--text-primary); padding: 0.35rem 0.5rem; font: inherit; font-weight: 800; }
@@ -812,6 +927,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .momentum-body { margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
         .period-toggle { display: inline-flex; gap: 0.5rem; padding: 0.35rem; border-radius: 999px; background: var(--bg-primary); border: 1px solid var(--color-border); }
         .period-button { border: none; background: transparent; color: var(--text-secondary); border-radius: 999px; padding: 0.55rem 0.9rem; cursor: pointer; font-weight: 700; }
+        .period-button:disabled { opacity: 0.5; cursor: not-allowed; }
         .period-active { background: rgba(59, 130, 246, 0.16); color: var(--text-primary); }
         .momentum-inline-kpis { display: flex; gap: 0.65rem; flex-wrap: wrap; justify-content: flex-end; }
         .momentum-chip { display: grid; gap: 0.15rem; min-width: 110px; padding: 0.7rem 0.85rem; border-radius: 1rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.48); }
@@ -860,8 +976,15 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .search-result-copy { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; min-width: 0; }
         .search-result-name { color: var(--text-primary); font-weight: 700; }
         .search-add { border: none; border-radius: 999px; background: var(--accent-blue); color: var(--text-primary); padding: 0.58rem 0.9rem; font: inherit; font-weight: 700; cursor: pointer; }
+        .search-add-ghost { background: transparent; border: 1px solid var(--color-border); color: var(--text-secondary); }
+        .search-result-tracked { opacity: 0.65; }
+        .search-tracked { color: var(--text-muted); font-size: 0.88rem; font-weight: 700; }
+        .near-match-card { display: grid; gap: 0.5rem; padding: 0.75rem; border-radius: 0.95rem; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); }
+        .near-match-copy { color: var(--text-primary); }
+        .near-match-actions { display: flex; gap: 0.55rem; flex-wrap: wrap; }
         .search-empty { display: grid; gap: 0.2rem; padding: 0.7rem 0.8rem; color: var(--text-secondary); }
         .search-suggest { color: var(--text-muted); font-size: 0.88rem; }
+        .add-typed-button { border: 1px dashed var(--color-border); border-radius: 0.95rem; background: transparent; color: var(--text-primary); padding: 0.8rem 0.9rem; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
         .casino-list { display: grid; gap: 0.85rem; }
         .casino-row { display: grid; gap: 0.9rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.52); scroll-margin-top: 7rem; }
         .casino-row-due { border-left: 3px solid var(--accent-green); }
@@ -927,6 +1050,16 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
       `}</style>
     </div>
   );
+}
+
+function normalizeCasinoName(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/\.com|\.net/g, '')
+    .replace(/casino|sweeps|sweepstakes/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
 }
 
 function buildCasinoRowModel(casino: TrackerCasinoRow, claims: string[], nowTs: number): CasinoRowModel {

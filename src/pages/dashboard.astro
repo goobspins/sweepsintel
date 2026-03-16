@@ -24,6 +24,8 @@ let initialSummary = {
   momentumPeriod: 'daily',
   scEarnedToday: 0,
   usdEarnedToday: 0,
+  scEarnedWeek: 0,
+  usdEarnedWeek: 0,
   purchaseCountToday: 0,
   purchaseUsdToday: 0,
   pendingRedemptionsCount: 0,
@@ -54,7 +56,7 @@ if (user) {
     trackerError = 'Your session is valid, but dashboard data could not be loaded right now.';
   }
 
-  const [settings, earnings, purchases, pending] = await Promise.all([
+  const [settings, earnings, weeklyEarnings, purchases, pending] = await Promise.all([
     safeDashboardQuery(
       'settings',
       () =>
@@ -88,6 +90,25 @@ if (user) {
             AND le.entry_type IN ('daily', 'free_sc')
             AND (COALESCE(le.entry_at, le.entry_date::timestamptz) AT TIME ZONE $2)::date = (NOW() AT TIME ZONE $2)::date`,
           [user.userId, user.timezone],
+        ),
+      [],
+    ),
+    safeDashboardQuery(
+      'weekly-earnings',
+      () =>
+        query<{
+          sc_earned_week: number | string | null;
+          usd_earned_week: number | string | null;
+        }>(
+          `SELECT
+            COALESCE(SUM(COALESCE(le.sc_amount, 0)), 0) AS sc_earned_week,
+            COALESCE(SUM(COALESCE(le.sc_amount, 0) * COALESCE(c.sc_to_usd_ratio, 1)), 0) AS usd_earned_week
+          FROM ledger_entries le
+          LEFT JOIN casinos c ON c.id = le.casino_id
+          WHERE le.user_id = $1
+            AND le.entry_type IN ('daily', 'free_sc', 'purchase_credit')
+            AND COALESCE(le.entry_at, le.entry_date::timestamptz) >= NOW() - INTERVAL '7 days'`,
+          [user.userId],
         ),
       [],
     ),
@@ -130,6 +151,7 @@ if (user) {
 
   const settingsRow = settings[0];
   const earningsRow = earnings[0];
+  const weeklyEarningsRow = weeklyEarnings[0];
   const purchasesRow = purchases[0];
   const pendingRow = pending[0];
 
@@ -142,6 +164,8 @@ if (user) {
     momentumPeriod: settingsRow?.momentum_period === 'weekly' ? 'weekly' : 'daily',
     scEarnedToday: Number(earningsRow?.sc_earned_today ?? 0),
     usdEarnedToday: Number(earningsRow?.usd_earned_today ?? 0),
+    scEarnedWeek: Number(weeklyEarningsRow?.sc_earned_week ?? 0),
+    usdEarnedWeek: Number(weeklyEarningsRow?.usd_earned_week ?? 0),
     purchaseCountToday: Number(purchasesRow?.purchase_count_today ?? 0),
     purchaseUsdToday: Number(purchasesRow?.purchase_usd_today ?? 0),
     pendingRedemptionsCount: Number(pendingRow?.pending_redemptions_count ?? 0),
