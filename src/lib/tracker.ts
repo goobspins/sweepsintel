@@ -297,7 +297,7 @@ export async function getTrackerStatus(userId: string): Promise<TrackerStatusDat
 
 export async function getTrackerSuggestions(userId: string) {
   return query<TrackerSuggestion>(
-    `SELECT c.id, c.name, c.slug, c.daily_bonus_desc, c.has_affiliate_link, c.affiliate_link_url, c.tier,
+    `SELECT c.id, c.name, c.slug, c.daily_bonus_desc, c.has_affiliate_link, c.affiliate_link_url, c.tier_label AS tier,
       c.sc_to_usd_ratio,
       COALESCE(agg.avg_sc, c.daily_bonus_sc_avg) AS sort_sc
     FROM casinos c

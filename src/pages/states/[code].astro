@@ -34,7 +34,7 @@ const stateData = await getCached(`state-detail:${stateCode}`, 15 * 60 * 1000, a
       id: number;
       name: string;
       slug: string;
-      tier: string;
+      tier: string | null;
       promoban_risk: string;
       has_live_games: boolean;
       has_affiliate_link: boolean;
@@ -46,7 +46,7 @@ const stateData = await getCached(`state-detail:${stateCode}`, 15 * 60 * 1000, a
         c.id,
         c.name,
         c.slug,
-        c.tier,
+        c.tier_label AS tier,
         c.promoban_risk,
         c.has_live_games,
         c.has_affiliate_link,
@@ -57,7 +57,7 @@ const stateData = await getCached(`state-detail:${stateCode}`, 15 * 60 * 1000, a
       JOIN casinos c ON c.id = csa.casino_id
       WHERE csa.state_code = $1
         AND c.is_excluded = false
-      ORDER BY c.tier ASC, c.name ASC`,
+      ORDER BY c.tier_label ASC NULLS LAST, c.name ASC`,
       [stateCode],
     ),
     query<{
