@@ -1,0 +1,399 @@
+---
+import SessionGate from '../components/auth/SessionGate';
+import ReportsPanel from '../components/reports/ReportsPanel';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionUser } from '../lib/auth';
+import { query } from '../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+
+let initialSummary = {
+  kpiCards: ['sc_earned', 'usd_earned', 'purchases', 'pending_redemptions'],
+  scEarnedToday: 0,
+  usdEarnedToday: 0,
+  purchaseCountToday: 0,
+  purchaseUsdToday: 0,
+  pendingRedemptionsCount: 0,
+  pendingRedemptionsUsd: 0,
+  bestPerformerName: null,
+  bestPerformerSc: 0,
+  claimStreakDays: 0,
+  dailyVelocityPct: 0,
+  totalSc: 0,
+  totalInvestedUsd: 0,
+  totalRedeemedUsd: 0,
+  netPlUsd: 0,
+};
+
+let initialCasinos = [];
+let initialRecentActivity = [];
+
+async function safeReportsQuery<T>(label: string, fetcher: () => Promise<T>, fallback: T) {
+  try {
+    return await fetcher();
+  } catch (error) {
+    console.error(`reports query failed: ${label}`, error);
+    return fallback;
+  }
+}
+
+function parseJsonish(value: unknown) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function normalizeKpiCards(value: unknown) {
+  const parsed = parseJsonish(value);
+  const allowed = new Set([
+    'sc_earned',
+    'usd_earned',
+    'purchases',
+    'pending_redemptions',
+    'best_performer',
+    'claim_streak',
+    'daily_velocity',
+  ]);
+  if (!Array.isArray(parsed)) return ['sc_earned', 'usd_earned', 'purchases', 'pending_redemptions'];
+  const filtered = parsed.filter((item): item is string => typeof item === 'string' && allowed.has(item));
+  return filtered.length >= 3 ? filtered.slice(0, 4) : ['sc_earned', 'usd_earned', 'purchases', 'pending_redemptions'];
+}
+
+function localDateKey(value: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+  const year = parts.find((part) => part.type === 'year')?.value ?? '0000';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '00';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '00';
+  return `${year}-${month}-${day}`;
+}
+
+if (user) {
+  const [settings, earnings, purchases, pending, bestPerformer, trackedDailyCount, streakCounts, velocity, totals, casinos, recentActivity] = await Promise.all([
+    safeReportsQuery(
+      'settings',
+      () =>
+        query<{
+          kpi_cards: unknown;
+        }>(
+          `SELECT kpi_cards
+          FROM user_settings
+          WHERE user_id = $1
+          LIMIT 1`,
+          [user.userId],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'earnings',
+      () =>
+        query<{
+          sc_earned_today: number | string | null;
+          usd_earned_today: number | string | null;
+        }>(
+          `SELECT
+            COALESCE(SUM(COALESCE(le.sc_amount, 0)), 0) AS sc_earned_today,
+            COALESCE(SUM(COALESCE(le.sc_amount, 0) * COALESCE(c.sc_to_usd_ratio, 1)), 0) AS usd_earned_today
+          FROM ledger_entries le
+          LEFT JOIN casinos c ON c.id = le.casino_id
+          WHERE le.user_id = $1
+            AND le.entry_type IN ('daily', 'free_sc')
+            AND (COALESCE(le.entry_at, le.entry_date::timestamptz) AT TIME ZONE $2)::date = (NOW() AT TIME ZONE $2)::date`,
+          [user.userId, user.timezone],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'purchases',
+      () =>
+        query<{
+          purchase_count_today: number | string | null;
+          purchase_usd_today: number | string | null;
+        }>(
+          `SELECT
+            COUNT(*)::int AS purchase_count_today,
+            COALESCE(SUM(ABS(COALESCE(usd_amount, 0))), 0) AS purchase_usd_today
+          FROM ledger_entries
+          WHERE user_id = $1
+            AND entry_type = 'purchase'
+            AND (COALESCE(entry_at, entry_date::timestamptz) AT TIME ZONE $2)::date = (NOW() AT TIME ZONE $2)::date`,
+          [user.userId, user.timezone],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'pending',
+      () =>
+        query<{
+          pending_redemptions_count: number | string | null;
+          pending_redemptions_usd: number | string | null;
+        }>(
+          `SELECT
+            COUNT(*)::int AS pending_redemptions_count,
+            COALESCE(SUM(usd_amount), 0) AS pending_redemptions_usd
+          FROM redemptions
+          WHERE user_id = $1
+            AND status = 'pending'`,
+          [user.userId],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'best-performer',
+      () =>
+        query<{ name: string; net_sc: number | string | null }>(
+          `SELECT
+            c.name,
+            COALESCE(SUM(COALESCE(le.sc_amount, 0)), 0) AS net_sc
+          FROM ledger_entries le
+          JOIN casinos c ON c.id = le.casino_id
+          WHERE le.user_id = $1
+            AND le.entry_type IN ('daily', 'free_sc', 'purchase_credit', 'adjustment')
+          GROUP BY c.id, c.name
+          ORDER BY net_sc DESC, c.name ASC
+          LIMIT 1`,
+          [user.userId],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'tracked-daily-count',
+      () =>
+        query<{ tracked_daily_count: number | string | null }>(
+          `SELECT COUNT(*)::int AS tracked_daily_count
+          FROM user_casino_settings
+          WHERE user_id = $1
+            AND removed_at IS NULL
+            AND COALESCE(no_daily_reward, false) = false`,
+          [user.userId],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'claim-streak',
+      () =>
+        query<{ claim_date: string; claim_count: number | string | null }>(
+          `SELECT
+            (COALESCE(reset_period_start, claimed_at) AT TIME ZONE $2)::date AS claim_date,
+            COUNT(DISTINCT casino_id)::int AS claim_count
+          FROM daily_bonus_claims
+          WHERE user_id = $1
+            AND COALESCE(reset_period_start, claimed_at) >= NOW() - INTERVAL '45 days'
+          GROUP BY claim_date
+          ORDER BY claim_date DESC`,
+          [user.userId, user.timezone],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'daily-velocity',
+      () =>
+        query<{ sc_today: number | string | null; sc_30d: number | string | null }>(
+          `SELECT
+            COALESCE(SUM(
+              CASE
+                WHEN (COALESCE(le.entry_at, le.entry_date::timestamptz) AT TIME ZONE $2)::date = (NOW() AT TIME ZONE $2)::date
+                  THEN COALESCE(le.sc_amount, 0)
+                ELSE 0
+              END
+            ), 0) AS sc_today,
+            COALESCE(SUM(
+              CASE
+                WHEN COALESCE(le.entry_at, le.entry_date::timestamptz) >= NOW() - INTERVAL '30 days'
+                  THEN COALESCE(le.sc_amount, 0)
+                ELSE 0
+              END
+            ), 0) AS sc_30d
+          FROM ledger_entries le
+          WHERE le.user_id = $1
+            AND le.entry_type IN ('daily', 'free_sc', 'purchase_credit')`,
+          [user.userId, user.timezone],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'totals',
+      () =>
+        query<{
+          total_sc: number | string | null;
+          total_invested: number | string | null;
+          total_redeemed: number | string | null;
+        }>(
+          `SELECT
+            COALESCE(SUM(CASE WHEN entry_type IN ('daily', 'free_sc', 'purchase_credit', 'adjustment') THEN COALESCE(sc_amount, 0) ELSE 0 END), 0) AS total_sc,
+            COALESCE(SUM(CASE WHEN entry_type = 'purchase' THEN ABS(COALESCE(usd_amount, 0)) ELSE 0 END), 0) AS total_invested,
+            COALESCE(SUM(CASE WHEN entry_type = 'redeem_confirmed' THEN COALESCE(usd_amount, 0) ELSE 0 END), 0) AS total_redeemed
+          FROM ledger_entries
+          WHERE user_id = $1`,
+          [user.userId],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'casino-performance',
+      () =>
+        query<{
+          casino_id: number;
+          name: string;
+          slug: string;
+          tier: string | null;
+          sc_balance: number | string | null;
+          total_invested_usd: number | string | null;
+          total_redeemed_usd: number | string | null;
+          net_pl_usd: number | string | null;
+          last_activity_at: string | null;
+        }>(
+          `SELECT
+            ucs.casino_id,
+            c.name,
+            c.slug,
+            c.tier_label AS tier,
+            COALESCE(SUM(CASE WHEN le.entry_type IN ('daily', 'free_sc', 'purchase_credit') THEN COALESCE(le.sc_amount, 0) ELSE 0 END), 0) AS sc_balance,
+            COALESCE(SUM(CASE WHEN le.entry_type = 'purchase' THEN ABS(COALESCE(le.usd_amount, 0)) ELSE 0 END), 0) AS total_invested_usd,
+            COALESCE(SUM(CASE WHEN le.entry_type = 'redeem_confirmed' THEN COALESCE(le.usd_amount, 0) ELSE 0 END), 0) AS total_redeemed_usd,
+            COALESCE(SUM(COALESCE(le.usd_amount, 0)), 0) AS net_pl_usd,
+            MAX(COALESCE(le.entry_at, le.entry_date::timestamptz)) AS last_activity_at
+          FROM user_casino_settings ucs
+          JOIN casinos c ON c.id = ucs.casino_id
+          LEFT JOIN ledger_entries le
+            ON le.user_id = ucs.user_id
+            AND le.casino_id = ucs.casino_id
+          WHERE ucs.user_id = $1
+            AND ucs.removed_at IS NULL
+          GROUP BY ucs.casino_id, c.name, c.slug, c.tier_label`,
+          [user.userId],
+        ),
+      [],
+    ),
+    safeReportsQuery(
+      'recent-activity',
+      () =>
+        query<{
+          id: number;
+          casino_name: string;
+          casino_slug: string;
+          entry_type: string;
+          sc_amount: number | string | null;
+          usd_amount: number | string | null;
+          notes: string | null;
+          entry_at: string | null;
+        }>(
+          `SELECT
+            le.id,
+            c.name AS casino_name,
+            c.slug AS casino_slug,
+            le.entry_type,
+            le.sc_amount,
+            le.usd_amount,
+            le.notes,
+            COALESCE(le.entry_at, le.entry_date::timestamptz) AS entry_at
+          FROM ledger_entries le
+          JOIN casinos c ON c.id = le.casino_id
+          WHERE le.user_id = $1
+            AND le.entry_type <> 'purchase_credit'
+          ORDER BY COALESCE(le.entry_at, le.entry_date::timestamptz) DESC
+          LIMIT 10`,
+          [user.userId],
+        ),
+      [],
+    ),
+  ]);
+
+  const settingsRow = settings[0];
+  const earningsRow = earnings[0];
+  const purchasesRow = purchases[0];
+  const pendingRow = pending[0];
+  const bestPerformerRow = bestPerformer[0];
+  const trackedDailyCountRow = trackedDailyCount[0];
+  const velocityRow = velocity[0];
+  const totalsRow = totals[0];
+  const trackedDailyTotal = Number(trackedDailyCountRow?.tracked_daily_count ?? 0);
+  const streakCountByDate = new Map(streakCounts.map((row) => [row.claim_date, Number(row.claim_count ?? 0)]));
+  let claimStreakDays = 0;
+  if (trackedDailyTotal > 0) {
+    let cursor = new Date();
+    while (claimStreakDays < 45) {
+      const localDate = localDateKey(cursor, user.timezone);
+      if ((streakCountByDate.get(localDate) ?? 0) < trackedDailyTotal) break;
+      claimStreakDays += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+
+  const scToday = Number(velocityRow?.sc_today ?? 0);
+  const sc30d = Number(velocityRow?.sc_30d ?? 0);
+  const avg30d = sc30d > 0 ? sc30d / 30 : 0;
+
+  initialSummary = {
+    kpiCards: normalizeKpiCards(settingsRow?.kpi_cards),
+    scEarnedToday: Number(earningsRow?.sc_earned_today ?? 0),
+    usdEarnedToday: Number(earningsRow?.usd_earned_today ?? 0),
+    purchaseCountToday: Number(purchasesRow?.purchase_count_today ?? 0),
+    purchaseUsdToday: Number(purchasesRow?.purchase_usd_today ?? 0),
+    pendingRedemptionsCount: Number(pendingRow?.pending_redemptions_count ?? 0),
+    pendingRedemptionsUsd: Number(pendingRow?.pending_redemptions_usd ?? 0),
+    bestPerformerName: bestPerformerRow?.name ?? null,
+    bestPerformerSc: Number(bestPerformerRow?.net_sc ?? 0),
+    claimStreakDays,
+    dailyVelocityPct: avg30d > 0 ? ((scToday / avg30d) - 1) * 100 : scToday > 0 ? 100 : 0,
+    totalSc: Number(totalsRow?.total_sc ?? 0),
+    totalInvestedUsd: Number(totalsRow?.total_invested ?? 0),
+    totalRedeemedUsd: Number(totalsRow?.total_redeemed ?? 0),
+    netPlUsd: Number(totalsRow?.total_redeemed ?? 0) - Number(totalsRow?.total_invested ?? 0),
+  };
+
+  initialCasinos = casinos.map((row) => ({
+    casinoId: row.casino_id,
+    name: row.name,
+    slug: row.slug,
+    tier: row.tier,
+    scBalance: Number(row.sc_balance ?? 0),
+    usdInvested: Number(row.total_invested_usd ?? 0),
+    usdRedeemed: Number(row.total_redeemed_usd ?? 0),
+    netPlUsd: Number(row.net_pl_usd ?? 0),
+    lastActivityAt: row.last_activity_at,
+  }));
+
+  initialRecentActivity = recentActivity.map((row) => ({
+    id: row.id,
+    casinoName: row.casino_name,
+    casinoSlug: row.casino_slug,
+    entryType: row.entry_type,
+    scAmount: row.sc_amount === null ? null : Number(row.sc_amount),
+    usdAmount: row.usd_amount === null ? null : Number(row.usd_amount),
+    notes: row.notes,
+    entryAt: row.entry_at,
+  }));
+}
+---
+
+<BaseLayout title="Reports | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <SessionGate
+      client:load
+      user={user}
+      redirectTo="/reports"
+      title="Log in to view your reports"
+      description="See your performance, portfolio winners, and recent activity in one place."
+    >
+      {user ? (
+        <ReportsPanel
+          client:load
+          initialSummary={initialSummary}
+          initialCasinos={initialCasinos}
+          initialRecentActivity={initialRecentActivity}
+        />
+      ) : null}
+    </SessionGate>
+  </div>
+</BaseLayout>

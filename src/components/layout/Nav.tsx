@@ -29,6 +29,7 @@ function buildToolItems(user: SessionUser | null): NavItem[] {
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/my-casinos', label: 'My Casinos' },
     { href: '/ledger', label: 'Ledger' },
+    { href: '/reports', label: 'Reports' },
     { href: '/redemptions', label: 'Redemptions' },
   ];
 }

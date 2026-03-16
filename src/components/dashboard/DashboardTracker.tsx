@@ -17,7 +17,6 @@ type DashboardSummary = {
   weeklyGoalUsd: number | null;
   momentumPeriod: 'daily' | 'weekly';
   momentumStyle: string;
-  kpiCards: string[];
   scEarnedToday: number;
   usdEarnedToday: number;
   scEarnedWeek: number;
@@ -26,10 +25,6 @@ type DashboardSummary = {
   purchaseUsdToday: number;
   pendingRedemptionsCount: number;
   pendingRedemptionsUsd: number;
-  bestPerformerName: string | null;
-  bestPerformerSc: number;
-  claimStreakDays: number;
-  dailyVelocityPct: number;
 };
 
 type DashboardDiscoveryCasino = {
@@ -93,23 +88,12 @@ type PurchaseDraft = {
   notes: string;
 };
 
-type KpiCardId =
-  | 'sc_earned'
-  | 'usd_earned'
-  | 'purchases'
-  | 'pending_redemptions'
-  | 'best_performer'
-  | 'claim_streak'
-  | 'daily_velocity';
-
 const DEFAULT_PURCHASE_DRAFT: PurchaseDraft = {
   costUsd: '',
   scAmount: '',
   promoCode: '',
   notes: '',
 };
-
-const DEFAULT_KPI_CARDS: KpiCardId[] = ['sc_earned', 'usd_earned', 'purchases', 'pending_redemptions'];
 
 const MOMENTUM_GRADIENTS: Record<string, string> = {
   rainbow: 'var(--progress-gradient)',
@@ -152,7 +136,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const [purchaseOpenByCasino, setPurchaseOpenByCasino] = useState<Record<number, boolean>>({});
   const [purchaseDraftByCasino, setPurchaseDraftByCasino] = useState<Record<number, PurchaseDraft>>({});
   const [pendingKey, setPendingKey] = useState<string | null>(null);
-  const [momentumCollapsed, setMomentumCollapsed] = useState(false);
+  const [momentumCollapsed, setMomentumCollapsed] = useState(true);
   const [bootstrapping, setBootstrapping] = useState(initialData.casinos.length > 0);
   const [goalEditing, setGoalEditing] = useState(false);
   const [goalDraft, setGoalDraft] = useState(() => initialSummary.dailyGoalUsd.toFixed(2));
@@ -187,12 +171,13 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   }, []);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem('dashboard:momentum-collapsed');
+    const saved = window.localStorage.getItem('si-momentum-collapsed');
     if (saved === 'true') setMomentumCollapsed(true);
+    if (saved === 'false') setMomentumCollapsed(false);
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem('dashboard:momentum-collapsed', momentumCollapsed ? 'true' : 'false');
+    window.localStorage.setItem('si-momentum-collapsed', momentumCollapsed ? 'true' : 'false');
   }, [momentumCollapsed]);
 
   useEffect(() => {
@@ -302,18 +287,9 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const compactDiscovery = discovery.casinos.slice(1);
   const trackedCasinoIds = useMemo(() => new Set(casinos.map((casino) => casino.casino_id)), [casinos]);
   const normalizedSearch = useMemo(() => normalizeCasinoName(searchQuery), [searchQuery]);
-  const selectedKpiCards = useMemo<KpiCardId[]>(() => {
-    const filtered = summary.kpiCards.filter(isKpiCardId);
-    return filtered.length >= 3 ? filtered.slice(0, 4) : DEFAULT_KPI_CARDS;
-  }, [summary.kpiCards]);
   const momentumFillStyle = useMemo(
     () => ({ width: `${progressPct}%`, background: MOMENTUM_GRADIENTS[summary.momentumStyle] ?? MOMENTUM_GRADIENTS.rainbow }),
     [progressPct, summary.momentumStyle],
-  );
-  const kpiCards = useMemo(
-    () =>
-      selectedKpiCards.map((cardId) => buildKpiCard(cardId, summary)),
-    [selectedKpiCards, summary],
   );
 
   function getMode(casinoId: number): ActionMode {
@@ -561,7 +537,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   return (
     <div className="dashboard-shell">
       {toast ? <div className={`toast toast-${toast.tone}`}>{toast.message}</div> : null}
-      <section className="surface-card momentum-card">
+      <section className={`surface-card momentum-card ${momentumCollapsed ? 'momentum-card-collapsed' : ''}`}>
         <div
           className="momentum-toggle"
           role="button"
@@ -574,14 +550,43 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
             }
           }}
         >
-          <div className="momentum-head">
-            <div>
-              <div className="eyebrow">Momentum</div>
-              <h1 className="section-title momentum-title">{isWeekly ? 'Weekly target' : 'Daily target'}</h1>
+          <div className="momentum-strip">
+            <div className="period-toggle" role="tablist" aria-label="Momentum period" onClick={(event) => event.stopPropagation()}>
+              <button
+                type="button"
+                className={`period-button ${momentumPeriod === 'daily' ? 'period-active' : ''}`}
+                onClick={() => setMomentumPeriod('daily')}
+              >
+                Daily
+              </button>
+              <button
+                type="button"
+                className={`period-button ${momentumPeriod === 'weekly' ? 'period-active' : ''}`}
+                onClick={() => setMomentumPeriod('weekly')}
+                disabled={weeklyGoalUsd === null}
+                title={weeklyGoalUsd === null ? 'Set a weekly goal in Settings first' : undefined}
+              >
+                Weekly
+              </button>
+            </div>
+            <div className="momentum-inline-copy">
+              <span className="momentum-captured">
+                {activeScEarned.toFixed(2)} SC captured {isWeekly ? 'this week' : 'today'}
+              </span>
+              <span className={overGoalUsd > 0 ? 'over-goal' : 'momentum-remaining'}>
+                {overGoalUsd > 0 ? `+$${overGoalUsd.toFixed(2)} over goal` : `$${Math.max(0, activeGoalUsd - activeUsdEarned).toFixed(2)} to go`}
+              </span>
+            </div>
+            <div className="progress-row">
+              <div className="progress-track" aria-hidden="true">
+                <div className="progress-fill" style={momentumFillStyle} />
+                {progressPct >= 15 ? <span className="progress-label progress-label-inline">{progressLabel}</span> : null}
+              </div>
+              {progressPct < 15 ? <span className="progress-label progress-label-side">{progressLabel}</span> : null}
             </div>
             <div className="momentum-summary">
               <span className="goal-fraction">
-                ${activeUsdEarned.toFixed(2)} /{' '}
+                ${activeUsdEarned.toFixed(2)} /
                 {goalEditing ? (
                   <input
                     className="goal-input"
@@ -632,48 +637,9 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
               <span className="collapse-indicator">{momentumCollapsed ? 'Expand' : 'Collapse'}</span>
             </div>
           </div>
-          <div className="progress-row">
-            <div className="progress-track" aria-hidden="true">
-              <div className="progress-fill" style={momentumFillStyle} />
-              {progressPct >= 15 ? <span className="progress-label progress-label-inline">{progressLabel}</span> : null}
-            </div>
-            {progressPct < 15 ? <span className="progress-label progress-label-side">{progressLabel}</span> : null}
-          </div>
-          <div className="momentum-foot">
-            <span className="momentum-captured">
-              {activeScEarned.toFixed(2)} SC captured {isWeekly ? 'this week' : 'today'}
-            </span>
-            <span className={overGoalUsd > 0 ? 'over-goal' : 'momentum-remaining'}>
-              {overGoalUsd > 0 ? `+$${overGoalUsd.toFixed(2)} over goal` : `$${Math.max(0, activeGoalUsd - activeUsdEarned).toFixed(2)} to go`}
-            </span>
-          </div>
         </div>
         {!momentumCollapsed ? (
           <div className="momentum-body" onClick={(event) => event.stopPropagation()}>
-            <div className="period-toggle" role="tablist" aria-label="Momentum period">
-              <button
-                type="button"
-                className={`period-button ${momentumPeriod === 'daily' ? 'period-active' : ''}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setMomentumPeriod('daily');
-                }}
-              >
-                Daily
-              </button>
-              <button
-                type="button"
-                className={`period-button ${momentumPeriod === 'weekly' ? 'period-active' : ''}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setMomentumPeriod('weekly');
-                }}
-                disabled={weeklyGoalUsd === null}
-                title={weeklyGoalUsd === null ? 'Set a weekly goal in Settings first' : undefined}
-              >
-                Weekly
-              </button>
-            </div>
             <div className="momentum-inline-kpis" aria-label="Momentum highlights">
               <div className="momentum-chip">
                 <span className="momentum-chip-label">USD today</span>
@@ -692,20 +658,10 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         ) : null}
       </section>
 
-      <section className="kpi-grid" aria-label="Dashboard KPIs">
-        {kpiCards.map((card) => (
-          <article key={card.id} className="surface-card kpi-card">
-            <span className="kpi-label">{card.label}</span>
-            <strong className={`kpi-value ${card.toneClassName ?? ''}`}>{card.value}</strong>
-            {card.subvalue ? <span className={`kpi-subvalue ${card.subtoneClassName ?? ''}`}>{card.subvalue}</span> : null}
-          </article>
-        ))}
-      </section>
-
+      <div className="dashboard-main">
       <section className="surface-card dashboard-section">
         <div className="section-header">
           <div>
-            <div className="eyebrow">Heartbeat</div>
             <h2 className="section-title">Dashboard</h2>
             <div className="section-toolbar">
               <p className="muted section-copy">{casinoRows.length} tracked casinos. Available rows float to the top.</p>
@@ -897,14 +853,12 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
       </section>
 
       {spotlightCasino ? (
-        <section className="surface-card discovery-section">
-          <div className="section-header">
+        <aside className="surface-card discovery-sidebar">
+          <div className="discovery-header">
             <div>
-              <div className="eyebrow">Discovery</div>
-              <h2 className="section-title">Casinos you're missing</h2>
+              <div className="eyebrow">Casinos you're missing</div>
               <p className="muted section-copy">
-                {discovery.homeState ? `Personalized for ${discovery.homeState}. ` : ''}
-                Ranked from the strongest untracked opportunities already in your orbit.
+                {discovery.homeState ? `Personalized for ${discovery.homeState}` : 'Based on your activity'}
               </p>
             </div>
           </div>
@@ -913,7 +867,6 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
             <div className="spotlight-copy">
               <div className="spotlight-topline">
                 <div className="spotlight-heading">
-                  <span className="spotlight-label">Spotlight</span>
                   <a href={`/casinos/${spotlightCasino.slug}`} className="spotlight-title">{spotlightCasino.name}</a>
                   {spotlightCasino.tier ? (
                     <span className="tier-badge" style={getTierBadgeStyle(spotlightCasino.tier)}>{spotlightCasino.tier}</span>
@@ -934,14 +887,14 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
               </div>
             </div>
             <div className="spotlight-actions">
-              <a href={`/casinos/${spotlightCasino.slug}`} className="spotlight-secondary">Full profile</a>
+              <a href={`/casinos/${spotlightCasino.slug}`} className="spotlight-secondary">Full Profile {'->'}</a>
               <a
                 href={spotlightCasino.has_affiliate_link && spotlightCasino.affiliate_link_url ? spotlightCasino.affiliate_link_url : `/casinos/${spotlightCasino.slug}`}
                 className="spotlight-primary"
                 target={spotlightCasino.has_affiliate_link && spotlightCasino.affiliate_link_url ? '_blank' : undefined}
                 rel={spotlightCasino.has_affiliate_link && spotlightCasino.affiliate_link_url ? 'noopener noreferrer' : undefined}
               >
-                {spotlightCasino.has_affiliate_link && spotlightCasino.affiliate_link_url ? 'Sign up' : 'Learn more'}
+                Sign Up {'->'}
               </a>
             </div>
           </div>
@@ -954,7 +907,6 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
                     <div>
                       <a href={`/casinos/${casino.slug}`} className="discovery-card-title">{casino.name}</a>
                       <div className="discovery-card-meta">
-                        <span className="health-dot" style={getDiscoveryHealthStyle(casino.promoban_risk)} />
                         <span>{getDiscoveryLead(casino)}</span>
                       </div>
                     </div>
@@ -964,32 +916,38 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
                   </div>
                   <p className="discovery-card-copy">{buildCompactPitch(casino)}</p>
                   <div className="discovery-card-actions">
-                    <a href={`/casinos/${casino.slug}`} className="discovery-link">Learn more</a>
+                    <a href={`/casinos/${casino.slug}`} className="discovery-link">Profile</a>
                     <a
                       href={casino.has_affiliate_link && casino.affiliate_link_url ? casino.affiliate_link_url : `/casinos/${casino.slug}`}
                       className="discovery-link discovery-link-primary"
                       target={casino.has_affiliate_link && casino.affiliate_link_url ? '_blank' : undefined}
                       rel={casino.has_affiliate_link && casino.affiliate_link_url ? 'noopener noreferrer' : undefined}
                     >
-                      {casino.has_affiliate_link && casino.affiliate_link_url ? 'Sign up' : 'Open'}
+                      Sign Up
                     </a>
                   </div>
                 </article>
               ))}
             </div>
           ) : null}
-        </section>
+          <a href="/casinos" className="explore-link">Explore All Casinos {'->'}</a>
+        </aside>
       ) : null}
+      </div>
 
       <style>{`
         .dashboard-shell { display: grid; gap: 1.25rem; }
-        .momentum-card, .dashboard-section, .discovery-section { padding: 1.2rem; }
+        .dashboard-main { display: grid; gap: 1.2rem; grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
+        .momentum-card, .dashboard-section, .discovery-sidebar { padding: 1.2rem; }
+        .momentum-card { padding-block: 0.85rem; }
+        .momentum-card-collapsed { min-height: 48px; }
         .momentum-toggle { display: grid; gap: 0.9rem; width: 100%; background: transparent; color: inherit; padding: 0; text-align: left; cursor: pointer; }
-        .momentum-head, .section-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+        .section-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
         .eyebrow { color: var(--text-muted); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
-        .momentum-title { margin: 0.15rem 0 0; font-size: 1.55rem; }
+        .momentum-strip { display: grid; gap: 0.8rem; grid-template-columns: auto auto minmax(220px, 1fr) auto; align-items: center; }
+        .momentum-inline-copy { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; }
         .momentum-summary { display: grid; gap: 0.2rem; justify-items: end; font-weight: 700; }
-        .goal-fraction { font-size: 1.05rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; }
+        .goal-fraction { font-size: 1.05rem; font-weight: 800; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
         .goal-edit-button { border: none; background: transparent; color: var(--text-primary); font: inherit; font-weight: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; padding: 0; }
         .goal-edit-button:disabled { cursor: default; opacity: 0.92; }
         .goal-edit-hint { opacity: 0; color: var(--text-muted); font-size: 0.78rem; font-weight: 700; transition: opacity 140ms ease; }
@@ -1002,11 +960,10 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .progress-label { color: #fff; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.02em; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
         .progress-label-inline { position: absolute; inset: 0; display: grid; place-items: center; }
         .progress-label-side { color: var(--text-primary); min-width: 2.5rem; text-align: right; }
-        .momentum-foot { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 1rem; }
         .momentum-captured { color: var(--text-primary); font-weight: 700; }
         .momentum-remaining { color: var(--accent-yellow); font-weight: 700; }
         .over-goal { color: var(--accent-green); font-weight: 700; }
-        .momentum-body { margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
+        .momentum-body { margin-top: 0.9rem; border-top: 1px solid var(--color-border); padding-top: 0.9rem; display: flex; justify-content: flex-end; gap: 1rem; flex-wrap: wrap; align-items: center; }
         .period-toggle { display: inline-flex; gap: 0.5rem; padding: 0.35rem; border-radius: 999px; background: var(--bg-primary); border: 1px solid var(--color-border); }
         .period-button { border: none; background: transparent; color: var(--text-secondary); border-radius: 999px; padding: 0.55rem 0.9rem; cursor: pointer; font-weight: 700; }
         .period-button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -1014,14 +971,6 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .momentum-inline-kpis { display: flex; gap: 0.65rem; flex-wrap: wrap; justify-content: flex-end; }
         .momentum-chip { display: grid; gap: 0.15rem; min-width: 110px; padding: 0.7rem 0.85rem; border-radius: 1rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.48); }
         .momentum-chip-label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-        .kpi-grid { display: grid; gap: 1rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        .kpi-card { padding: 1rem 1.1rem; display: grid; gap: 0.45rem; min-height: 112px; align-content: start; }
-        .kpi-label { color: var(--text-muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-        .kpi-value { color: var(--text-primary); font-size: clamp(1.55rem, 4vw, 2rem); letter-spacing: -0.04em; font-weight: 800; }
-        .kpi-positive { color: var(--accent-green); }
-        .kpi-pending { color: var(--accent-yellow); }
-        .kpi-negative { color: var(--accent-red); }
-        .kpi-subvalue { color: var(--text-secondary); font-size: 1rem; font-weight: 600; }
         .section-copy { margin: 0; }
         .section-toolbar { display: flex; gap: 0.85rem; align-items: center; flex-wrap: wrap; }
         .compact-toggle {
@@ -1039,6 +988,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           border-color: rgba(59, 130, 246, 0.35);
           background: rgba(59, 130, 246, 0.12);
         }
+        .dashboard-section { display: grid; gap: 1rem; max-height: calc(100vh - 165px); overflow-y: auto; }
         .search-shell { position: relative; }
         .search-input {
           width: 100%;
@@ -1120,29 +1070,38 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .empty-state { display: grid; gap: 0.45rem; justify-items: start; padding: 1rem 0.25rem 0.25rem; }
         .empty-state p { margin: 0; color: var(--text-secondary); }
         .dashboard-loading { padding: 1rem 0.25rem 0.25rem; }
-        .discovery-section { display: grid; gap: 1rem; }
-        .discovery-spotlight { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.6fr) auto; padding: 1.15rem; border-radius: 1.35rem; border: 1px solid rgba(59, 130, 246, 0.24); background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(17, 24, 39, 0.58)); }
+        .discovery-sidebar {
+          display: grid;
+          gap: 1rem;
+          position: sticky;
+          top: 80px;
+          max-height: calc(100vh - 100px);
+          overflow-y: auto;
+          background: rgba(17, 24, 39, 0.65);
+          border-left: 1px solid var(--color-border);
+        }
+        .discovery-header { display: grid; gap: 0.35rem; }
+        .discovery-spotlight { display: grid; gap: 1rem; padding: 1.15rem; border-radius: 1.35rem; border: 1px solid rgba(59, 130, 246, 0.24); background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(17, 24, 39, 0.58)); }
         .spotlight-copy { display: grid; gap: 0.9rem; }
         .spotlight-topline { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
         .spotlight-heading { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
-        .spotlight-label { display: inline-flex; padding: 0.28rem 0.55rem; border-radius: 999px; background: rgba(59, 130, 246, 0.14); color: var(--accent-blue); font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
         .spotlight-title { color: var(--text-primary); text-decoration: none; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.04em; }
         .health-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.32rem 0.6rem; border-radius: 999px; border: 1px solid currentColor; font-size: 0.8rem; font-weight: 700; }
         .spotlight-pitch, .discovery-card-copy { margin: 0; color: var(--text-secondary); line-height: 1.65; }
-        .spotlight-facts { display: grid; gap: 0.75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .spotlight-facts { display: grid; gap: 0.75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .spotlight-fact { display: grid; gap: 0.28rem; padding: 0.85rem; border-radius: 1rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.48); }
         .spotlight-fact-label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
         .spotlight-actions { display: grid; gap: 0.65rem; align-content: end; }
         .spotlight-primary, .spotlight-secondary, .discovery-link { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 0.78rem 1rem; text-decoration: none; font-weight: 700; white-space: nowrap; }
-        .spotlight-primary, .discovery-link-primary { background: var(--accent-blue); color: var(--text-primary); }
+        .spotlight-primary, .discovery-link-primary { background: var(--accent-green); color: #0b1220; font-weight: 800; }
         .spotlight-secondary, .discovery-link { border: 1px solid var(--color-border); color: var(--text-primary); background: rgba(17, 24, 39, 0.42); }
-        .discovery-grid { display: grid; gap: 0.9rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .discovery-grid { display: grid; gap: 0.9rem; grid-template-columns: 1fr; }
         .discovery-card { display: grid; gap: 0.85rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.46); }
         .discovery-card-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: flex-start; }
         .discovery-card-title { color: var(--text-primary); text-decoration: none; font-size: 1rem; font-weight: 800; letter-spacing: -0.03em; }
         .discovery-card-meta { display: flex; align-items: center; gap: 0.45rem; color: var(--text-muted); font-size: 0.86rem; margin-top: 0.3rem; }
-        .health-dot { width: 0.6rem; height: 0.6rem; border-radius: 999px; display: inline-block; border: 1px solid currentColor; }
         .discovery-card-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+        .explore-link { color: var(--accent-blue); text-decoration: none; font-weight: 700; }
         .toast { position: sticky; top: 1rem; z-index: 15; justify-self: center; padding: 0.8rem 1rem; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3); }
         .toast-success { background: rgba(16, 185, 129, 0.16); color: var(--accent-green); }
         .toast-error { background: rgba(239, 68, 68, 0.16); color: var(--accent-red); }
@@ -1155,9 +1114,10 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .casino-row-compact .purchase-save { padding: 0.55rem 0.8rem; font-size: 0.88rem; }
         .casino-row-compact .status-secondary,
         .casino-row-compact .status-secondary-amber { display: none; }
-        @media (max-width: 1180px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .purchase-grid, .spotlight-facts, .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .discovery-spotlight { grid-template-columns: 1fr; } .spotlight-actions { grid-auto-flow: column; justify-content: flex-start; } }
-        @media (max-width: 780px) { .casino-main { flex-direction: column; align-items: stretch; } .action-stack { width: 100%; justify-items: stretch; } .mode-toggle, .entry-row, .purchase-actions { justify-content: flex-start; } .momentum-body { align-items: stretch; } .momentum-inline-kpis { justify-content: flex-start; } }
-        @media (max-width: 640px) { .kpi-grid, .purchase-grid, .spotlight-facts, .discovery-grid { grid-template-columns: 1fr; } .momentum-summary { justify-items: start; } .entry-row input, .purchase-grid input, .save-button, .purchase-save, .ghost-button, .spotlight-primary, .spotlight-secondary, .discovery-link { width: 100%; } .spotlight-actions, .discovery-card-actions { grid-auto-flow: row; display: grid; } }
+        @media (max-width: 1180px) { .purchase-grid, .spotlight-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .spotlight-actions { grid-auto-flow: column; justify-content: flex-start; } }
+        @media (max-width: 1024px) { .dashboard-main { grid-template-columns: 1fr; } .dashboard-section, .discovery-sidebar { max-height: none; overflow: visible; position: static; } .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 780px) { .momentum-strip { grid-template-columns: 1fr; } .casino-main { flex-direction: column; align-items: stretch; } .action-stack { width: 100%; justify-items: stretch; } .mode-toggle, .entry-row, .purchase-actions, .momentum-inline-kpis { justify-content: flex-start; } .momentum-body { align-items: stretch; } .momentum-summary { justify-items: start; } }
+        @media (max-width: 640px) { .purchase-grid, .spotlight-facts, .discovery-grid { grid-template-columns: 1fr; } .entry-row input, .purchase-grid input, .save-button, .purchase-save, .ghost-button, .spotlight-primary, .spotlight-secondary, .discovery-link { width: 100%; } .spotlight-actions, .discovery-card-actions { grid-auto-flow: row; display: grid; } }
       `}</style>
     </div>
   );
@@ -1171,89 +1131,6 @@ function normalizeCasinoName(name: string) {
     .replace(/\s+/g, '')
     .replace(/[^a-z0-9]/g, '')
     .trim();
-}
-
-function isKpiCardId(value: string): value is KpiCardId {
-  return [
-    'sc_earned',
-    'usd_earned',
-    'purchases',
-    'pending_redemptions',
-    'best_performer',
-    'claim_streak',
-    'daily_velocity',
-  ].includes(value);
-}
-
-function buildKpiCard(cardId: KpiCardId, summary: DashboardSummary) {
-  if (cardId === 'sc_earned') {
-    return {
-      id: cardId,
-      label: 'SC Earned Today',
-      value: summary.scEarnedToday.toFixed(2),
-      subvalue: null,
-      toneClassName: 'kpi-positive',
-      subtoneClassName: null,
-    };
-  }
-  if (cardId === 'usd_earned') {
-    return {
-      id: cardId,
-      label: 'USD Earned Today',
-      value: `$${summary.usdEarnedToday.toFixed(2)}`,
-      subvalue: null,
-      toneClassName: 'kpi-positive',
-      subtoneClassName: null,
-    };
-  }
-  if (cardId === 'purchases') {
-    return {
-      id: cardId,
-      label: 'Purchases',
-      value: String(summary.purchaseCountToday),
-      subvalue: `$${summary.purchaseUsdToday.toFixed(2)}`,
-      toneClassName: null,
-      subtoneClassName: null,
-    };
-  }
-  if (cardId === 'pending_redemptions') {
-    return {
-      id: cardId,
-      label: 'Pending Redemptions',
-      value: String(summary.pendingRedemptionsCount),
-      subvalue: `$${summary.pendingRedemptionsUsd.toFixed(2)}`,
-      toneClassName: 'kpi-pending',
-      subtoneClassName: 'kpi-pending',
-    };
-  }
-  if (cardId === 'best_performer') {
-    return {
-      id: cardId,
-      label: 'Best Performer',
-      value: summary.bestPerformerName ?? 'No data yet',
-      subvalue: `${summary.bestPerformerSc >= 0 ? '+' : ''}${summary.bestPerformerSc.toFixed(2)} SC`,
-      toneClassName: summary.bestPerformerSc >= 0 ? 'kpi-positive' : 'kpi-negative',
-      subtoneClassName: summary.bestPerformerSc >= 0 ? 'kpi-positive' : 'kpi-negative',
-    };
-  }
-  if (cardId === 'claim_streak') {
-    return {
-      id: cardId,
-      label: 'Claim Streak',
-      value: `${summary.claimStreakDays} day${summary.claimStreakDays === 1 ? '' : 's'}`,
-      subvalue: summary.claimStreakDays > 0 ? 'Consecutive full days' : 'Start a full-day streak',
-      toneClassName: summary.claimStreakDays > 0 ? 'kpi-positive' : null,
-      subtoneClassName: null,
-    };
-  }
-  return {
-    id: cardId,
-    label: 'Daily Velocity',
-    value: `${summary.dailyVelocityPct >= 0 ? '+' : ''}${Math.round(summary.dailyVelocityPct)}%`,
-    subvalue: 'vs 30-day daily average',
-    toneClassName: summary.dailyVelocityPct >= 0 ? 'kpi-positive' : 'kpi-negative',
-    subtoneClassName: null,
-  };
 }
 
 function buildCasinoRowModel(casino: TrackerCasinoRow, claims: string[], nowTs: number): CasinoRowModel {
