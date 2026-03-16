@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 
 import { methodNotAllowed } from '../../../lib/api';
 import { isHttpError, requireAdmin } from '../../../lib/auth';
+import { invalidateCachedPrefix } from '../../../lib/cache';
 import { transaction, type TransactionClient } from '../../../lib/db';
 import { normalizeCasinoName } from '../../../lib/tracker';
 
@@ -500,6 +501,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const mappedRows = buildMappedRows(rows, mapping);
     const result = await importRows(mappedRows);
+    invalidateCachedPrefix('dashboard-discovery:');
     return json(result);
   } catch (error) {
     if (isHttpError(error)) {
