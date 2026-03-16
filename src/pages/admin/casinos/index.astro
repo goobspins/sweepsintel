@@ -48,7 +48,10 @@ const excludedCasinos = casinos.filter((casino) => casino.is_excluded);
     <section class="surface-card" style="padding:1.25rem;">
       <div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;">
         <h1 class="section-title" style="margin:0;">Casinos</h1>
-        <a href="/admin/casinos/new" class="new-button">New Casino</a>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+          <a href="/admin/import-casinos" class="ghost-button">Import CSV/XLSX</a>
+          <a href="/admin/casinos/new" class="new-button">New Casino</a>
+        </div>
       </div>
     </section>
 
@@ -93,6 +96,7 @@ const excludedCasinos = casinos.filter((casino) => casino.is_excluded);
   </div>
   <style>
     .new-button { display:inline-flex; border-radius:999px; padding:.85rem 1rem; background:var(--color-primary); color:var(--text-primary); text-decoration:none; font-weight:700; }
+    .ghost-button { display:inline-flex; border-radius:999px; padding:.85rem 1rem; border:1px solid var(--color-border); background:transparent; color:var(--text-primary); text-decoration:none; font-weight:700; }
     .admin-table { width:100%; border-collapse: collapse; }
     .admin-table th, .admin-table td { padding:.85rem; border-bottom:1px solid var(--color-border); text-align:left; }
     @media (max-width: 1023px) { .admin-shell::before { content:'Admin panel requires a larger screen'; display:block; padding:1rem; border-radius:1rem; background:rgba(245, 158, 11, 0.16); color:var(--accent-yellow); border:1px solid rgba(245, 158, 11, 0.28); } }

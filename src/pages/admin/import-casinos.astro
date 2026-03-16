@@ -1,0 +1,17 @@
+---
+import CasinoImporter from '../../components/admin/CasinoImporter';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+---
+
+<BaseLayout title="Import Casinos | Admin" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack admin-shell">
+    <CasinoImporter client:load />
+  </div>
+</BaseLayout>

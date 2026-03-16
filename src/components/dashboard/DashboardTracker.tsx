@@ -988,7 +988,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           border-color: rgba(59, 130, 246, 0.35);
           background: rgba(59, 130, 246, 0.12);
         }
-        .dashboard-section { display: grid; gap: 1rem; max-height: calc(100vh - 165px); overflow-y: auto; min-width: 0; }
+        .dashboard-section { display: grid; gap: 1rem; max-height: calc(100vh - 165px); overflow-y: auto; overflow-x: hidden; min-width: 0; }
         .search-shell { position: relative; min-width: 0; }
         .search-input {
           width: 100%;
