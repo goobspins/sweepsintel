@@ -104,33 +104,33 @@ const {
         min-height: calc(100vh - 140px);
       }
 
-      .page-shell {
+      :global(.page-shell) {
         width: 100%;
         max-width: var(--content-max-width);
         padding-inline: var(--content-gutter);
         margin: 0 auto;
       }
 
-      .page-stack {
+      :global(.page-stack) {
         display: grid;
         gap: 2rem;
         padding: 2rem 0 4rem;
       }
 
-      .surface-card {
+      :global(.surface-card) {
         border-radius: 1.5rem;
         border: 1px solid var(--color-border);
         background: var(--color-surface);
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
       }
 
-      .section-title {
+      :global(.section-title) {
         margin: 0 0 1rem;
         font-size: clamp(1.5rem, 3vw, 2rem);
         letter-spacing: -0.04em;
       }
 
-      .muted {
+      :global(.muted) {
         color: var(--color-muted);
       }
     </style>
