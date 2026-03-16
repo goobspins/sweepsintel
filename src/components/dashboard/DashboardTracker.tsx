@@ -128,6 +128,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const [purchaseDraftByCasino, setPurchaseDraftByCasino] = useState<Record<number, PurchaseDraft>>({});
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [momentumCollapsed, setMomentumCollapsed] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(initialData.casinos.length > 0);
   const [goalEditing, setGoalEditing] = useState(false);
   const [goalDraft, setGoalDraft] = useState(() => initialSummary.dailyGoalUsd.toFixed(2));
   const [goalSaving, setGoalSaving] = useState(false);
@@ -146,12 +147,17 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
 
   useEffect(() => {
     if (initialData.casinos.length === 0) {
+      setBootstrapping(false);
       return;
     }
 
-    void refreshTracker().catch((error) => {
-      console.error(error);
-    });
+    void refreshTracker()
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => {
+        setBootstrapping(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -731,6 +737,10 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         </div>
         {casinoRows.length === 0 ? (
           <div className="empty-state"><p>No casinos are being tracked yet.</p><a href="/casinos">Browse casinos</a></div>
+        ) : bootstrapping ? (
+          <div className="dashboard-loading">
+            <div className="muted">Loading current claim windows...</div>
+          </div>
         ) : (
           <div className="casino-list">
             {casinoRows.map((casino) => {
@@ -1028,6 +1038,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .purchase-save { background: var(--accent-blue); }
         .empty-state { display: grid; gap: 0.45rem; justify-items: start; padding: 1rem 0.25rem 0.25rem; }
         .empty-state p { margin: 0; color: var(--text-secondary); }
+        .dashboard-loading { padding: 1rem 0.25rem 0.25rem; }
         .discovery-section { display: grid; gap: 1rem; }
         .discovery-spotlight { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.6fr) auto; padding: 1.15rem; border-radius: 1.35rem; border: 1px solid rgba(59, 130, 246, 0.24); background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(17, 24, 39, 0.58)); }
         .spotlight-copy { display: grid; gap: 0.9rem; }
