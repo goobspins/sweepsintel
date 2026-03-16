@@ -105,7 +105,9 @@ const {
       }
 
       .page-shell {
-        width: min(var(--content-max-width), calc(100% - (var(--content-gutter) * 2)));
+        width: 100%;
+        max-width: var(--content-max-width);
+        padding-inline: var(--content-gutter);
         margin: 0 auto;
       }
 
