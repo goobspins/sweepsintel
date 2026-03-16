@@ -20,6 +20,7 @@ if (user) {
     slug: string;
     tier: string | null;
     notes: string | null;
+    website_url: string | null;
     claim_url: string | null;
     affiliate_link_url: string | null;
     sc_to_usd_ratio: number | string | null;
@@ -35,6 +36,7 @@ if (user) {
       c.slug,
       c.tier_label AS tier,
       COALESCE(ucs.notes, ucs.personal_notes) AS notes,
+      c.website_url,
       c.claim_url,
       c.affiliate_link_url,
       c.sc_to_usd_ratio,
@@ -57,6 +59,7 @@ if (user) {
       c.tier_label,
       ucs.notes,
       ucs.personal_notes,
+      c.website_url,
       c.claim_url,
       c.affiliate_link_url,
       c.sc_to_usd_ratio`,
@@ -121,7 +124,7 @@ if (user) {
       tier: row.tier,
       notes: row.notes ?? '',
       claim_url: row.claim_url,
-      visit_url: row.claim_url ?? row.affiliate_link_url,
+      visit_url: row.website_url ?? row.affiliate_link_url ?? row.claim_url,
       sc_balance: Number(row.sc_balance ?? 0),
       usd_value: Number(row.sc_balance ?? 0) * Number(row.sc_to_usd_ratio ?? 1),
       total_invested_usd: Number(row.total_invested_usd ?? 0),

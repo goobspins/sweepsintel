@@ -112,6 +112,7 @@ export const POST: APIRoute = async ({ request }) => {
         slug,
         name,
         tier,
+        website_url,
         claim_url,
         reset_mode,
         reset_time_local,
@@ -138,13 +139,14 @@ export const POST: APIRoute = async ({ request }) => {
         is_excluded,
         last_updated_at
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,NOW()
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,NOW()
       )
       RETURNING id`,
       [
         body.slug,
         body.name,
         body.tier ?? 'B',
+        body.website_url ?? null,
         body.claim_url ?? null,
         body.reset_mode ?? 'rolling',
         body.reset_time_local ?? null,
@@ -211,6 +213,7 @@ export const PATCH: APIRoute = async ({ request }) => {
       'slug',
       'name',
       'tier',
+      'website_url',
       'claim_url',
       'reset_mode',
       'reset_time_local',
@@ -284,3 +287,4 @@ export const PATCH: APIRoute = async ({ request }) => {
     return json({ error: 'Unable to update casino.' }, 500);
   }
 };
+

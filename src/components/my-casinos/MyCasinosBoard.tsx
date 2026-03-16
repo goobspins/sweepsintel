@@ -200,14 +200,16 @@ export default function MyCasinosBoard({ initialData }: MyCasinosBoardProps) {
 
                   <div className="quick-actions">
                     <a href={`/dashboard#casino-${casino.casino_id}`} className="action-link action-claim">Claim</a>
-                    <a
-                      href={casino.visit_url ?? `/casinos/${casino.slug}`}
-                      className="action-link"
-                      target={casino.visit_url ? '_blank' : undefined}
-                      rel={casino.visit_url ? 'noopener noreferrer' : undefined}
-                    >
-                      Visit
-                    </a>
+                    {casino.visit_url ? (
+                      <a
+                        href={casino.visit_url}
+                        className="action-link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Visit
+                      </a>
+                    ) : null}
                     <a href={`/casinos/${casino.slug}`} className="action-link action-secondary">Profile</a>
                   </div>
                 </div>

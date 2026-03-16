@@ -22,6 +22,7 @@ interface CasinoRecord {
   slug: string;
   name: string;
   tier: CasinoTier;
+  website_url?: string | null;
   claim_url?: string | null;
   reset_mode?: string | null;
   reset_time_local?: string | null;
@@ -142,6 +143,7 @@ export default function AdminCasinoForm({
       </Section>
 
       <Section title="Affiliate and access">
+        <Text label="Website URL" value={form.website_url ?? ''} onChange={(value) => update('website_url', value)} />
         <Text label="Claim URL" value={form.claim_url ?? ''} onChange={(value) => update('claim_url', value)} />
         <NumberField label="SC to USD ratio" value={form.sc_to_usd_ratio ?? null} onChange={(value) => update('sc_to_usd_ratio', value)} />
         <Checkbox label="Has affiliate link" checked={Boolean(form.has_affiliate_link)} onChange={(value) => update('has_affiliate_link', value)} />
