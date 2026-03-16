@@ -8,9 +8,9 @@ export default function Footer() {
     >
       <div
         style={{
-          maxWidth: '1180px',
+          maxWidth: 'var(--content-max-width)',
           margin: '0 auto',
-          padding: '2rem 1.25rem 3rem',
+          padding: '2rem var(--content-gutter) 3rem',
           display: 'grid',
           gap: '0.5rem',
           color: 'var(--text-secondary)',

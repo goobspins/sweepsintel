@@ -41,12 +41,12 @@ export default function Header({
       }}
     >
       <div
-        style={{
-          maxWidth: '1180px',
-          margin: '0 auto',
-          padding: '1rem 1.25rem',
-        }}
-      >
+          style={{
+              maxWidth: 'var(--content-max-width)',
+              margin: '0 auto',
+              padding: '1rem var(--content-gutter)',
+            }}
+          >
         <div
           style={{
             display: 'flex',

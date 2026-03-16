@@ -69,6 +69,61 @@ export interface AddCasinoResult {
   skippedDuplicate: boolean;
 }
 
+type TrackerSchemaShape = {
+  hasNoDailyReward: boolean;
+  resetModeColumn: 'reset_mode' | 'streak_mode';
+  hasResetIntervalHours: boolean;
+};
+
+let trackerSchemaShapePromise: Promise<TrackerSchemaShape> | null = null;
+
+async function safeTrackerQuery<T>(
+  label: string,
+  fetcher: () => Promise<T>,
+  fallback: T,
+): Promise<T> {
+  try {
+    return await fetcher();
+  } catch (error) {
+    console.error(`tracker query failed: ${label}`, error);
+    return fallback;
+  }
+}
+
+async function getTrackerSchemaShape(): Promise<TrackerSchemaShape> {
+  if (!trackerSchemaShapePromise) {
+    trackerSchemaShapePromise = (async () => {
+      const rows = await query<{ table_name: string; column_name: string }>(
+        `SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND (
+            (table_name = 'user_casino_settings' AND column_name IN ('no_daily_reward'))
+            OR
+            (table_name = 'casinos' AND column_name IN ('reset_mode', 'streak_mode', 'reset_interval_hours'))
+          )`,
+      );
+
+      const columnSet = new Set(
+        rows.map((row) => `${row.table_name}.${row.column_name}`),
+      );
+
+      return {
+        hasNoDailyReward: columnSet.has('user_casino_settings.no_daily_reward'),
+        resetModeColumn: columnSet.has('casinos.reset_mode')
+          ? 'reset_mode'
+          : 'streak_mode',
+        hasResetIntervalHours: columnSet.has('casinos.reset_interval_hours'),
+      };
+    })().catch((error) => {
+      trackerSchemaShapePromise = null;
+      throw error;
+    });
+  }
+
+  return trackerSchemaShapePromise;
+}
+
 function toSlug(name: string) {
   return name
     .trim()
@@ -161,23 +216,46 @@ async function resolveCasinoById(
 }
 
 export async function getTrackerStatus(userId: string): Promise<TrackerStatusData> {
-  const casinos = await query<TrackerCasinoRow>(
-    `SELECT
-      ucs.casino_id, ucs.sort_order, ucs.no_daily_reward, ucs.typical_daily_sc, ucs.personal_notes,
-      c.name, c.slug, c.tier, c.claim_url, c.reset_mode, c.reset_time_local, c.reset_timezone, c.reset_interval_hours,
-      c.has_streaks, c.sc_to_usd_ratio, c.has_affiliate_link, c.affiliate_link_url, c.source,
-      c.daily_bonus_desc,
-      dbc.id AS today_claim_id, dbc.sc_amount AS today_sc, dbc.claimed_at AS today_claimed_at
-    FROM user_casino_settings ucs
-    JOIN casinos c ON c.id = ucs.casino_id
-    LEFT JOIN daily_bonus_claims dbc
-      ON dbc.user_id = ucs.user_id
-      AND dbc.casino_id = ucs.casino_id
-      AND dbc.claimed_date = CURRENT_DATE
-      AND dbc.claim_type = 'daily'
-    WHERE ucs.user_id = $1 AND ucs.removed_at IS NULL
-    ORDER BY ucs.sort_order ASC NULLS LAST`,
-    [userId],
+  const schema = await safeTrackerQuery(
+    'tracker-schema-shape',
+    () => getTrackerSchemaShape(),
+    {
+      hasNoDailyReward: false,
+      resetModeColumn: 'streak_mode' as const,
+      hasResetIntervalHours: false,
+    },
+  );
+
+  const noDailyRewardSql = schema.hasNoDailyReward
+    ? 'ucs.no_daily_reward'
+    : 'false AS no_daily_reward';
+  const resetModeSql = `c.${schema.resetModeColumn} AS reset_mode`;
+  const resetIntervalHoursSql = schema.hasResetIntervalHours
+    ? 'c.reset_interval_hours'
+    : '24 AS reset_interval_hours';
+
+  const casinos = await safeTrackerQuery(
+    'tracked-casinos',
+    () =>
+      query<TrackerCasinoRow>(
+        `SELECT
+          ucs.casino_id, ucs.sort_order, ${noDailyRewardSql}, ucs.typical_daily_sc, ucs.personal_notes,
+          c.name, c.slug, c.tier, c.claim_url, ${resetModeSql}, c.reset_time_local, c.reset_timezone, ${resetIntervalHoursSql},
+          c.has_streaks, c.sc_to_usd_ratio, c.has_affiliate_link, c.affiliate_link_url, c.source,
+          c.daily_bonus_desc,
+          dbc.id AS today_claim_id, dbc.sc_amount AS today_sc, dbc.claimed_at AS today_claimed_at
+        FROM user_casino_settings ucs
+        JOIN casinos c ON c.id = ucs.casino_id
+        LEFT JOIN daily_bonus_claims dbc
+          ON dbc.user_id = ucs.user_id
+          AND dbc.casino_id = ucs.casino_id
+          AND dbc.claimed_date = CURRENT_DATE
+          AND dbc.claim_type = 'daily'
+        WHERE ucs.user_id = $1 AND ucs.removed_at IS NULL
+        ORDER BY ucs.sort_order ASC NULLS LAST`,
+        [userId],
+      ),
+    [] as TrackerCasinoRow[],
   );
 
   const streakOrRollingIds = casinos
@@ -188,49 +266,69 @@ export async function getTrackerStatus(userId: string): Promise<TrackerStatusDat
 
   const streakClaims =
     streakOrRollingIds.length > 0
-      ? await query<TrackerClaimHistoryRow>(
-          `SELECT casino_id, claimed_at
-          FROM daily_bonus_claims
-          WHERE user_id = $1
-            AND casino_id = ANY($2::int[])
-            AND claim_type = 'daily'
-          ORDER BY casino_id ASC, claimed_at DESC`,
-          [userId, streakOrRollingIds],
+      ? await safeTrackerQuery(
+          'streak-claims',
+          () =>
+            query<TrackerClaimHistoryRow>(
+              `SELECT casino_id, claimed_at
+              FROM daily_bonus_claims
+              WHERE user_id = $1
+                AND casino_id = ANY($2::int[])
+                AND claim_type = 'daily'
+              ORDER BY casino_id ASC, claimed_at DESC`,
+              [userId, streakOrRollingIds],
+            ),
+          [] as TrackerClaimHistoryRow[],
         )
       : [];
 
   const trackedIds = casinos.map((casino) => casino.casino_id);
   const joinedCasinoIds =
     trackedIds.length > 0
-      ? await query<{ casino_id: number }>(
-          `SELECT DISTINCT casino_id
-          FROM ledger_entries
-          WHERE user_id = $1
-            AND casino_id = ANY($2::int[])`,
-          [userId, trackedIds],
+      ? await safeTrackerQuery(
+          'joined-casinos',
+          () =>
+            query<{ casino_id: number }>(
+              `SELECT DISTINCT casino_id
+              FROM ledger_entries
+              WHERE user_id = $1
+                AND casino_id = ANY($2::int[])`,
+              [userId, trackedIds],
+            ),
+          [] as { casino_id: number }[],
         )
       : [];
 
   const alerts =
     trackedIds.length > 0
-      ? await query<TrackerAlertItem>(
-          `SELECT id, item_type, casino_id, title, content, expires_at, confirm_count, dispute_count, created_at
-          FROM discord_intel_items
-          WHERE is_published = true
-            AND (expires_at IS NULL OR expires_at > NOW())
-            AND (casino_id = ANY($1::int[]) OR casino_id IS NULL)
-          ORDER BY created_at DESC
-          LIMIT 20`,
-          [trackedIds],
+      ? await safeTrackerQuery(
+          'tracker-alerts',
+          () =>
+            query<TrackerAlertItem>(
+              `SELECT id, item_type, casino_id, title, content, expires_at, confirm_count, dispute_count, created_at
+              FROM discord_intel_items
+              WHERE is_published = true
+                AND (expires_at IS NULL OR expires_at > NOW())
+                AND (casino_id = ANY($1::int[]) OR casino_id IS NULL)
+              ORDER BY created_at DESC
+              LIMIT 20`,
+              [trackedIds],
+            ),
+          [] as TrackerAlertItem[],
         )
-      : await query<TrackerAlertItem>(
-          `SELECT id, item_type, casino_id, title, content, expires_at, confirm_count, dispute_count, created_at
-          FROM discord_intel_items
-          WHERE is_published = true
-            AND (expires_at IS NULL OR expires_at > NOW())
-            AND casino_id IS NULL
-          ORDER BY created_at DESC
-          LIMIT 20`,
+      : await safeTrackerQuery(
+          'global-alerts',
+          () =>
+            query<TrackerAlertItem>(
+              `SELECT id, item_type, casino_id, title, content, expires_at, confirm_count, dispute_count, created_at
+              FROM discord_intel_items
+              WHERE is_published = true
+                AND (expires_at IS NULL OR expires_at > NOW())
+                AND casino_id IS NULL
+              ORDER BY created_at DESC
+              LIMIT 20`,
+            ),
+          [] as TrackerAlertItem[],
         );
 
   return {
@@ -369,3 +467,4 @@ export async function removeCasinoFromTracker(userId: string, casinoId: number) 
     [userId, casinoId],
   );
 }
+
