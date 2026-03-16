@@ -3,6 +3,7 @@ import SessionGate from '../components/auth/SessionGate';
 import DashboardTracker from '../components/dashboard/DashboardTracker';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getSessionUser } from '../lib/auth';
+import { getCached } from '../lib/cache';
 import { query } from '../lib/db';
 import { getTrackerStatus } from '../lib/tracker';
 
@@ -27,6 +28,11 @@ let initialSummary = {
   purchaseUsdToday: 0,
   pendingRedemptionsCount: 0,
   pendingRedemptionsUsd: 0,
+};
+
+let initialDiscovery = {
+  homeState: null,
+  casinos: [],
 };
 
 let trackerError: string | null = null;
@@ -56,8 +62,9 @@ if (user) {
           daily_goal_usd: number | string | null;
           weekly_goal_usd: number | string | null;
           momentum_period: string | null;
+          home_state: string | null;
         }>(
-          `SELECT daily_goal_usd, weekly_goal_usd, momentum_period
+          `SELECT daily_goal_usd, weekly_goal_usd, momentum_period, home_state
           FROM user_settings
           WHERE user_id = $1
           LIMIT 1`,
@@ -140,6 +147,95 @@ if (user) {
     pendingRedemptionsCount: Number(pendingRow?.pending_redemptions_count ?? 0),
     pendingRedemptionsUsd: Number(pendingRow?.pending_redemptions_usd ?? 0),
   };
+
+  const trackedIds = initialData.casinos.map((casino) => casino.casino_id);
+  const homeState = settingsRow?.home_state ?? null;
+  const discoveryCacheKey = `dashboard-discovery:${user.userId}:${homeState ?? 'all'}:${trackedIds.join(',')}`;
+
+  const discoveryRows = await safeDashboardQuery(
+    'discovery',
+    () =>
+      getCached(discoveryCacheKey, 6 * 60 * 60 * 1000, async () =>
+        query<{
+          id: number;
+          slug: string;
+          name: string;
+          tier: string | null;
+          promoban_risk: string | null;
+          daily_bonus_desc: string | null;
+          redemption_speed_desc: string | null;
+          has_live_games: boolean;
+          has_affiliate_link: boolean;
+          affiliate_link_url: string | null;
+          intel_count: number | string | null;
+          tracker_count: number | string | null;
+        }>(
+          `SELECT
+            c.id,
+            c.slug,
+            c.name,
+            c.tier_label AS tier,
+            c.promoban_risk,
+            c.daily_bonus_desc,
+            c.redemption_speed_desc,
+            c.has_live_games,
+            c.has_affiliate_link,
+            c.affiliate_link_url,
+            COALESCE(intel.intel_count, 0) AS intel_count,
+            COALESCE(pop.tracker_count, 0) AS tracker_count
+          FROM casinos c
+          LEFT JOIN (
+            SELECT casino_id, COUNT(*)::int AS intel_count
+            FROM discord_intel_items
+            WHERE is_published = true
+              AND (expires_at IS NULL OR expires_at > NOW())
+            GROUP BY casino_id
+          ) intel ON intel.casino_id = c.id
+          LEFT JOIN (
+            SELECT casino_id, COUNT(*)::int AS tracker_count
+            FROM user_casino_settings
+            WHERE removed_at IS NULL
+            GROUP BY casino_id
+          ) pop ON pop.casino_id = c.id
+          WHERE c.source = 'admin'
+            AND c.is_excluded = false
+            AND ($1::int[] IS NULL OR NOT (c.id = ANY($1::int[])))
+            AND (
+              $2::text IS NULL
+              OR EXISTS (
+                SELECT 1
+                FROM casino_state_availability csa
+                WHERE csa.casino_id = c.id
+                  AND csa.state_code = $2
+                  AND csa.status IN ('available', 'operates_despite_restrictions')
+              )
+            )
+          ORDER BY
+            CASE c.tier_label
+              WHEN 'S' THEN 0
+              WHEN 'A' THEN 1
+              WHEN 'B' THEN 2
+              WHEN 'C' THEN 3
+              ELSE 4
+            END,
+            COALESCE(intel.intel_count, 0) DESC,
+            COALESCE(pop.tracker_count, 0) DESC,
+            c.name ASC
+          LIMIT 5`,
+          [trackedIds.length > 0 ? trackedIds : null, homeState],
+        ),
+      ),
+    [],
+  );
+
+  initialDiscovery = {
+    homeState,
+    casinos: discoveryRows.map((casino) => ({
+      ...casino,
+      intel_count: Number(casino.intel_count ?? 0),
+      tracker_count: Number(casino.tracker_count ?? 0),
+    })),
+  };
 }
 ---
 
@@ -164,6 +260,7 @@ if (user) {
           user={user}
           initialData={initialData}
           initialSummary={initialSummary}
+          initialDiscovery={initialDiscovery}
         />
       ) : null}
     </SessionGate>

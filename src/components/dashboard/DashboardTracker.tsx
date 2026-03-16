@@ -24,10 +24,31 @@ type DashboardSummary = {
   pendingRedemptionsUsd: number;
 };
 
+type DashboardDiscoveryCasino = {
+  id: number;
+  slug: string;
+  name: string;
+  tier: string | null;
+  promoban_risk: string | null;
+  daily_bonus_desc: string | null;
+  redemption_speed_desc: string | null;
+  has_live_games: boolean;
+  has_affiliate_link: boolean;
+  affiliate_link_url: string | null;
+  intel_count: number;
+  tracker_count: number;
+};
+
+type DashboardDiscovery = {
+  homeState: string | null;
+  casinos: DashboardDiscoveryCasino[];
+};
+
 type DashboardTrackerProps = {
   user: SessionUser;
   initialData: TrackerStatusData;
   initialSummary: DashboardSummary;
+  initialDiscovery: DashboardDiscovery;
 };
 
 type ActionMode = 'daily' | 'adjust' | 'spins';
@@ -82,10 +103,11 @@ async function readApiResponse(response: Response) {
   return {};
 }
 
-export default function DashboardTracker({ user, initialData, initialSummary }: DashboardTrackerProps) {
+export default function DashboardTracker({ user, initialData, initialSummary, initialDiscovery }: DashboardTrackerProps) {
   const [casinos, setCasinos] = useState(initialData.casinos);
   const [streakClaims, setStreakClaims] = useState(initialData.streakClaims);
   const [summary, setSummary] = useState(initialSummary);
+  const [discovery] = useState(initialDiscovery);
   const [nowTs, setNowTs] = useState(() => Date.now());
   const [toast, setToast] = useState<ToastState>(null);
   const [modeByCasino, setModeByCasino] = useState<Record<number, ActionMode>>({});
@@ -147,6 +169,8 @@ export default function DashboardTracker({ user, initialData, initialSummary }: 
   const dailyGoalUsd = summary.dailyGoalUsd || 5;
   const overGoalUsd = Math.max(0, summary.usdEarnedToday - dailyGoalUsd);
   const progressPct = dailyGoalUsd > 0 ? Math.min(100, (summary.usdEarnedToday / dailyGoalUsd) * 100) : 0;
+  const spotlightCasino = discovery.casinos[0] ?? null;
+  const compactDiscovery = discovery.casinos.slice(1);
 
   function getMode(casinoId: number): ActionMode {
     return modeByCasino[casinoId] ?? 'daily';
@@ -310,6 +334,20 @@ export default function DashboardTracker({ user, initialData, initialSummary }: 
               <button type="button" className="period-button period-active">Daily</button>
               <button type="button" className="period-button" onClick={() => setToast({ tone: 'success', message: 'Weekly view coming soon.' })}>Weekly</button>
             </div>
+            <div className="momentum-inline-kpis" aria-label="Momentum highlights">
+              <div className="momentum-chip">
+                <span className="momentum-chip-label">USD today</span>
+                <strong>${summary.usdEarnedToday.toFixed(2)}</strong>
+              </div>
+              <div className="momentum-chip">
+                <span className="momentum-chip-label">Purchases</span>
+                <strong>{summary.purchaseCountToday}</strong>
+              </div>
+              <div className="momentum-chip">
+                <span className="momentum-chip-label">Pending</span>
+                <strong>${summary.pendingRedemptionsUsd.toFixed(2)}</strong>
+              </div>
+            </div>
           </div>
         ) : null}
       </section>
@@ -324,6 +362,7 @@ export default function DashboardTracker({ user, initialData, initialSummary }: 
       <section className="surface-card dashboard-section">
         <div className="section-header">
           <div>
+            <div className="eyebrow">Heartbeat</div>
             <h2 className="section-title">Dashboard</h2>
             <p className="muted section-copy">{casinoRows.length} tracked casinos. Available rows float to the top.</p>
           </div>
@@ -398,9 +437,94 @@ export default function DashboardTracker({ user, initialData, initialSummary }: 
         )}
       </section>
 
+      {spotlightCasino ? (
+        <section className="surface-card discovery-section">
+          <div className="section-header">
+            <div>
+              <div className="eyebrow">Discovery</div>
+              <h2 className="section-title">Casinos you're missing</h2>
+              <p className="muted section-copy">
+                {discovery.homeState ? `Personalized for ${discovery.homeState}. ` : ''}
+                Ranked from the strongest untracked opportunities already in your orbit.
+              </p>
+            </div>
+          </div>
+
+          <div className="discovery-spotlight">
+            <div className="spotlight-copy">
+              <div className="spotlight-topline">
+                <div className="spotlight-heading">
+                  <span className="spotlight-label">Spotlight</span>
+                  <a href={`/casinos/${spotlightCasino.slug}`} className="spotlight-title">{spotlightCasino.name}</a>
+                  {spotlightCasino.tier ? (
+                    <span className="tier-badge" style={getTierBadgeStyle(spotlightCasino.tier)}>{spotlightCasino.tier}</span>
+                  ) : null}
+                </div>
+                <span className="health-pill" style={getDiscoveryHealthStyle(spotlightCasino.promoban_risk)}>
+                  {getDiscoveryHealthLabel(spotlightCasino.promoban_risk)}
+                </span>
+              </div>
+              <p className="spotlight-pitch">{buildDiscoveryPitch(spotlightCasino)}</p>
+              <div className="spotlight-facts">
+                {buildSpotlightFacts(spotlightCasino).map((fact) => (
+                  <div key={fact.label} className="spotlight-fact">
+                    <span className="spotlight-fact-label">{fact.label}</span>
+                    <strong>{fact.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="spotlight-actions">
+              <a href={`/casinos/${spotlightCasino.slug}`} className="spotlight-secondary">Full profile</a>
+              <a
+                href={spotlightCasino.has_affiliate_link && spotlightCasino.affiliate_link_url ? spotlightCasino.affiliate_link_url : `/casinos/${spotlightCasino.slug}`}
+                className="spotlight-primary"
+                target={spotlightCasino.has_affiliate_link && spotlightCasino.affiliate_link_url ? '_blank' : undefined}
+                rel={spotlightCasino.has_affiliate_link && spotlightCasino.affiliate_link_url ? 'noopener noreferrer' : undefined}
+              >
+                {spotlightCasino.has_affiliate_link && spotlightCasino.affiliate_link_url ? 'Sign up' : 'Learn more'}
+              </a>
+            </div>
+          </div>
+
+          {compactDiscovery.length > 0 ? (
+            <div className="discovery-grid">
+              {compactDiscovery.map((casino) => (
+                <article key={casino.id} className="discovery-card">
+                  <div className="discovery-card-head">
+                    <div>
+                      <a href={`/casinos/${casino.slug}`} className="discovery-card-title">{casino.name}</a>
+                      <div className="discovery-card-meta">
+                        <span className="health-dot" style={getDiscoveryHealthStyle(casino.promoban_risk)} />
+                        <span>{getDiscoveryLead(casino)}</span>
+                      </div>
+                    </div>
+                    {casino.tier ? (
+                      <span className="tier-badge" style={getTierBadgeStyle(casino.tier)}>{casino.tier}</span>
+                    ) : null}
+                  </div>
+                  <p className="discovery-card-copy">{buildCompactPitch(casino)}</p>
+                  <div className="discovery-card-actions">
+                    <a href={`/casinos/${casino.slug}`} className="discovery-link">Learn more</a>
+                    <a
+                      href={casino.has_affiliate_link && casino.affiliate_link_url ? casino.affiliate_link_url : `/casinos/${casino.slug}`}
+                      className="discovery-link discovery-link-primary"
+                      target={casino.has_affiliate_link && casino.affiliate_link_url ? '_blank' : undefined}
+                      rel={casino.has_affiliate_link && casino.affiliate_link_url ? 'noopener noreferrer' : undefined}
+                    >
+                      {casino.has_affiliate_link && casino.affiliate_link_url ? 'Sign up' : 'Open'}
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <style>{`
         .dashboard-shell { display: grid; gap: 1.25rem; }
-        .momentum-card, .dashboard-section { padding: 1.2rem; }
+        .momentum-card, .dashboard-section, .discovery-section { padding: 1.2rem; }
         .momentum-toggle { display: grid; gap: 0.9rem; width: 100%; border: none; background: transparent; color: inherit; padding: 0; text-align: left; cursor: pointer; }
         .momentum-head, .section-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
         .eyebrow { color: var(--text-muted); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; }
@@ -411,10 +535,13 @@ export default function DashboardTracker({ user, initialData, initialSummary }: 
         .progress-fill { height: 100%; border-radius: inherit; background: var(--progress-gradient); transition: width 180ms ease; }
         .momentum-foot { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font-size: 0.95rem; }
         .over-goal { color: var(--accent-green); font-weight: 700; }
-        .momentum-body { margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem; }
+        .momentum-body { margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
         .period-toggle { display: inline-flex; gap: 0.5rem; padding: 0.35rem; border-radius: 999px; background: var(--bg-primary); border: 1px solid var(--color-border); }
         .period-button { border: none; background: transparent; color: var(--text-secondary); border-radius: 999px; padding: 0.55rem 0.9rem; cursor: pointer; font-weight: 700; }
         .period-active { background: rgba(59, 130, 246, 0.16); color: var(--text-primary); }
+        .momentum-inline-kpis { display: flex; gap: 0.65rem; flex-wrap: wrap; justify-content: flex-end; }
+        .momentum-chip { display: grid; gap: 0.15rem; min-width: 110px; padding: 0.7rem 0.85rem; border-radius: 1rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.48); }
+        .momentum-chip-label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
         .kpi-grid { display: grid; gap: 1rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .kpi-card { padding: 1rem 1.1rem; display: grid; gap: 0.45rem; min-height: 112px; }
         .kpi-label { color: var(--text-muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
@@ -446,12 +573,35 @@ export default function DashboardTracker({ user, initialData, initialSummary }: 
         .purchase-save { background: var(--accent-blue); }
         .empty-state { display: grid; gap: 0.45rem; justify-items: start; padding: 1rem 0.25rem 0.25rem; }
         .empty-state p { margin: 0; color: var(--text-secondary); }
+        .discovery-section { display: grid; gap: 1rem; }
+        .discovery-spotlight { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.6fr) auto; padding: 1.15rem; border-radius: 1.35rem; border: 1px solid rgba(59, 130, 246, 0.24); background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(17, 24, 39, 0.58)); }
+        .spotlight-copy { display: grid; gap: 0.9rem; }
+        .spotlight-topline { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+        .spotlight-heading { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
+        .spotlight-label { display: inline-flex; padding: 0.28rem 0.55rem; border-radius: 999px; background: rgba(59, 130, 246, 0.14); color: var(--accent-blue); font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+        .spotlight-title { color: var(--text-primary); text-decoration: none; font-size: 1.45rem; font-weight: 800; letter-spacing: -0.04em; }
+        .health-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.32rem 0.6rem; border-radius: 999px; border: 1px solid currentColor; font-size: 0.8rem; font-weight: 700; }
+        .spotlight-pitch, .discovery-card-copy { margin: 0; color: var(--text-secondary); line-height: 1.65; }
+        .spotlight-facts { display: grid; gap: 0.75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .spotlight-fact { display: grid; gap: 0.28rem; padding: 0.85rem; border-radius: 1rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.48); }
+        .spotlight-fact-label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+        .spotlight-actions { display: grid; gap: 0.65rem; align-content: end; }
+        .spotlight-primary, .spotlight-secondary, .discovery-link { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 0.78rem 1rem; text-decoration: none; font-weight: 700; white-space: nowrap; }
+        .spotlight-primary, .discovery-link-primary { background: var(--accent-blue); color: var(--text-primary); }
+        .spotlight-secondary, .discovery-link { border: 1px solid var(--color-border); color: var(--text-primary); background: rgba(17, 24, 39, 0.42); }
+        .discovery-grid { display: grid; gap: 0.9rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .discovery-card { display: grid; gap: 0.85rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.46); }
+        .discovery-card-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: flex-start; }
+        .discovery-card-title { color: var(--text-primary); text-decoration: none; font-size: 1rem; font-weight: 800; letter-spacing: -0.03em; }
+        .discovery-card-meta { display: flex; align-items: center; gap: 0.45rem; color: var(--text-muted); font-size: 0.86rem; margin-top: 0.3rem; }
+        .health-dot { width: 0.6rem; height: 0.6rem; border-radius: 999px; display: inline-block; border: 1px solid currentColor; }
+        .discovery-card-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
         .toast { position: sticky; top: 1rem; z-index: 15; justify-self: center; padding: 0.8rem 1rem; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3); }
         .toast-success { background: rgba(16, 185, 129, 0.16); color: var(--accent-green); }
         .toast-error { background: rgba(239, 68, 68, 0.16); color: var(--accent-red); }
-        @media (max-width: 1180px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .purchase-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 780px) { .casino-main { flex-direction: column; align-items: stretch; } .action-stack { width: 100%; justify-items: stretch; } .mode-toggle, .entry-row, .purchase-actions { justify-content: flex-start; } }
-        @media (max-width: 640px) { .kpi-grid, .purchase-grid { grid-template-columns: 1fr; } .momentum-summary { justify-items: start; } .entry-row input, .purchase-grid input, .save-button, .purchase-save, .ghost-button { width: 100%; } }
+        @media (max-width: 1180px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .purchase-grid, .spotlight-facts, .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .discovery-spotlight { grid-template-columns: 1fr; } .spotlight-actions { grid-auto-flow: column; justify-content: flex-start; } }
+        @media (max-width: 780px) { .casino-main { flex-direction: column; align-items: stretch; } .action-stack { width: 100%; justify-items: stretch; } .mode-toggle, .entry-row, .purchase-actions { justify-content: flex-start; } .momentum-body { align-items: stretch; } .momentum-inline-kpis { justify-content: flex-start; } }
+        @media (max-width: 640px) { .kpi-grid, .purchase-grid, .spotlight-facts, .discovery-grid { grid-template-columns: 1fr; } .momentum-summary { justify-items: start; } .entry-row input, .purchase-grid input, .save-button, .purchase-save, .ghost-button, .spotlight-primary, .spotlight-secondary, .discovery-link { width: 100%; } .spotlight-actions, .discovery-card-actions { grid-auto-flow: row; display: grid; } }
       `}</style>
     </div>
   );
@@ -551,6 +701,58 @@ function getTierBadgeStyle(tier: string) {
   if (tier === 'A') return { background: 'rgba(16, 185, 129, 0.16)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.32)' };
   if (tier === 'B') return { background: 'rgba(59, 130, 246, 0.16)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.32)' };
   return { background: 'rgba(156, 163, 175, 0.12)', color: 'var(--text-secondary)', borderColor: 'rgba(156, 163, 175, 0.26)' };
+}
+
+function getDiscoveryHealthStyle(risk: string | null) {
+  if (risk === 'none' || risk === 'low') {
+    return { color: 'var(--accent-green)', background: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.24)' };
+  }
+  if (risk === 'high') {
+    return { color: 'var(--accent-red)', background: 'rgba(239, 68, 68, 0.12)', borderColor: 'rgba(239, 68, 68, 0.24)' };
+  }
+  return { color: 'var(--accent-yellow)', background: 'rgba(245, 158, 11, 0.12)', borderColor: 'rgba(245, 158, 11, 0.24)' };
+}
+
+function getDiscoveryHealthLabel(risk: string | null) {
+  if (risk === 'none' || risk === 'low') return 'Low risk';
+  if (risk === 'high') return 'Caution';
+  return 'Watch list';
+}
+
+function buildDiscoveryPitch(casino: DashboardDiscoveryCasino) {
+  const fragments = [
+    casino.daily_bonus_desc ? `${casino.daily_bonus_desc}.` : null,
+    casino.redemption_speed_desc ? `Redemptions: ${casino.redemption_speed_desc}.` : null,
+    casino.has_live_games ? 'Live tables are available, so keep your account setup disciplined.' : 'Built more for routine daily extraction than live-table complexity.',
+  ].filter(Boolean);
+
+  return fragments.join(' ');
+}
+
+function buildCompactPitch(casino: DashboardDiscoveryCasino) {
+  if (casino.daily_bonus_desc && casino.redemption_speed_desc) {
+    return `${casino.daily_bonus_desc}. ${casino.redemption_speed_desc}.`;
+  }
+  if (casino.daily_bonus_desc) return `${casino.daily_bonus_desc}.`;
+  if (casino.redemption_speed_desc) return `${casino.redemption_speed_desc}.`;
+  if (casino.intel_count > 0) return `${casino.intel_count} recent intel items are already feeding this profile.`;
+  return 'Profile coverage is live and ready when you want to dig deeper.';
+}
+
+function getDiscoveryLead(casino: DashboardDiscoveryCasino) {
+  if (casino.redemption_speed_desc) return casino.redemption_speed_desc;
+  if (casino.daily_bonus_desc) return casino.daily_bonus_desc;
+  if (casino.intel_count > 0) return `${casino.intel_count} intel notes`;
+  return 'Profile ready';
+}
+
+function buildSpotlightFacts(casino: DashboardDiscoveryCasino) {
+  return [
+    { label: 'Daily bonus', value: casino.daily_bonus_desc ?? 'Details coming soon' },
+    { label: 'Redeem speed', value: casino.redemption_speed_desc ?? 'Unknown' },
+    { label: 'PB risk', value: getDiscoveryHealthLabel(casino.promoban_risk) },
+    { label: 'Signal', value: casino.intel_count > 0 ? `${casino.intel_count} live intel items` : `${casino.tracker_count} trackers watching` },
+  ];
 }
 
 function formatLastClaim(value: string, timezone: string) {
