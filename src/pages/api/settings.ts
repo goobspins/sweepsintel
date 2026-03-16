@@ -21,8 +21,10 @@ async function loadSettings(userId: string) {
       ledger_mode: 'simple' | 'advanced' | null;
       daily_goal_usd: number | string | null;
       weekly_goal_usd: number | string | null;
+      kpi_cards: unknown;
+      momentum_style: unknown;
     }>(
-      `SELECT timezone, home_state, ledger_mode, daily_goal_usd, weekly_goal_usd
+      `SELECT timezone, home_state, ledger_mode, daily_goal_usd, weekly_goal_usd, kpi_cards, momentum_style
       FROM user_settings
       WHERE user_id = $1
       LIMIT 1`,
@@ -49,6 +51,8 @@ async function loadSettings(userId: string) {
     ledger_mode: 'simple' as const,
     daily_goal_usd: 5,
     weekly_goal_usd: null,
+    kpi_cards: null,
+    momentum_style: null,
   };
 
   return {
@@ -59,9 +63,52 @@ async function loadSettings(userId: string) {
       settings.daily_goal_usd === null ? 5 : Number(settings.daily_goal_usd) || 5,
     weekly_goal_usd:
       settings.weekly_goal_usd === null ? null : Number(settings.weekly_goal_usd) || null,
+    kpi_cards: normalizeKpiCards(settings.kpi_cards),
+    momentum_style: normalizeMomentumStyle(settings.momentum_style),
     state_subscriptions: subscriptionRows.map((row) => row.state_code),
     states,
   };
+}
+
+function normalizeKpiCards(value: unknown) {
+  const parsed = parseJsonish(value);
+  const allowed = new Set([
+    'sc_earned',
+    'usd_earned',
+    'purchases',
+    'pending_redemptions',
+    'best_performer',
+    'claim_streak',
+    'daily_velocity',
+  ]);
+  if (!Array.isArray(parsed)) {
+    return ['sc_earned', 'usd_earned', 'purchases', 'pending_redemptions'];
+  }
+
+  const filtered = parsed.filter(
+    (item): item is string => typeof item === 'string' && allowed.has(item),
+  );
+  return filtered.length >= 3 ? filtered.slice(0, 4) : ['sc_earned', 'usd_earned', 'purchases', 'pending_redemptions'];
+}
+
+function normalizeMomentumStyle(value: unknown) {
+  const parsed = parseJsonish(value);
+  const allowed = new Set(['rainbow', 'green', 'blue', 'amber', 'purple']);
+  return typeof parsed === 'string' && allowed.has(parsed) ? parsed : 'rainbow';
+}
+
+function parseJsonish(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    return value;
+  }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 }
 
 export const GET: APIRoute = async ({ request }) => {
@@ -81,6 +128,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const user = await requireAuth(request);
     const body = await request.json();
+    const hasOwn = (key: string) => Object.prototype.hasOwnProperty.call(body ?? {}, key);
 
     const timezone =
       typeof body?.timezone === 'string' && body.timezone.trim()
@@ -103,14 +151,28 @@ export const POST: APIRoute = async ({ request }) => {
           ),
         )
       : null;
-    const dailyGoalUsd =
-      body?.daily_goal_usd === null || body?.daily_goal_usd === undefined || body?.daily_goal_usd === ''
+    const dailyGoalUsd = !hasOwn('daily_goal_usd')
+      ? undefined
+      : body?.daily_goal_usd === null || body?.daily_goal_usd === ''
         ? null
         : Number(body.daily_goal_usd);
-    const weeklyGoalUsd =
-      body?.weekly_goal_usd === null || body?.weekly_goal_usd === undefined || body?.weekly_goal_usd === ''
+    const weeklyGoalUsd = !hasOwn('weekly_goal_usd')
+      ? undefined
+      : body?.weekly_goal_usd === null || body?.weekly_goal_usd === ''
         ? null
         : Number(body.weekly_goal_usd);
+    const kpiCards = Array.isArray(body?.kpi_cards)
+      ? body.kpi_cards.filter(
+          (value: unknown): value is string =>
+            typeof value === 'string' &&
+            ['sc_earned', 'usd_earned', 'purchases', 'pending_redemptions', 'best_performer', 'claim_streak', 'daily_velocity'].includes(value),
+        )
+      : undefined;
+    const momentumStyle =
+      typeof body?.momentum_style === 'string' &&
+      ['rainbow', 'green', 'blue', 'amber', 'purple'].includes(body.momentum_style)
+        ? body.momentum_style
+        : undefined;
 
     await transaction(async (tx) => {
       await tx.query(
@@ -119,7 +181,9 @@ export const POST: APIRoute = async ({ request }) => {
             home_state = COALESCE($3, home_state),
             ledger_mode = COALESCE($4, ledger_mode),
             daily_goal_usd = COALESCE($5, daily_goal_usd),
-            weekly_goal_usd = $6,
+            weekly_goal_usd = CASE WHEN $6::boolean THEN $7 ELSE weekly_goal_usd END,
+            kpi_cards = COALESCE($8::jsonb, kpi_cards),
+            momentum_style = COALESCE($9::jsonb, momentum_style),
             updated_at = NOW()
         WHERE user_id = $1`,
         [
@@ -127,8 +191,19 @@ export const POST: APIRoute = async ({ request }) => {
           timezone,
           homeState,
           ledgerMode,
-          Number.isFinite(dailyGoalUsd) && dailyGoalUsd !== null ? dailyGoalUsd : null,
-          Number.isFinite(weeklyGoalUsd) ? weeklyGoalUsd : null,
+          dailyGoalUsd === undefined
+            ? null
+            : Number.isFinite(dailyGoalUsd) && dailyGoalUsd !== null
+              ? dailyGoalUsd
+              : null,
+          weeklyGoalUsd !== undefined,
+          weeklyGoalUsd === undefined
+            ? null
+            : Number.isFinite(weeklyGoalUsd)
+              ? weeklyGoalUsd
+              : null,
+          kpiCards && kpiCards.length >= 3 && kpiCards.length <= 4 ? JSON.stringify(kpiCards) : null,
+          momentumStyle ? JSON.stringify(momentumStyle) : null,
         ],
       );
 

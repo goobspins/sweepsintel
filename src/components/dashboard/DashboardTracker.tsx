@@ -16,6 +16,8 @@ type DashboardSummary = {
   dailyGoalUsd: number;
   weeklyGoalUsd: number | null;
   momentumPeriod: 'daily' | 'weekly';
+  momentumStyle: string;
+  kpiCards: string[];
   scEarnedToday: number;
   usdEarnedToday: number;
   scEarnedWeek: number;
@@ -24,6 +26,10 @@ type DashboardSummary = {
   purchaseUsdToday: number;
   pendingRedemptionsCount: number;
   pendingRedemptionsUsd: number;
+  bestPerformerName: string | null;
+  bestPerformerSc: number;
+  claimStreakDays: number;
+  dailyVelocityPct: number;
 };
 
 type DashboardDiscoveryCasino = {
@@ -87,11 +93,30 @@ type PurchaseDraft = {
   notes: string;
 };
 
+type KpiCardId =
+  | 'sc_earned'
+  | 'usd_earned'
+  | 'purchases'
+  | 'pending_redemptions'
+  | 'best_performer'
+  | 'claim_streak'
+  | 'daily_velocity';
+
 const DEFAULT_PURCHASE_DRAFT: PurchaseDraft = {
   costUsd: '',
   scAmount: '',
   promoCode: '',
   notes: '',
+};
+
+const DEFAULT_KPI_CARDS: KpiCardId[] = ['sc_earned', 'usd_earned', 'purchases', 'pending_redemptions'];
+
+const MOMENTUM_GRADIENTS: Record<string, string> = {
+  rainbow: 'var(--progress-gradient)',
+  green: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+  blue: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+  amber: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+  purple: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
 };
 
 const MODE_META: Record<ActionMode, { label: string; saveLabel: string; accent: string; endpoint: string }> = {
@@ -139,6 +164,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [momentumPeriod, setMomentumPeriod] = useState<'daily' | 'weekly'>(() => initialSummary.momentumPeriod ?? 'daily');
+  const [compactMode, setCompactMode] = useState(false);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowTs(Date.now()), 60_000);
@@ -179,6 +205,17 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   useEffect(() => {
     window.localStorage.setItem('si-momentum-period', momentumPeriod);
   }, [momentumPeriod]);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem('si-compact-mode');
+    if (saved === 'true') {
+      setCompactMode(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem('si-compact-mode', compactMode ? 'true' : 'false');
+  }, [compactMode]);
 
   useEffect(() => {
     if (!toast) return;
@@ -265,6 +302,19 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const compactDiscovery = discovery.casinos.slice(1);
   const trackedCasinoIds = useMemo(() => new Set(casinos.map((casino) => casino.casino_id)), [casinos]);
   const normalizedSearch = useMemo(() => normalizeCasinoName(searchQuery), [searchQuery]);
+  const selectedKpiCards = useMemo<KpiCardId[]>(() => {
+    const filtered = summary.kpiCards.filter(isKpiCardId);
+    return filtered.length >= 3 ? filtered.slice(0, 4) : DEFAULT_KPI_CARDS;
+  }, [summary.kpiCards]);
+  const momentumFillStyle = useMemo(
+    () => ({ width: `${progressPct}%`, background: MOMENTUM_GRADIENTS[summary.momentumStyle] ?? MOMENTUM_GRADIENTS.rainbow }),
+    [progressPct, summary.momentumStyle],
+  );
+  const kpiCards = useMemo(
+    () =>
+      selectedKpiCards.map((cardId) => buildKpiCard(cardId, summary)),
+    [selectedKpiCards, summary],
+  );
 
   function getMode(casinoId: number): ActionMode {
     return modeByCasino[casinoId] ?? 'daily';
@@ -584,7 +634,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           </div>
           <div className="progress-row">
             <div className="progress-track" aria-hidden="true">
-              <div className="progress-fill" style={{ width: `${progressPct}%` }} />
+              <div className="progress-fill" style={momentumFillStyle} />
               {progressPct >= 15 ? <span className="progress-label progress-label-inline">{progressLabel}</span> : null}
             </div>
             {progressPct < 15 ? <span className="progress-label progress-label-side">{progressLabel}</span> : null}
@@ -643,10 +693,13 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
       </section>
 
       <section className="kpi-grid" aria-label="Dashboard KPIs">
-        <article className="surface-card kpi-card"><span className="kpi-label">SC Earned Today</span><strong className="kpi-value kpi-positive">{summary.scEarnedToday.toFixed(2)}</strong></article>
-        <article className="surface-card kpi-card"><span className="kpi-label">USD Earned Today</span><strong className="kpi-value kpi-positive">${summary.usdEarnedToday.toFixed(2)}</strong></article>
-        <article className="surface-card kpi-card"><span className="kpi-label">Purchases</span><strong className="kpi-value">{summary.purchaseCountToday} <span className="kpi-subvalue">| ${summary.purchaseUsdToday.toFixed(2)}</span></strong></article>
-        <article className="surface-card kpi-card"><span className="kpi-label">Pending Redemptions</span><strong className="kpi-value kpi-pending">{summary.pendingRedemptionsCount} <span className="kpi-subvalue">| ${summary.pendingRedemptionsUsd.toFixed(2)}</span></strong></article>
+        {kpiCards.map((card) => (
+          <article key={card.id} className="surface-card kpi-card">
+            <span className="kpi-label">{card.label}</span>
+            <strong className={`kpi-value ${card.toneClassName ?? ''}`}>{card.value}</strong>
+            {card.subvalue ? <span className={`kpi-subvalue ${card.subtoneClassName ?? ''}`}>{card.subvalue}</span> : null}
+          </article>
+        ))}
       </section>
 
       <section className="surface-card dashboard-section">
@@ -654,7 +707,16 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           <div>
             <div className="eyebrow">Heartbeat</div>
             <h2 className="section-title">Dashboard</h2>
-            <p className="muted section-copy">{casinoRows.length} tracked casinos. Available rows float to the top.</p>
+            <div className="section-toolbar">
+              <p className="muted section-copy">{casinoRows.length} tracked casinos. Available rows float to the top.</p>
+              <button
+                type="button"
+                className={`compact-toggle ${compactMode ? 'compact-toggle-active' : ''}`}
+                onClick={() => setCompactMode((current) => !current)}
+              >
+                Compact
+              </button>
+            </div>
           </div>
         </div>
         <div className="search-shell">
@@ -742,7 +804,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
             <div className="muted">Loading current claim windows...</div>
           </div>
         ) : (
-          <div className="casino-list">
+          <div className={`casino-list ${compactMode ? 'casino-list-compact' : ''}`}>
             {casinoRows.map((casino) => {
               const mode = getMode(casino.casinoId);
               const meta = MODE_META[mode];
@@ -754,7 +816,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
               const inputError = inputErrorByCasino[casino.casinoId];
 
               return (
-                <article key={casino.casinoId} id={`casino-${casino.casinoId}`} className={`casino-row ${statusDisplay.isDue ? 'casino-row-due' : ''}`}>
+                <article key={casino.casinoId} id={`casino-${casino.casinoId}`} className={`casino-row ${statusDisplay.isDue ? 'casino-row-due' : ''} ${compactMode ? 'casino-row-compact' : ''}`}>
                   <div className="casino-main">
                     <div className="casino-copy">
                       <div className="casino-heading">
@@ -953,13 +1015,30 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .momentum-chip { display: grid; gap: 0.15rem; min-width: 110px; padding: 0.7rem 0.85rem; border-radius: 1rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.48); }
         .momentum-chip-label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
         .kpi-grid { display: grid; gap: 1rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        .kpi-card { padding: 1rem 1.1rem; display: grid; gap: 0.45rem; min-height: 112px; }
+        .kpi-card { padding: 1rem 1.1rem; display: grid; gap: 0.45rem; min-height: 112px; align-content: start; }
         .kpi-label { color: var(--text-muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
-        .kpi-value { color: var(--text-primary); font-size: clamp(1.55rem, 4vw, 2rem); letter-spacing: -0.04em; }
+        .kpi-value { color: var(--text-primary); font-size: clamp(1.55rem, 4vw, 2rem); letter-spacing: -0.04em; font-weight: 800; }
         .kpi-positive { color: var(--accent-green); }
         .kpi-pending { color: var(--accent-yellow); }
+        .kpi-negative { color: var(--accent-red); }
         .kpi-subvalue { color: var(--text-secondary); font-size: 1rem; font-weight: 600; }
         .section-copy { margin: 0; }
+        .section-toolbar { display: flex; gap: 0.85rem; align-items: center; flex-wrap: wrap; }
+        .compact-toggle {
+          border: 1px solid var(--color-border);
+          border-radius: 999px;
+          background: var(--bg-primary);
+          color: var(--text-secondary);
+          padding: 0.48rem 0.82rem;
+          font: inherit;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .compact-toggle-active {
+          color: var(--text-primary);
+          border-color: rgba(59, 130, 246, 0.35);
+          background: rgba(59, 130, 246, 0.12);
+        }
         .search-shell { position: relative; }
         .search-input {
           width: 100%;
@@ -1007,6 +1086,8 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .add-typed-button { border: 1px dashed var(--color-border); border-radius: 0.95rem; background: transparent; color: var(--text-primary); padding: 0.8rem 0.9rem; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
         .casino-list { display: grid; gap: 0.85rem; }
         .casino-row { display: grid; gap: 0.9rem; padding: 1rem; border-radius: 1.2rem; border: 1px solid var(--color-border); background: rgba(17, 24, 39, 0.52); scroll-margin-top: 7rem; }
+        .casino-list .casino-row:nth-child(odd) { background: rgba(17, 24, 39, 0.38); }
+        .casino-list .casino-row:nth-child(even) { background: rgba(17, 24, 39, 0.52); }
         .casino-row-due { border-left: 3px solid var(--accent-green); }
         .casino-row:target { border-color: rgba(59, 130, 246, 0.52); box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.18), 0 18px 40px rgba(2, 6, 23, 0.38); }
         .casino-main { display: flex; gap: 1rem; justify-content: space-between; align-items: center; }
@@ -1065,6 +1146,15 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .toast { position: sticky; top: 1rem; z-index: 15; justify-self: center; padding: 0.8rem 1rem; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3); }
         .toast-success { background: rgba(16, 185, 129, 0.16); color: var(--accent-green); }
         .toast-error { background: rgba(239, 68, 68, 0.16); color: var(--accent-red); }
+        .casino-row-compact { padding: 0.6rem; }
+        .casino-row-compact .casino-link { font-size: 0.95rem; }
+        .casino-row-compact .mode-pill,
+        .casino-row-compact .buy-button,
+        .casino-row-compact .save-button,
+        .casino-row-compact .ghost-button,
+        .casino-row-compact .purchase-save { padding: 0.55rem 0.8rem; font-size: 0.88rem; }
+        .casino-row-compact .status-secondary,
+        .casino-row-compact .status-secondary-amber { display: none; }
         @media (max-width: 1180px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .purchase-grid, .spotlight-facts, .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .discovery-spotlight { grid-template-columns: 1fr; } .spotlight-actions { grid-auto-flow: column; justify-content: flex-start; } }
         @media (max-width: 780px) { .casino-main { flex-direction: column; align-items: stretch; } .action-stack { width: 100%; justify-items: stretch; } .mode-toggle, .entry-row, .purchase-actions { justify-content: flex-start; } .momentum-body { align-items: stretch; } .momentum-inline-kpis { justify-content: flex-start; } }
         @media (max-width: 640px) { .kpi-grid, .purchase-grid, .spotlight-facts, .discovery-grid { grid-template-columns: 1fr; } .momentum-summary { justify-items: start; } .entry-row input, .purchase-grid input, .save-button, .purchase-save, .ghost-button, .spotlight-primary, .spotlight-secondary, .discovery-link { width: 100%; } .spotlight-actions, .discovery-card-actions { grid-auto-flow: row; display: grid; } }
@@ -1081,6 +1171,89 @@ function normalizeCasinoName(name: string) {
     .replace(/\s+/g, '')
     .replace(/[^a-z0-9]/g, '')
     .trim();
+}
+
+function isKpiCardId(value: string): value is KpiCardId {
+  return [
+    'sc_earned',
+    'usd_earned',
+    'purchases',
+    'pending_redemptions',
+    'best_performer',
+    'claim_streak',
+    'daily_velocity',
+  ].includes(value);
+}
+
+function buildKpiCard(cardId: KpiCardId, summary: DashboardSummary) {
+  if (cardId === 'sc_earned') {
+    return {
+      id: cardId,
+      label: 'SC Earned Today',
+      value: summary.scEarnedToday.toFixed(2),
+      subvalue: null,
+      toneClassName: 'kpi-positive',
+      subtoneClassName: null,
+    };
+  }
+  if (cardId === 'usd_earned') {
+    return {
+      id: cardId,
+      label: 'USD Earned Today',
+      value: `$${summary.usdEarnedToday.toFixed(2)}`,
+      subvalue: null,
+      toneClassName: 'kpi-positive',
+      subtoneClassName: null,
+    };
+  }
+  if (cardId === 'purchases') {
+    return {
+      id: cardId,
+      label: 'Purchases',
+      value: String(summary.purchaseCountToday),
+      subvalue: `$${summary.purchaseUsdToday.toFixed(2)}`,
+      toneClassName: null,
+      subtoneClassName: null,
+    };
+  }
+  if (cardId === 'pending_redemptions') {
+    return {
+      id: cardId,
+      label: 'Pending Redemptions',
+      value: String(summary.pendingRedemptionsCount),
+      subvalue: `$${summary.pendingRedemptionsUsd.toFixed(2)}`,
+      toneClassName: 'kpi-pending',
+      subtoneClassName: 'kpi-pending',
+    };
+  }
+  if (cardId === 'best_performer') {
+    return {
+      id: cardId,
+      label: 'Best Performer',
+      value: summary.bestPerformerName ?? 'No data yet',
+      subvalue: `${summary.bestPerformerSc >= 0 ? '+' : ''}${summary.bestPerformerSc.toFixed(2)} SC`,
+      toneClassName: summary.bestPerformerSc >= 0 ? 'kpi-positive' : 'kpi-negative',
+      subtoneClassName: summary.bestPerformerSc >= 0 ? 'kpi-positive' : 'kpi-negative',
+    };
+  }
+  if (cardId === 'claim_streak') {
+    return {
+      id: cardId,
+      label: 'Claim Streak',
+      value: `${summary.claimStreakDays} day${summary.claimStreakDays === 1 ? '' : 's'}`,
+      subvalue: summary.claimStreakDays > 0 ? 'Consecutive full days' : 'Start a full-day streak',
+      toneClassName: summary.claimStreakDays > 0 ? 'kpi-positive' : null,
+      subtoneClassName: null,
+    };
+  }
+  return {
+    id: cardId,
+    label: 'Daily Velocity',
+    value: `${summary.dailyVelocityPct >= 0 ? '+' : ''}${Math.round(summary.dailyVelocityPct)}%`,
+    subvalue: 'vs 30-day daily average',
+    toneClassName: summary.dailyVelocityPct >= 0 ? 'kpi-positive' : 'kpi-negative',
+    subtoneClassName: null,
+  };
 }
 
 function buildCasinoRowModel(casino: TrackerCasinoRow, claims: string[], nowTs: number): CasinoRowModel {

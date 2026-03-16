@@ -16,6 +16,8 @@ interface SettingsPanelProps {
     ledger_mode: 'simple' | 'advanced';
     daily_goal_usd?: number | null;
     weekly_goal_usd?: number | null;
+    kpi_cards?: string[];
+    momentum_style?: string | null;
     state_subscriptions: string[];
     states: Array<{ state_code: string; state_name: string }>;
     vapid_public_key: string;
@@ -39,6 +41,26 @@ const COMMON_TIMEZONES = [
   'America/Anchorage',
   'Pacific/Honolulu',
 ];
+
+const DEFAULT_KPI_CARDS = ['sc_earned', 'usd_earned', 'purchases', 'pending_redemptions'];
+
+const KPI_OPTIONS = [
+  { id: 'sc_earned', label: 'SC Earned Today' },
+  { id: 'usd_earned', label: 'USD Earned Today' },
+  { id: 'purchases', label: 'Purchases' },
+  { id: 'pending_redemptions', label: 'Pending Redemptions' },
+  { id: 'best_performer', label: 'Best Performer' },
+  { id: 'claim_streak', label: 'Claim Streak' },
+  { id: 'daily_velocity', label: 'Daily Velocity' },
+] as const;
+
+const MOMENTUM_STYLE_OPTIONS = [
+  { id: 'rainbow', label: 'Rainbow', swatch: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 28%, #ef4444 52%, #f59e0b 76%, #10b981 100%)' },
+  { id: 'green', label: 'Green', swatch: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' },
+  { id: 'blue', label: 'Blue', swatch: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' },
+  { id: 'amber', label: 'Amber', swatch: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' },
+  { id: 'purple', label: 'Purple', swatch: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' },
+] as const;
 
 function getTimezoneOptions() {
   if (typeof Intl.supportedValuesOf !== 'function') {
@@ -67,6 +89,14 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
   );
   const [weeklyGoalUsd, setWeeklyGoalUsd] = useState(
     initialSettings.weekly_goal_usd?.toString() ?? '',
+  );
+  const [kpiCards, setKpiCards] = useState<string[]>(
+    initialSettings.kpi_cards && initialSettings.kpi_cards.length >= 3
+      ? initialSettings.kpi_cards.slice(0, 4)
+      : DEFAULT_KPI_CARDS,
+  );
+  const [momentumStyle, setMomentumStyle] = useState(
+    initialSettings.momentum_style ?? 'rainbow',
   );
   const [stateSubscriptions, setStateSubscriptions] = useState(initialSettings.state_subscriptions);
   const [pushOptIn, setPushOptIn] = useState(false);
@@ -118,6 +148,12 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         setWeeklyGoalUsd(
           typeof data.weekly_goal_usd === 'number' ? String(data.weekly_goal_usd) : '',
         );
+        setKpiCards(
+          Array.isArray(data.kpi_cards) && data.kpi_cards.length >= 3
+            ? data.kpi_cards.slice(0, 4)
+            : DEFAULT_KPI_CARDS,
+        );
+        setMomentumStyle(typeof data.momentum_style === 'string' ? data.momentum_style : 'rainbow');
         setStateSubscriptions(Array.isArray(data.state_subscriptions) ? data.state_subscriptions : []);
       } catch (error) {
         console.error(error);
@@ -143,6 +179,8 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
           ledger_mode: ledgerMode,
           daily_goal_usd: dailyGoalUsd === '' ? 5 : Number(dailyGoalUsd),
           weekly_goal_usd: weeklyGoalUsd === '' ? null : Number(weeklyGoalUsd),
+          kpi_cards: kpiCards,
+          momentum_style: momentumStyle,
           state_subscriptions: stateSubscriptions,
         }),
       });
@@ -156,6 +194,12 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
       setLedgerMode(data.ledger_mode);
       setDailyGoalUsd(typeof data.daily_goal_usd === 'number' ? String(data.daily_goal_usd) : '5');
       setWeeklyGoalUsd(typeof data.weekly_goal_usd === 'number' ? String(data.weekly_goal_usd) : '');
+      setKpiCards(
+        Array.isArray(data.kpi_cards) && data.kpi_cards.length >= 3
+          ? data.kpi_cards.slice(0, 4)
+          : DEFAULT_KPI_CARDS,
+      );
+      setMomentumStyle(typeof data.momentum_style === 'string' ? data.momentum_style : 'rainbow');
       setStateSubscriptions(data.state_subscriptions ?? []);
     } catch (error) {
       console.error(error);
@@ -227,6 +271,23 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
     }
   }
 
+  function toggleKpiCard(cardId: string) {
+    setKpiCards((current) => {
+      if (current.includes(cardId)) {
+        if (current.length <= 3) {
+          setToast({ tone: 'error', message: 'Choose at least 3 KPI cards.' });
+          return current;
+        }
+        return current.filter((id) => id !== cardId);
+      }
+      if (current.length >= 4) {
+        setToast({ tone: 'error', message: 'Choose up to 4 KPI cards.' });
+        return current;
+      }
+      return [...current, cardId];
+    });
+  }
+
   return (
     <section className="surface-card settings-panel">
       {toast ? <div className={`toast toast-${toast.tone}`}>{toast.message}</div> : null}
@@ -284,6 +345,47 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
               placeholder="Optional"
             />
           </label>
+        </div>
+      </div>
+
+      <div className="field">
+        <span>Dashboard KPI Cards</span>
+        <div className="kpi-picker">
+          {KPI_OPTIONS.map((option) => {
+            const checked = kpiCards.includes(option.id);
+            const disableUnchecked = !checked && kpiCards.length >= 4;
+            return (
+              <label key={option.id} className={`kpi-option ${checked ? 'kpi-option-active' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disableUnchecked}
+                  onChange={() => toggleKpiCard(option.id)}
+                />
+                <span>{option.label}</span>
+              </label>
+            );
+          })}
+        </div>
+        <span className="field-hint">Choose 3 to 4 cards. Dashboard order follows your selection order.</span>
+      </div>
+
+      <div className="field">
+        <span>Momentum Bar Style</span>
+        <div className="swatch-row">
+          {MOMENTUM_STYLE_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`swatch-button ${momentumStyle === option.id ? 'swatch-button-active' : ''}`}
+              style={{ background: option.swatch }}
+              aria-label={option.label}
+              title={option.label}
+              onClick={() => setMomentumStyle(option.id)}
+            >
+              {momentumStyle === option.id ? '✓' : ''}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -354,6 +456,7 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         .settings-panel { display:grid; gap:1rem; padding:1.25rem; }
         .field { display:grid; gap:.45rem; }
         .field span { font-weight:700; }
+        .field-hint { color:var(--text-muted); font-size:.85rem; font-weight:600; }
         .field select {
           border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem;
           font:inherit; background:var(--color-surface);
@@ -365,6 +468,19 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
           border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem;
           font:inherit; background:var(--color-surface); color:var(--text-primary);
         }
+        .kpi-picker { display:grid; gap:.65rem; grid-template-columns:repeat(2, minmax(0, 1fr)); }
+        .kpi-option {
+          display:flex; gap:.65rem; align-items:center; border:1px solid var(--color-border);
+          border-radius:1rem; padding:.8rem .9rem; background:var(--color-surface); color:var(--text-secondary);
+        }
+        .kpi-option-active { color:var(--text-primary); border-color:rgba(59, 130, 246, 0.32); }
+        .swatch-row { display:flex; gap:.65rem; flex-wrap:wrap; }
+        .swatch-button {
+          width:28px; height:28px; border-radius:999px; border:1px solid var(--color-border);
+          color:#fff; font-weight:800; cursor:pointer; display:grid; place-items:center;
+          box-shadow:0 0 0 0 transparent; transition:transform 120ms ease, box-shadow 120ms ease;
+        }
+        .swatch-button-active { transform:scale(1.06); box-shadow:0 0 0 2px rgba(255,255,255,.18); }
         .casino-settings-list { display:grid; gap:.75rem; }
         .casino-setting-row {
           display:flex; justify-content:space-between; gap:1rem; align-items:center; flex-wrap:wrap;
@@ -388,7 +504,7 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         }
         .toast-success { background:rgba(16, 185, 129, 0.16); color:var(--accent-green); }
         .toast-error { background:rgba(239, 68, 68, 0.16); color:var(--accent-red); }
-        @media (max-width: 720px) { .goal-grid { grid-template-columns:1fr; } }
+        @media (max-width: 720px) { .goal-grid, .kpi-picker { grid-template-columns:1fr; } }
       `}</style>
     </section>
   );

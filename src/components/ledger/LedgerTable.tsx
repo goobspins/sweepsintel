@@ -300,6 +300,14 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
           border-collapse: collapse;
         }
 
+        .ledger-table tbody tr:nth-child(odd) {
+          background: rgba(17, 24, 39, 0.38);
+        }
+
+        .ledger-table tbody tr:nth-child(even) {
+          background: rgba(17, 24, 39, 0.52);
+        }
+
         .ledger-table th,
         .ledger-table td {
           padding: 0.85rem;
