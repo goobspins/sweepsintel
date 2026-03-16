@@ -4,6 +4,7 @@ interface NavProps {
   currentPath?: string;
   mobile?: boolean;
   user: SessionUser | null;
+  section?: 'public' | 'tools';
 }
 
 interface NavItem {
@@ -11,30 +12,47 @@ interface NavItem {
   label: string;
 }
 
-function buildNavItems(user: SessionUser | null): NavItem[] {
-  const publicItems = [
+function buildPublicItems(): NavItem[] {
+  return [
     { href: '/casinos', label: 'Casinos' },
     { href: '/states', label: 'States' },
     { href: '/getting-started', label: 'Getting Started' },
   ];
+}
 
+function buildToolItems(user: SessionUser | null): NavItem[] {
   if (!user) {
-    return publicItems;
+    return [];
   }
 
   return [
-    ...publicItems,
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/my-casinos', label: 'My Casinos' },
     { href: '/ledger', label: 'Ledger' },
     { href: '/redemptions', label: 'Redemptions' },
-    { href: '/settings', label: 'Settings' },
-    ...(user.isAdmin ? [{ href: '/admin', label: 'Admin' }] : []),
   ];
 }
 
-export default function Nav({ currentPath = '/', mobile = false, user }: NavProps) {
-  const items = buildNavItems(user);
+export function getNavSections(user: SessionUser | null) {
+  return {
+    publicItems: buildPublicItems(),
+    toolItems: buildToolItems(user),
+  };
+}
+
+export default function Nav({
+  currentPath = '/',
+  mobile = false,
+  user,
+  section,
+}: NavProps) {
+  const { publicItems, toolItems } = getNavSections(user);
+  const items =
+    section === 'public'
+      ? publicItems
+      : section === 'tools'
+        ? toolItems
+        : [...publicItems, ...toolItems];
 
   return (
     <nav
@@ -42,7 +60,7 @@ export default function Nav({ currentPath = '/', mobile = false, user }: NavProp
       style={{
         display: 'flex',
         flexDirection: mobile ? 'column' : 'row',
-        gap: mobile ? '0.4rem' : '0.7rem',
+        gap: mobile ? '0.35rem' : '0.5rem',
         alignItems: mobile ? 'stretch' : 'center',
         flexWrap: mobile ? 'nowrap' : 'wrap',
       }}
@@ -60,8 +78,8 @@ export default function Nav({ currentPath = '/', mobile = false, user }: NavProp
               color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
               textDecoration: 'none',
               fontWeight: active ? 700 : 500,
-              fontSize: mobile ? '1rem' : '0.92rem',
-              padding: mobile ? '0.7rem 0.85rem' : '0.45rem 0.2rem',
+              fontSize: mobile ? '0.98rem' : '0.92rem',
+              padding: mobile ? '0.68rem 0.8rem' : '0.42rem 0.2rem',
               borderRadius: '0.75rem',
               background: active ? 'rgba(59, 130, 246, 0.14)' : 'transparent',
               whiteSpace: 'nowrap',
@@ -74,4 +92,3 @@ export default function Nav({ currentPath = '/', mobile = false, user }: NavProp
     </nav>
   );
 }
-
