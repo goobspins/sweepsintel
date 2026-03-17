@@ -1,67 +1,21 @@
 import type { APIRoute } from 'astro';
-import * as XLSX from 'xlsx';
 
 import { methodNotAllowed } from '../../../lib/api';
 import { isHttpError, requireAdmin } from '../../../lib/auth';
 import { invalidateCachedPrefix } from '../../../lib/cache';
+import {
+  mapImportFields,
+  normalizeImportRow,
+  parseWorkbookRows,
+  slugify,
+  type ImportRowPayload,
+  type PreviewRow,
+  validateImportRow,
+} from '../../../lib/casino-import';
 import { transaction, type TransactionClient } from '../../../lib/db';
-import { normalizeCasinoName } from '../../../lib/tracker';
 
 export const prerender = false;
 
-type PreviewRow = Record<string, string>;
-type ImportField =
-  | 'slug'
-  | 'name'
-  | 'tier'
-  | 'claim_url'
-  | 'reset_mode'
-  | 'reset_time_local'
-  | 'reset_timezone'
-  | 'reset_interval_hours'
-  | 'has_streaks'
-  | 'sc_to_usd_ratio'
-  | 'parent_company'
-  | 'promoban_risk'
-  | 'hardban_risk'
-  | 'family_ban_propagation'
-  | 'ban_confiscates_funds'
-  | 'daily_bonus_sc_avg'
-  | 'has_live_games'
-  | 'live_game_providers'
-  | 'min_redemption_usd'
-  | 'has_affiliate_link'
-  | 'affiliate_link_url'
-  | 'affiliate_type'
-  | 'affiliate_notes';
-
-type ImportRowPayload = Partial<Record<ImportField, string | null>>;
-
-const IMPORT_FIELDS: ImportField[] = [
-  'slug',
-  'name',
-  'tier',
-  'claim_url',
-  'reset_mode',
-  'reset_time_local',
-  'reset_timezone',
-  'reset_interval_hours',
-  'has_streaks',
-  'sc_to_usd_ratio',
-  'parent_company',
-  'promoban_risk',
-  'hardban_risk',
-  'family_ban_propagation',
-  'ban_confiscates_funds',
-  'daily_bonus_sc_avg',
-  'has_live_games',
-  'live_game_providers',
-  'min_redemption_usd',
-  'has_affiliate_link',
-  'affiliate_link_url',
-  'affiliate_type',
-  'affiliate_notes',
-];
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -70,121 +24,6 @@ function json(data: unknown, status = 200) {
   });
 }
 
-function slugify(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 50);
-}
-
-function normalizeHeader(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
-}
-
-function normalizeCell(value: unknown) {
-  if (value === null || value === undefined) {
-    return '';
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return String(value);
-  }
-  return String(value).trim();
-}
-
-function parseWorkbookRows(buffer: Buffer) {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  if (!sheet) {
-    return { headers: [] as string[], rows: [] as PreviewRow[] };
-  }
-
-  const matrix = XLSX.utils.sheet_to_json<(string | number | boolean | null)[]>(sheet, {
-    header: 1,
-    blankrows: false,
-    defval: '',
-    raw: false,
-  });
-
-  if (matrix.length === 0) {
-    return { headers: [] as string[], rows: [] as PreviewRow[] };
-  }
-
-  const [rawHeaders, ...rawRows] = matrix;
-  const headers = rawHeaders.map((header) => normalizeCell(header));
-  const rows = rawRows.map((row) => {
-    const record: PreviewRow = {};
-    headers.forEach((header, index) => {
-      record[header] = normalizeCell(row[index]);
-    });
-    return record;
-  });
-
-  return { headers, rows };
-}
-
-function parseBoolean(value: string | null) {
-  const normalized = String(value ?? '').trim().toLowerCase();
-  if (!normalized || normalized === 'nan') return null;
-  if (['true', '1', '1.0', 'yes', 'y'].includes(normalized)) return true;
-  if (['false', '0', '0.0', 'no', 'n'].includes(normalized)) return false;
-  return null;
-}
-
-function parseInteger(value: string | null) {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) ? parsed : null;
-}
-
-function parseDecimal(value: string | null) {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseTier(value: string | null, rowNumber: number, warnings: string[]) {
-  if (!value) return null;
-  const normalized = value.trim().toUpperCase();
-  if (['S', 'A', 'B', 'C'].includes(normalized)) {
-    return normalized;
-  }
-  warnings.push(`Row ${rowNumber}: invalid tier "${value}", defaulted to "B"`);
-  return 'B';
-}
-
-function parseEnum(
-  value: string | null,
-  allowed: string[],
-  fallback: string | null,
-  warningLabel: string,
-  rowNumber: number,
-  warnings: string[],
-) {
-  if (!value) return fallback;
-  const normalized = value.trim().toLowerCase();
-  if (allowed.includes(normalized)) {
-    return normalized;
-  }
-  warnings.push(`Row ${rowNumber}: invalid ${warningLabel} "${value}"`);
-  return fallback;
-}
-
-function buildMappedRows(rows: PreviewRow[], mapping: Record<string, string>) {
-  return rows.map((row) => {
-    const mappedRow: ImportRowPayload = {};
-    for (const [header, rawValue] of Object.entries(row)) {
-      const mappedField = mapping[header];
-      if (!mappedField || mappedField === 'skip' || !IMPORT_FIELDS.includes(mappedField as ImportField)) {
-        continue;
-      }
-      mappedRow[mappedField as ImportField] = normalizeCell(rawValue) || null;
-    }
-    return mappedRow;
-  });
-}
 
 async function getUniqueSlug(tx: TransactionClient, name: string) {
   const base = slugify(name) || 'casino';
@@ -284,56 +123,14 @@ async function importRows(rows: ImportRowPayload[]) {
     for (let index = 0; index < rows.length; index += 1) {
       const rowNumber = index + 2;
       const row = rows[index];
-      const rawName = row.name?.trim() ?? '';
-      if (!rawName) {
+      if (!validateImportRow(row)) {
         skipped += 1;
         continue;
       }
 
-      const normalizedName = normalizeCasinoName(rawName);
-      const tierLabel = parseTier(row.tier ?? null, rowNumber, warnings);
-      const resetMode = parseEnum(row.reset_mode ?? null, ['rolling', 'fixed'], 'rolling', 'reset_mode', rowNumber, warnings);
-      const promobanRisk = parseEnum(row.promoban_risk ?? null, ['none', 'low', 'medium', 'high', 'unknown'], 'unknown', 'promoban_risk', rowNumber, warnings);
-      const hardbanRisk = parseEnum(row.hardban_risk ?? null, ['none', 'low', 'medium', 'high', 'unknown'], 'unknown', 'hardban_risk', rowNumber, warnings);
-      const resetIntervalHours = parseInteger(row.reset_interval_hours ?? null) ?? 24;
-      const resetTimezone = (row.reset_timezone?.trim() || null) ?? (resetMode === 'fixed' ? 'America/New_York' : null);
-      const slug = row.slug?.trim() ? slugify(row.slug) : null;
-      const providerNames = Array.from(
-        new Set(
-          String(row.live_game_providers ?? '')
-            .split(',')
-            .map((value) => value.trim())
-            .filter(Boolean),
-        ),
-      );
-      const hasAffiliateLink = parseBoolean(row.has_affiliate_link ?? null);
-      const hasLiveGames = providerNames.length > 0 ? true : (parseBoolean(row.has_live_games ?? null) ?? null);
-      const payload = {
-        slug,
-        name: rawName,
-        normalizedName,
-        tierLabel,
-        claimUrl: row.claim_url?.trim() || null,
-        resetMode,
-        resetTimeLocal: row.reset_time_local?.trim() || null,
-        resetTimezone,
-        resetIntervalHours,
-        hasStreaks: parseBoolean(row.has_streaks ?? null),
-        scToUsdRatio: parseDecimal(row.sc_to_usd_ratio ?? null),
-        parentCompany: row.parent_company?.trim() || null,
-        promobanRisk,
-        hardbanRisk,
-        familyBanPropagation: parseBoolean(row.family_ban_propagation ?? null),
-        banConfiscatesFunds: parseBoolean(row.ban_confiscates_funds ?? null),
-        dailyBonusScAvg: parseInteger(row.daily_bonus_sc_avg ?? null),
-        hasLiveGames,
-        minRedemptionUsd: parseDecimal(row.min_redemption_usd ?? null),
-        hasAffiliateLink,
-        affiliateLinkUrl: row.affiliate_link_url?.trim() || null,
-        affiliateType: row.affiliate_type?.trim() || null,
-      };
+      const payload = normalizeImportRow(row, rowNumber, warnings);
 
-      const existingId = await findExistingCasino(tx, payload.slug, normalizedName);
+      const existingId = await findExistingCasino(tx, payload.slug, payload.normalizedName);
       let casinoId = existingId;
 
       if (existingId) {
@@ -499,7 +296,7 @@ export const POST: APIRoute = async ({ request }) => {
       return json({ error: 'No rows provided for import.' }, 400);
     }
 
-    const mappedRows = buildMappedRows(rows, mapping);
+      const mappedRows = mapImportFields(rows, mapping);
     const result = await importRows(mappedRows);
     invalidateCachedPrefix('dashboard-discovery:');
     return json(result);
