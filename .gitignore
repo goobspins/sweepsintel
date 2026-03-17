@@ -8,3 +8,5 @@ dist/
 .vercel/
 .astro/
 content-pipeline/
+*.skill
+.dev.pid
