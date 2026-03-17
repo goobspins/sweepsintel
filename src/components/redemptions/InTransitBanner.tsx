@@ -1,3 +1,5 @@
+import { formatCurrency } from '../../lib/format';
+
 interface InTransitBannerProps {
   totalUsd: number;
   pendingCount: number;
@@ -23,12 +25,5 @@ export default function InTransitBanner({ totalUsd, pendingCount }: InTransitBan
       `}</style>
     </div>
   );
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
 }
 

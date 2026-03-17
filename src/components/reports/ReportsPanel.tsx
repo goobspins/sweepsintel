@@ -1,5 +1,16 @@
 import { useMemo, useState } from 'react';
 
+import {
+  formatCurrency,
+  formatCurrencySigned,
+  formatDateTime,
+  formatDateTimeCompact,
+  formatEntryType,
+  formatNumber,
+  formatSignedNumber,
+  getTierBadgeStyle,
+} from '../../lib/format';
+
 type KpiCardId =
   | 'sc_earned'
   | 'usd_earned'
@@ -138,7 +149,7 @@ export default function ReportsPanel({
           <article className="overview-item">
             <span className="overview-label">Net P/L</span>
             <strong className={`overview-value ${initialSummary.netPlUsd >= 0 ? 'positive' : 'negative'}`}>
-              {formatCurrency(initialSummary.netPlUsd)}
+              {formatCurrencySigned(initialSummary.netPlUsd)}
             </strong>
           </article>
         </div>
@@ -178,7 +189,7 @@ export default function ReportsPanel({
                   <td>{formatCurrency(casino.usdInvested)}</td>
                   <td>{formatCurrency(casino.usdRedeemed)}</td>
                   <td className={casino.netPlUsd >= 0 ? 'positive' : 'negative'}>{formatCurrency(casino.netPlUsd)}</td>
-                  <td>{casino.lastActivityAt ? formatDateTime(casino.lastActivityAt) : '--'}</td>
+                  <td>{casino.lastActivityAt ? formatDateTimeCompact(casino.lastActivityAt) : '--'}</td>
                 </tr>
               ))}
             </tbody>
@@ -204,7 +215,7 @@ export default function ReportsPanel({
                 <div className="activity-values">
                   <span className={getTone(entry.scAmount)}>{entry.scAmount === null ? '--' : formatSignedNumber(entry.scAmount)}</span>
                   <span className={getTone(entry.usdAmount)}>{entry.usdAmount === null ? '--' : formatCurrency(entry.usdAmount)}</span>
-                  <span className="muted">{entry.entryAt ? formatDateTime(entry.entryAt) : '--'}</span>
+                  <span className="muted">{entry.entryAt ? formatDateTimeCompact(entry.entryAt) : '--'}</span>
                 </div>
               </div>
             ))}
@@ -315,44 +326,6 @@ function buildKpiCard(cardId: KpiCardId, summary: ReportsSummary) {
     toneClassName: summary.dailyVelocityPct >= 0 ? 'kpi-positive' : 'kpi-negative',
     subtoneClassName: null,
   };
-}
-
-function getTierBadgeStyle(tier: string) {
-  if (tier === 'S') return { background: 'rgba(245, 158, 11, 0.16)', color: 'var(--accent-yellow)', borderColor: 'rgba(245, 158, 11, 0.32)' };
-  if (tier === 'A') return { background: 'rgba(16, 185, 129, 0.16)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.32)' };
-  if (tier === 'B') return { background: 'rgba(59, 130, 246, 0.16)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.32)' };
-  return { background: 'rgba(156, 163, 175, 0.12)', color: 'var(--text-secondary)', borderColor: 'rgba(156, 163, 175, 0.26)' };
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    signDisplay: 'exceptZero',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatNumber(value: number) {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
-}
-
-function formatSignedNumber(value: number) {
-  return `${value > 0 ? '+' : ''}${formatNumber(value)}`;
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
-
-function formatEntryType(value: string) {
-  if (value === 'free_sc') return 'Free Spins';
-  if (value === 'redeem_confirmed') return 'Redemption';
-  if (value === 'purchase') return 'Purchase';
-  if (value === 'adjustment') return 'Adjust';
-  if (value === 'daily') return 'Daily';
-  return value.replace(/_/g, ' ');
 }
 
 function getTone(value: number | null) {

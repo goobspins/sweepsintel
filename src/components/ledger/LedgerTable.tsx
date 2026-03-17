@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import {
+  formatCurrencySigned,
+  formatDate,
+  formatEntryType,
+  formatNumber,
+  formatSignedNumber,
+} from '../../lib/format';
 import LedgerSummary from './LedgerSummary';
 import ManualEntryForm from './ManualEntryForm';
 
@@ -204,14 +211,14 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
             <tbody>
               {displayEntries.map((entry) => (
                 <tr key={entry.id}>
-                  <td>{new Date(entry.entry_at).toLocaleDateString()}</td>
+                  <td>{formatDate(entry.entry_at)}</td>
                   <td>{entry.casino_name}</td>
                   <td>{formatEntryType(entry.display_type)}</td>
                   <td className={getAmountTone(entry.display_sc_amount)}>
                     {entry.display_sc_amount === null ? '--' : formatSignedNumber(entry.display_sc_amount)}
                   </td>
                   <td className={getAmountTone(entry.display_usd_amount)}>
-                    {entry.display_usd_amount === null ? '--' : formatCurrency(entry.display_usd_amount)}
+                    {entry.display_usd_amount === null ? '--' : formatCurrencySigned(entry.display_usd_amount)}
                   </td>
                   <td>{entry.display_notes ?? '--'}</td>
                 </tr>
@@ -356,7 +363,7 @@ function groupLedgerEntries(entries: LedgerEntryRow[]): DisplayLedgerEntryRow[] 
           display_type: 'purchase',
           display_sc_amount: linked.sc_amount,
           display_usd_amount: entry.usd_amount,
-          display_notes: `Purchase: ${formatCurrency(entry.usd_amount ?? 0)} USD -> +${formatNumber(linked.sc_amount ?? 0)} SC`,
+          display_notes: `Purchase: ${formatCurrencySigned(entry.usd_amount ?? 0)} USD -> +${formatNumber(linked.sc_amount ?? 0)} SC`,
         });
         continue;
       }
@@ -379,32 +386,6 @@ function groupLedgerEntries(entries: LedgerEntryRow[]): DisplayLedgerEntryRow[] 
   }
 
   return grouped;
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    signDisplay: 'exceptZero',
-  }).format(value);
-}
-
-function formatNumber(value: number) {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
-}
-
-function formatSignedNumber(value: number) {
-  const prefix = value > 0 ? '+' : '';
-  return `${prefix}${formatNumber(value)}`;
-}
-
-function formatEntryType(value: string) {
-  if (value === 'free_sc') return 'Free Spins';
-  if (value === 'redeem_confirmed') return 'Redemption';
-  if (value === 'purchase') return 'Purchase';
-  if (value === 'adjustment') return 'Adjust';
-  if (value === 'daily') return 'Daily';
-  return value.replace(/_/g, ' ');
 }
 
 function getAmountTone(value: number | null) {

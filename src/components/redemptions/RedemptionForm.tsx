@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { formatCurrency } from '../../lib/format';
+
 interface TrackedCasinoOption {
   casino_id: number;
   name: string;
@@ -357,13 +359,6 @@ export default function RedemptionForm({ onClose, onSuccess }: RedemptionFormPro
       `}</style>
     </div>
   );
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
 }
 
 function formatMethod(method: string) {

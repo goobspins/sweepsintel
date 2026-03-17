@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { formatCurrency, formatRelativeTime, formatSc } from '../../lib/format';
 import InTransitBanner from './InTransitBanner';
 import RedemptionForm from './RedemptionForm';
 
@@ -159,7 +160,7 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
                   <div>
                     <h2>{redemption.casino_name}</h2>
                     <p className="muted">
-                      {formatCurrency(redemption.usd_amount)} via {formatMethod(redemption.method)} - {relativeTime(redemption.submitted_at)}
+                      {formatCurrency(redemption.usd_amount)} via {formatMethod(redemption.method)} - {formatRelativeTime(redemption.submitted_at)}
                     </p>
                   </div>
                   <span className={`status-pill status-${redemption.status}`}>{statusLabel(redemption.status)}</span>
@@ -375,17 +376,6 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
   );
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
-}
-
-function formatSc(value: number) {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
-}
-
 function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -405,15 +395,4 @@ function statusLabel(status: RedemptionRow['status']) {
   return 'Draft';
 }
 
-function relativeTime(timestamp: string) {
-  const diffMs = new Date(timestamp).getTime() - Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const hourMs = 60 * 60 * 1000;
-  const minuteMs = 60 * 1000;
-  const formatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-
-  if (Math.abs(diffMs) >= dayMs) return formatter.format(Math.round(diffMs / dayMs), 'day');
-  if (Math.abs(diffMs) >= hourMs) return formatter.format(Math.round(diffMs / hourMs), 'hour');
-  return formatter.format(Math.round(diffMs / minuteMs), 'minute');
-}
 

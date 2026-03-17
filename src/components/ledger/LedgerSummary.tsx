@@ -1,3 +1,5 @@
+import { formatCurrency } from '../../lib/format';
+
 interface SummaryBreakdown {
   casino_id: number;
   casino_name: string;
@@ -73,12 +75,5 @@ export default function LedgerSummary({ summary }: LedgerSummaryProps) {
       `}</style>
     </section>
   );
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value);
 }
 
