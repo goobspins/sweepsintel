@@ -35,8 +35,6 @@ export interface TrackerAlertItem {
   title: string;
   content: string;
   expires_at: string | null;
-  confirm_count: number;
-  dispute_count: number;
   created_at: string;
 }
 
@@ -260,37 +258,25 @@ export async function getTrackerStatus(userId: string): Promise<TrackerStatusDat
         )
       : [];
 
-  const alerts =
-    trackedIds.length > 0
-      ? await safeTrackerQuery(
-          'tracker-alerts',
-          () =>
-            query<TrackerAlertItem>(
-              `SELECT id, item_type, casino_id, title, content, expires_at, confirm_count, dispute_count, created_at
-              FROM discord_intel_items
-              WHERE is_published = true
-                AND (expires_at IS NULL OR expires_at > NOW())
-                AND (casino_id = ANY($1::int[]) OR casino_id IS NULL)
-              ORDER BY created_at DESC
-              LIMIT 20`,
-              [trackedIds],
-            ),
-          [] as TrackerAlertItem[],
-        )
-      : await safeTrackerQuery(
-          'global-alerts',
-          () =>
-            query<TrackerAlertItem>(
-              `SELECT id, item_type, casino_id, title, content, expires_at, confirm_count, dispute_count, created_at
-              FROM discord_intel_items
-              WHERE is_published = true
-                AND (expires_at IS NULL OR expires_at > NOW())
-                AND casino_id IS NULL
-              ORDER BY created_at DESC
-              LIMIT 20`,
-            ),
-          [] as TrackerAlertItem[],
-        );
+  const alerts = await safeTrackerQuery(
+    'tracker-alerts',
+    () =>
+      query<TrackerAlertItem>(
+        `SELECT id, item_type, casino_id, title, content, expires_at, created_at
+        FROM discord_intel_items
+        WHERE is_published = true
+          AND (expires_at IS NULL OR expires_at > NOW())
+          AND (
+            (cardinality($1::int[]) > 0 AND (casino_id = ANY($1::int[]) OR casino_id IS NULL))
+            OR (cardinality($1::int[]) = 0 AND casino_id IS NULL)
+          )
+          AND item_type IN ('platform_warning', 'flash_sale', 'promo_code', 'free_sc')
+        ORDER BY created_at DESC
+        LIMIT 20`,
+        [trackedIds],
+      ),
+    [] as TrackerAlertItem[],
+  );
 
   return {
     casinos,

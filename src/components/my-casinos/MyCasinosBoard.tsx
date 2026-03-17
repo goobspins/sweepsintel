@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { formatAgo } from '../../lib/format';
+import { formatAgo, formatCurrency, formatDateTime, formatEntryType, formatSc, getTierBadgeStyle, riskRank } from '../../lib/format';
 import HealthDetail from '../health/HealthDetail';
 import HealthDot from '../health/HealthDot';
 
@@ -52,7 +52,7 @@ export default function MyCasinosBoard({ initialData }: MyCasinosBoardProps) {
   const [draftNotes, setDraftNotes] = useState<Record<number, string>>(
     () => Object.fromEntries(initialData.casinos.map((casino) => [casino.casino_id, casino.notes])),
   );
-  const [healthByCasino, setHealthByCasino] = useState<Record<number, any>>({});
+  const [healthByCasino, setHealthByCasino] = useState<Record<number, { status: string; reason: string | null; warnings: unknown[]; personal_exposure?: unknown }>>({});
   const [loadingHealthId, setLoadingHealthId] = useState<number | null>(null);
   const [savingNotesId, setSavingNotesId] = useState<number | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
@@ -158,37 +158,47 @@ export default function MyCasinosBoard({ initialData }: MyCasinosBoardProps) {
           </div>
         </div>
 
-        <div className="card-list">
-          {sortedCasinos.map((casino) => (
-            <article key={casino.casino_id} className={`casino-card health-${casino.health_status ?? 'unknown'}`} id={`casino-${casino.casino_id}`}>
-              <button type="button" className="casino-card-head" onClick={() => void toggleExpanded(casino.casino_id)}>
-                <div className="card-title-row">
-                  <HealthDot status={casino.health_status} size={14} pulse={casino.health_status === 'critical'} />
-                  <a href={`/casinos/${casino.slug}`} className="casino-name" onClick={(event) => event.stopPropagation()}>{casino.name}</a>
-                  {casino.tier ? <span className="tier-badge" style={getTierBadgeStyle(casino.tier)}>{casino.tier}</span> : null}
-                </div>
-                <div className="mini-metrics">
-                  <div className="mini-metric">
-                    <span className="metric-label">SC Balance</span>
-                    <strong>{formatSc(casino.sc_balance)}</strong>
+        {sortedCasinos.length === 0 ? (
+          <div className="portfolio-empty">
+            <p className="portfolio-empty-title">No casinos yet</p>
+            <p className="muted" style={{ margin: 0 }}>
+              You haven't added any casinos to your portfolio yet. Browse casinos to get started.
+            </p>
+            <a href="/casinos" className="subtle-link">Browse casinos</a>
+          </div>
+        ) : (
+          <div className="card-list">
+            {sortedCasinos.map((casino) => (
+              <article key={casino.casino_id} className={`casino-card health-${casino.health_status ?? 'unknown'}`} id={`casino-${casino.casino_id}`}>
+                <button type="button" className="casino-card-head" onClick={() => void toggleExpanded(casino.casino_id)}>
+                  <div className="card-title-row">
+                    <HealthDot status={casino.health_status} size={14} pulse={casino.health_status === 'critical'} />
+                    <a href={`/casinos/${casino.slug}`} className="casino-name" onClick={(event) => event.stopPropagation()}>{casino.name}</a>
+                    {casino.tier ? <span className="tier-badge" style={getTierBadgeStyle(casino.tier)}>{casino.tier}</span> : null}
                   </div>
-                  <div className="mini-metric">
-                    <span className="metric-label">Net P/L</span>
-                    <strong className={casino.net_pl_usd >= 0 ? 'positive' : 'negative'}>{formatCurrency(casino.net_pl_usd)}</strong>
+                  <div className="mini-metrics">
+                    <div className="mini-metric">
+                      <span className="metric-label">SC Balance</span>
+                      <strong>{formatSc(casino.sc_balance)}</strong>
+                    </div>
+                    <div className="mini-metric">
+                      <span className="metric-label">Net P/L</span>
+                      <strong className={casino.net_pl_usd >= 0 ? 'positive' : 'negative'}>{formatCurrency(casino.net_pl_usd)}</strong>
+                    </div>
+                    <div className="mini-metric">
+                      <span className="metric-label">Last Activity</span>
+                      <strong>{casino.last_activity_at ? formatAgo(casino.last_activity_at) : 'No entries yet'}</strong>
+                    </div>
+                    <div className="mini-metric">
+                      <span className="metric-label">Alerts</span>
+                      <strong>{casino.alert_count > 0 ? `${casino.alert_count} alerts` : 'No alerts'}</strong>
+                    </div>
                   </div>
-                  <div className="mini-metric">
-                    <span className="metric-label">Last Activity</span>
-                    <strong>{casino.last_activity_at ? formatAgo(casino.last_activity_at) : 'No entries yet'}</strong>
-                  </div>
-                  <div className="mini-metric">
-                    <span className="metric-label">Alerts</span>
-                    <strong>{casino.alert_count > 0 ? `${casino.alert_count} alerts` : 'No alerts'}</strong>
-                  </div>
-                </div>
-              </button>
-            </article>
-          ))}
-        </div>
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
 
         {expandedCasino ? (
           <section className="expanded-panel">
@@ -284,6 +294,8 @@ export default function MyCasinosBoard({ initialData }: MyCasinosBoardProps) {
         .sort-pill { border:1px solid var(--color-border); background:var(--bg-primary); color:var(--text-secondary); border-radius:999px; padding:0.58rem 0.82rem; font-weight:700; cursor:pointer; }
         .sort-pill-active { background:rgba(59,130,246,.14); color:var(--text-primary); border-color:rgba(59,130,246,.28); }
         .card-list { display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); }
+        .portfolio-empty { display:grid; gap:.55rem; justify-items:start; padding:1.2rem; border:1px dashed var(--color-border-subtle); border-radius:1.25rem; text-align:left; }
+        .portfolio-empty-title { margin:0; font-size:1.05rem; font-weight:800; }
         .casino-card { border:1px solid var(--color-border); border-radius:1.35rem; background:rgba(17, 24, 39, 0.54); overflow:hidden; }
         .casino-card-head { width:100%; border:none; background:transparent; color:inherit; padding:1rem 1.05rem; display:grid; gap:.95rem; cursor:pointer; text-align:left; }
         .card-title-row { display:flex; gap:.55rem; align-items:center; flex-wrap:wrap; }
@@ -332,41 +344,4 @@ export default function MyCasinosBoard({ initialData }: MyCasinosBoardProps) {
       `}</style>
     </div>
   );
-}
-
-function riskRank(status: string | null) {
-  if (status === 'critical') return 0;
-  if (status === 'at_risk') return 1;
-  if (status === 'watch') return 2;
-  return 3;
-}
-
-function getTierBadgeStyle(tier: string) {
-  if (tier === 'S') return { background: 'rgba(245, 158, 11, 0.16)', color: 'var(--accent-yellow)', borderColor: 'rgba(245, 158, 11, 0.32)' };
-  if (tier === 'A') return { background: 'rgba(16, 185, 129, 0.16)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.32)' };
-  if (tier === 'B') return { background: 'rgba(59, 130, 246, 0.16)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.32)' };
-  return { background: 'rgba(156, 163, 175, 0.12)', color: 'var(--text-secondary)', borderColor: 'rgba(156, 163, 175, 0.26)' };
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-}
-
-function formatSc(value: number) {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown';
-  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-}
-
-function formatEntryType(value: string) {
-  if (value === 'free_sc') return 'Free Spins';
-  if (value === 'redeem_confirmed') return 'Redemption';
-  if (value === 'purchase') return 'Purchase';
-  if (value === 'adjustment') return 'Adjust';
-  if (value === 'daily') return 'Daily';
-  return value.replace(/_/g, ' ');
 }

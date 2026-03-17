@@ -69,7 +69,7 @@ if (user) {
       title="Log in to view the Intel Feed"
       description="See live community intelligence for the casinos you track."
     >
-      {user ? <IntelFeed client:load user={user} initialData={initialData} /> : null}
+      {user ? <IntelFeed client:load initialData={initialData} /> : null}
     </SessionGate>
   </div>
 </BaseLayout>

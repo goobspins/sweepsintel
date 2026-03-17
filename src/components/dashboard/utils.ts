@@ -1,5 +1,6 @@
 import { DateTime } from 'luxon';
 
+export { getTierBadgeStyle } from '../../lib/format';
 import { computeFixedResetPeriodStart } from '../../lib/reset';
 import type { TrackerCasinoRow } from '../../lib/tracker';
 import type {
@@ -209,13 +210,6 @@ export function getCasinoStatusDisplay(casino: CasinoRowModel, userTimezone: str
   };
 }
 
-export function getTierBadgeStyle(tier: string) {
-  if (tier === 'S') return { background: 'rgba(245, 158, 11, 0.16)', color: 'var(--accent-yellow)', borderColor: 'rgba(245, 158, 11, 0.32)' };
-  if (tier === 'A') return { background: 'rgba(16, 185, 129, 0.16)', color: 'var(--accent-green)', borderColor: 'rgba(16, 185, 129, 0.32)' };
-  if (tier === 'B') return { background: 'rgba(59, 130, 246, 0.16)', color: 'var(--accent-blue)', borderColor: 'rgba(59, 130, 246, 0.32)' };
-  return { background: 'rgba(156, 163, 175, 0.12)', color: 'var(--text-secondary)', borderColor: 'rgba(156, 163, 175, 0.26)' };
-}
-
 export function getDiscoveryHealthStyle(risk: string | null) {
   if (risk === 'none' || risk === 'low') {
     return { color: 'var(--accent-green)', background: 'rgba(16, 185, 129, 0.12)', borderColor: 'rgba(16, 185, 129, 0.24)' };
@@ -336,4 +330,3 @@ function toNumber(value: number | string | null | undefined, fallback = 0) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : fallback;
 }
-

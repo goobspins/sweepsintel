@@ -41,38 +41,40 @@ docs/
 
 ## Per-task reading guide
 
+All v1 numbered specs are in `docs/archive/v1/`. Always read the reconciled spec first, then drill into these for granular detail.
+
 **Task: Set up project scaffold + deploy config**
-→ Read: `00-OVERVIEW.md`, `07-FILE-STRUCTURE.md`, `08-CONSTRAINTS.md`
+→ Read: `docs/archive/v1/00-OVERVIEW.md`, `docs/archive/v1/07-FILE-STRUCTURE.md`, `docs/archive/v1/08-CONSTRAINTS.md`
 
 **Task: Build database schema**
-→ Read: `01-SCHEMA.md` (run the SQL), `02-CORE-MECHANICS.md` (understand the business logic the schema supports)
+→ Read: `docs/active/schema-reference.md`, `docs/archive/v1/02-CORE-MECHANICS.md`
 
 **Task: Build casino directory + profiles**
-→ Read: `00-OVERVIEW.md`, `01-SCHEMA.md`, `03-FEATURES-PUBLIC.md`, `07-FILE-STRUCTURE.md`, `08-CONSTRAINTS.md`, `UI-SPEC-v1.md`
+→ Read: `docs/archive/v1/03-FEATURES-PUBLIC.md`, `docs/archive/v1/08-CONSTRAINTS.md`, `docs/archive/v1/UI-SPEC-v1.md`
 
 **Task: Build daily tracker**
-→ Read: `00-OVERVIEW.md`, `01-SCHEMA.md`, `02-CORE-MECHANICS.md`, `04-FEATURES-PRIVATE.md`, `07-FILE-STRUCTURE.md`, `08-CONSTRAINTS.md` (esp. DB efficiency tracker section), `UI-SPEC-v1.md`
+→ Read: `docs/archive/v1/04-FEATURES-PRIVATE.md`, `docs/archive/v1/08-CONSTRAINTS.md` (esp. DB efficiency), `docs/archive/v1/UI-SPEC-v1.md`
 
 **Task: Build redemption tracker + ledger**
-→ Read: `00-OVERVIEW.md`, `01-SCHEMA.md`, `02-CORE-MECHANICS.md`, `04-FEATURES-PRIVATE.md`, `07-FILE-STRUCTURE.md`, `08-CONSTRAINTS.md`, `UI-SPEC-v1.md`
+→ Read: `docs/archive/v1/02-CORE-MECHANICS.md`, `docs/archive/v1/04-FEATURES-PRIVATE.md`, `docs/archive/v1/UI-SPEC-v1.md`
 
 **Task: Build auth system**
-→ Read: `00-OVERVIEW.md`, `01-SCHEMA.md`, `04-FEATURES-PRIVATE.md` (Feature 8), `07-FILE-STRUCTURE.md`
+→ Read: `docs/archive/v1/04-FEATURES-PRIVATE.md` (Feature 8)
 
 **Task: Build admin panel**
-→ Read: `00-OVERVIEW.md`, `01-SCHEMA.md`, `05-FEATURES-ADMIN.md`, `07-FILE-STRUCTURE.md`, `08-CONSTRAINTS.md`, `UI-SPEC-v1.md`
+→ Read: `docs/archive/v1/05-FEATURES-ADMIN.md`, `docs/archive/v1/08-CONSTRAINTS.md`, `docs/archive/v1/UI-SPEC-v1.md`
 
 **Task: Build discord intel feed + ingest API**
-→ Read: `01-SCHEMA.md`, `05-FEATURES-ADMIN.md`, `04-FEATURES-PRIVATE.md` (Feature 9 for notification scoping), `07-FILE-STRUCTURE.md`, `MONITORING-SPEC-v1.md`
+→ Read: `docs/archive/v1/05-FEATURES-ADMIN.md`, `docs/archive/v1/MONITORING-SPEC-v1.md`
 
 **Task: Build state availability + pullout alerts**
-→ Read: `01-SCHEMA.md`, `03-FEATURES-PUBLIC.md`, `05-FEATURES-ADMIN.md` (provider cascade), `04-FEATURES-PRIVATE.md` (notification scoping), `07-FILE-STRUCTURE.md`
+→ Read: `docs/archive/v1/03-FEATURES-PUBLIC.md`, `docs/archive/v1/05-FEATURES-ADMIN.md` (provider cascade)
 
 **Task: Build retention features (PWA, push, bookmarks)**
-→ Read: `01-SCHEMA.md`, `06-FEATURES-RETENTION.md`, `07-FILE-STRUCTURE.md`
+→ Read: `docs/archive/v1/06-FEATURES-RETENTION.md`
 
-**Task: Build homepage + Getting Started**
-→ Read: `03-FEATURES-PUBLIC.md`, `08-CONSTRAINTS.md` (homepage caching), `UI-SPEC-v1.md`
+**Task: Build intelligence layer features**
+→ Read: `docs/active/INTELLIGENCE-LAYER-DESIGN-v2.md`, `docs/active/schema-reference.md`
 
 ---
 
