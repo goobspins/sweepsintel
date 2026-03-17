@@ -1,11 +1,17 @@
 import { useState } from 'react';
 
+import { SIGNAL_TYPE_LABELS } from '../../lib/intel-constants';
 import SignalTracker from './SignalTracker';
 
 interface SignalCreatorProps {
   casinos: Array<{ id: number; name: string }>;
   digest: {
-    summary: Record<string, number>;
+    summary: {
+      total_signals: number;
+      worked_signals: number;
+      disputed_signals: number;
+      unverified_signals: number;
+    };
     flagged_users: Array<{ user_id: string; trust_score: number; contributor_tier: string | null }>;
     top_contributors: Array<{ user_id: string; contributor_tier: string | null; signal_count: number; worked_votes: number; didnt_work_votes: number }>;
   };
@@ -74,8 +80,8 @@ export default function SignalCreator({ casinos, digest, items }: SignalCreatorP
             ))}
           </select>
           <select value={signalType} onChange={(event) => setSignalType(event.target.value)}>
-            {['free_sc', 'promo_code', 'flash_sale', 'playthrough_deal', 'platform_warning', 'general_tip'].map((value) => (
-              <option key={value} value={value}>{value.replace(/_/g, ' ')}</option>
+            {Object.entries(SIGNAL_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
             ))}
           </select>
         </div>

@@ -9,21 +9,51 @@ const user = await getSessionUser(Astro.request);
 if (!user) return Astro.redirect('/');
 if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
 
-const bans = await query<any>(
+interface BanQueueRow {
+  id: number;
+  casino_name: string | null;
+  report_type: string;
+  description: string;
+  reporter_ip_hash: string | null;
+  reporter_user_id: string | null;
+}
+
+interface StateQueueRow {
+  id: number;
+  casino_name: string | null;
+  state_code: string | null;
+  reported_status: string;
+  report_text: string;
+  reporter_ip_hash: string | null;
+  reporter_user_id: string | null;
+}
+
+interface ResetQueueRow {
+  id: number;
+  casino_name: string | null;
+  suggested_reset_mode: string | null;
+  suggested_reset_time: string | null;
+  suggested_timezone: string | null;
+  evidence_text: string | null;
+  reporter_ip_hash: string | null;
+  reporter_user_id: string | null;
+}
+
+const bans = await query<BanQueueRow>(
   `SELECT br.id, c.name AS casino_name, br.report_type, br.description, br.reporter_ip_hash, br.reporter_user_id
   FROM ban_reports br
   LEFT JOIN casinos c ON c.id = br.casino_id
   WHERE br.is_published = false
   ORDER BY br.submitted_at DESC`,
 );
-const states = await query<any>(
+const states = await query<StateQueueRow>(
   `SELECT sar.id, c.name AS casino_name, sar.state_code, sar.reported_status, sar.report_text, sar.reporter_ip_hash, sar.reporter_user_id
   FROM state_availability_reports sar
   LEFT JOIN casinos c ON c.id = sar.casino_id
   WHERE sar.is_published = false
   ORDER BY sar.submitted_at DESC`,
 );
-const resets = await query<any>(
+const resets = await query<ResetQueueRow>(
   `SELECT rts.id, c.name AS casino_name, rts.suggested_reset_mode, rts.suggested_reset_time, rts.suggested_timezone, rts.evidence_text, rts.reporter_ip_hash, rts.reporter_user_id
   FROM reset_time_suggestions rts
   LEFT JOIN casinos c ON c.id = rts.casino_id

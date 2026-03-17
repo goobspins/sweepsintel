@@ -10,6 +10,39 @@ const user = await getSessionUser(Astro.request);
 if (!user) return Astro.redirect('/');
 if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
 
+interface AdminSignalsSummary {
+  total_signals: number;
+  worked_signals: number;
+  disputed_signals: number;
+  unverified_signals: number;
+}
+
+interface FlaggedUserRow {
+  user_id: string;
+  trust_score: number | string | null;
+  contributor_tier: string | null;
+}
+
+interface TopContributorRow {
+  user_id: string;
+  contributor_tier: string | null;
+  signal_count: number | string;
+  worked_votes: number | string;
+  didnt_work_votes: number | string;
+}
+
+interface AdminSignalRow {
+  id: number;
+  casino_name: string | null;
+  source: string;
+  title: string;
+  item_type: string;
+  signal_status: string;
+  worked_count: number | string;
+  didnt_work_count: number | string;
+  created_at: string;
+}
+
 const [casinos, summaryRows, flaggedUsers, topContributors, items] = await Promise.all([
   query<{ id: number; name: string }>(
     `SELECT id, name
@@ -17,7 +50,7 @@ const [casinos, summaryRows, flaggedUsers, topContributors, items] = await Promi
     WHERE source = 'admin'
     ORDER BY name ASC`,
   ),
-  query<any>(
+  query<AdminSignalsSummary>(
     `SELECT
       COUNT(*)::int AS total_signals,
       COUNT(*) FILTER (WHERE worked_count > didnt_work_count)::int AS worked_signals,
@@ -26,14 +59,14 @@ const [casinos, summaryRows, flaggedUsers, topContributors, items] = await Promi
     FROM discord_intel_items
     WHERE created_at >= NOW() - INTERVAL '7 days'`,
   ),
-  query<any>(
+  query<FlaggedUserRow>(
     `SELECT user_id, trust_score, contributor_tier
     FROM user_settings
     WHERE COALESCE(trust_score, 0) < 0.20
     ORDER BY trust_score ASC
     LIMIT 20`,
   ),
-  query<any>(
+  query<TopContributorRow>(
     `SELECT
       di.submitted_by AS user_id,
       us.contributor_tier,
@@ -49,7 +82,7 @@ const [casinos, summaryRows, flaggedUsers, topContributors, items] = await Promi
     ORDER BY signal_count DESC, worked_votes DESC
     LIMIT 10`,
   ),
-  query<any>(
+  query<AdminSignalRow>(
     `SELECT
       di.id,
       c.name AS casino_name,
@@ -67,6 +100,13 @@ const [casinos, summaryRows, flaggedUsers, topContributors, items] = await Promi
     LIMIT 100`,
   ),
 ]);
+
+const summary = summaryRows[0] ?? {
+  total_signals: 0,
+  worked_signals: 0,
+  disputed_signals: 0,
+  unverified_signals: 0,
+};
 ---
 
 <BaseLayout title="Signals | Admin" user={user} currentPath={Astro.url.pathname}>
@@ -75,7 +115,7 @@ const [casinos, summaryRows, flaggedUsers, topContributors, items] = await Promi
       client:load
       casinos={casinos}
       digest={{
-        summary: summaryRows[0] ?? {},
+        summary,
         flagged_users: flaggedUsers.map((row) => ({ ...row, trust_score: Number(row.trust_score ?? 0) })),
         top_contributors: topContributors.map((row) => ({
           ...row,

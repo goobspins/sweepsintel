@@ -9,7 +9,21 @@ const user = await getSessionUser(Astro.request);
 if (!user) return Astro.redirect('/');
 if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
 
-const items = await query<any>(
+interface DiscordQueueItem {
+  id: number;
+  item_type: string;
+  casino_name: string | null;
+  casino_name_raw: string | null;
+  title: string;
+  content: string;
+  source_channel: string | null;
+  expires_at: string | null;
+  confidence: string;
+  confidence_reason: string | null;
+  created_at: string;
+}
+
+const items = await query<DiscordQueueItem>(
   `SELECT di.id, di.item_type, c.name AS casino_name, di.casino_name_raw, di.title, di.content, di.source_channel, di.expires_at, di.confidence, di.confidence_reason, di.created_at
   FROM discord_intel_items di
   LEFT JOIN casinos c ON c.id = di.casino_id

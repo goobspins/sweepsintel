@@ -9,14 +9,29 @@ const user = await getSessionUser(Astro.request);
 if (!user) return Astro.redirect('/');
 if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
 
-const casinoStates = await query<any>(
+interface CasinoStateRow {
+  casino_id: number;
+  casino_name: string;
+  state_code: string;
+  status: string;
+  compliance_note: string | null;
+}
+
+interface ProviderStateRow {
+  provider_id: number;
+  provider_name: string;
+  state_code: string;
+  status: string;
+}
+
+const casinoStates = await query<CasinoStateRow>(
   `SELECT csa.casino_id, c.name AS casino_name, csa.state_code, csa.status, csa.compliance_note
   FROM casino_state_availability csa
   JOIN casinos c ON c.id = csa.casino_id
   ORDER BY c.name ASC, csa.state_code ASC
   LIMIT 300`,
 );
-const providerStates = await query<any>(
+const providerStates = await query<ProviderStateRow>(
   `SELECT psa.provider_id, gp.name AS provider_name, psa.state_code, psa.status
   FROM provider_state_availability psa
   JOIN game_providers gp ON gp.id = psa.provider_id

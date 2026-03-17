@@ -8,6 +8,17 @@ interface TrackedCasinoOption {
   sc_to_usd_ratio: number | string | null;
 }
 
+interface TrackerStatusCasino {
+  casino_id: number;
+  name: string;
+  sc_to_usd_ratio: number | string | null;
+}
+
+interface TrackerStatusResponse {
+  casinos?: TrackerStatusCasino[];
+  error?: string;
+}
+
 interface RedemptionFormProps {
   onClose: () => void;
   onSuccess: () => Promise<void> | void;
@@ -35,7 +46,7 @@ export default function RedemptionForm({ onClose, onSuccess }: RedemptionFormPro
     async function loadCasinos() {
       try {
         const response = await fetch('/api/tracker/status');
-        const data = await response.json();
+        const data = (await response.json()) as TrackerStatusResponse;
         if (!response.ok) {
           throw new Error(data.error ?? 'Unable to load casinos.');
         }
@@ -43,7 +54,7 @@ export default function RedemptionForm({ onClose, onSuccess }: RedemptionFormPro
           return;
         }
 
-        const options = (data.casinos ?? []).map((casino: any) => ({
+        const options = (data.casinos ?? []).map((casino) => ({
           casino_id: casino.casino_id,
           name: casino.name,
           sc_to_usd_ratio: casino.sc_to_usd_ratio,

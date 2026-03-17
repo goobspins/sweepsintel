@@ -5,6 +5,16 @@ interface TrackedCasinoOption {
   name: string;
 }
 
+interface TrackerStatusCasino {
+  casino_id: number;
+  name: string;
+}
+
+interface TrackerStatusResponse {
+  casinos?: TrackerStatusCasino[];
+  error?: string;
+}
+
 interface ManualEntryFormProps {
   ledgerMode: 'simple' | 'advanced';
   onClose: () => void;
@@ -36,12 +46,12 @@ export default function ManualEntryForm({
     async function loadCasinos() {
       try {
         const response = await fetch('/api/tracker/status');
-        const data = await response.json();
+        const data = (await response.json()) as TrackerStatusResponse;
         if (!response.ok) {
           throw new Error(data.error ?? 'Unable to load tracked casinos.');
         }
         if (!cancelled) {
-          setCasinos((data.casinos ?? []).map((casino: any) => ({
+          setCasinos((data.casinos ?? []).map((casino) => ({
             casino_id: casino.casino_id,
             name: casino.name,
           })));

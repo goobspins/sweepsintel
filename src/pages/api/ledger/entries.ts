@@ -5,6 +5,23 @@ import { query } from '../../../lib/db';
 
 export const prerender = false;
 
+interface LedgerEntryRow {
+  id: number;
+  casino_id: number;
+  casino_name: string;
+  entry_type: string;
+  sc_amount: number | string | null;
+  usd_amount: number | string | null;
+  is_crypto: boolean | null;
+  notes: string | null;
+  source_redemption_id: number | null;
+  source_claim_id: number | null;
+  linked_entry_id: number | null;
+  link_id: string | null;
+  entry_at: string | null;
+  entry_date: string;
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -44,7 +61,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     params.push(20);
     params.push((page - 1) * 20);
 
-    const rows = await query(
+    const rows = await query<LedgerEntryRow>(
       `SELECT
         le.id,
         le.casino_id,
@@ -69,7 +86,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     );
 
     return json({
-      entries: rows.map((row: any) => ({
+      entries: rows.map((row) => ({
         ...row,
         sc_amount: row.sc_amount === null ? null : Number(row.sc_amount),
         usd_amount: row.usd_amount === null ? null : Number(row.usd_amount),

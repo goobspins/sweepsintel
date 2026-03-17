@@ -10,13 +10,55 @@ if (!user) return Astro.redirect('/');
 if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
 
 const casinoId = Number(Astro.params.id);
-const casinos = await query<any>('SELECT * FROM casinos WHERE id = $1 LIMIT 1', [casinoId]);
+interface AdminCasinoRecord {
+  id: number;
+  slug: string;
+  name: string;
+  tier: 'S' | 'A' | 'B' | 'C';
+  website_url?: string | null;
+  claim_url?: string | null;
+  reset_mode?: string | null;
+  reset_time_local?: string | null;
+  reset_timezone?: string | null;
+  reset_interval_hours?: number | null;
+  has_streaks?: boolean;
+  sc_to_usd_ratio?: number | string | null;
+  parent_company?: string | null;
+  promoban_risk?: string | null;
+  hardban_risk?: string | null;
+  family_ban_propagation?: boolean;
+  ban_confiscates_funds?: boolean;
+  daily_bonus_desc?: string | null;
+  daily_bonus_sc_avg?: number | null;
+  has_live_games?: boolean;
+  redemption_speed_desc?: string | null;
+  redemption_fee_desc?: string | null;
+  min_redemption_usd?: number | string | null;
+  has_affiliate_link?: boolean;
+  affiliate_link_url?: string | null;
+  affiliate_type?: string | null;
+  affiliate_enrollment_verified?: boolean;
+  source?: string;
+  is_excluded?: boolean;
+}
+
+interface AdminCasinoGameRow {
+  id: number;
+  provider_id: number | null;
+  game_name: string;
+  game_type: string | null;
+  is_cross_wash_relevant: boolean;
+  confidence: string;
+  status: string;
+}
+
+const casinos = await query<AdminCasinoRecord>('SELECT * FROM casinos WHERE id = $1 LIMIT 1', [casinoId]);
 const casino = casinos[0];
 if (!casino) return new Response('Not found', { status: 404 });
 
 const providers = await query<{ id: number; name: string }>('SELECT id, name FROM game_providers ORDER BY name ASC');
 const selectedProviders = await query<{ provider_id: number }>('SELECT provider_id FROM casino_live_game_providers WHERE casino_id = $1', [casinoId]);
-const games = await query<any>(
+const games = await query<AdminCasinoGameRow>(
   `SELECT id, provider_id, game_name, game_type, is_cross_wash_relevant, confidence, status
   FROM casino_game_availability
   WHERE casino_id = $1
