@@ -5,6 +5,13 @@ import { query } from '../../../lib/db';
 
 export const prerender = false;
 
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 function escapeCsv(value: unknown) {
   const text = value === null || value === undefined ? '' : String(value);
   if (text.includes(',') || text.includes('"') || text.includes('\n')) {
@@ -60,10 +67,10 @@ export const GET: APIRoute = async ({ request }) => {
     });
   } catch (error) {
     if (isHttpError(error)) {
-      return new Response(error.message, { status: error.status === 302 ? 401 : error.status });
+      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
     }
-    console.error('ledger/export-csv failed', error);
-    return new Response('Unable to export ledger CSV.', { status: 500 });
+    console.error('[api/ledger/export-csv]', error);
+    return json({ error: 'Unable to export ledger CSV.' }, 500);
   }
 };
 

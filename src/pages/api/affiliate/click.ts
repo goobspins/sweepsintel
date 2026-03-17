@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 
 import { methodNotAllowed } from '../../../lib/api';
-
+import { isHttpError } from '../../../lib/auth';
 import { query } from '../../../lib/db';
 
 export const prerender = false;
@@ -52,7 +52,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     return json({ url: casino.affiliate_link_url });
   } catch (error) {
-    console.error('affiliate click failed', error);
+    if (isHttpError(error)) {
+      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
+    }
+    console.error('[api/affiliate/click]', error);
     return json({ error: 'Unable to resolve affiliate link.' }, 500);
   }
 };

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 
 import { methodNotAllowed } from '../../../lib/api';
+import { isHttpError } from '../../../lib/auth';
 
 import { createAdminFlag } from '../../../lib/admin';
 import {
@@ -127,7 +128,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     return json({ success: true, processed });
   } catch (error) {
-    console.error('discord/game-availability failed', error);
+    if (isHttpError(error)) {
+      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
+    }
+    console.error('[api/discord/game-availability]', error);
     return json({ error: 'Unable to process game availability signals.' }, 500);
   }
 };

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 
-import { isValidEmail, normalizeEmail } from '../../../lib/auth';
+import { isHttpError, isValidEmail, normalizeEmail } from '../../../lib/auth';
 import { query } from '../../../lib/db';
 
 export const prerender = false;
@@ -39,7 +39,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     return json({ success: true });
   } catch (error) {
-    console.error('waitlist capture failed', error);
+    if (isHttpError(error)) {
+      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
+    }
+    console.error('[api/waitlist/capture]', error);
     return json({ error: 'Unable to subscribe right now.' }, 500);
   }
 };

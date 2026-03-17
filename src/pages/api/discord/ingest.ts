@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 
 import { methodNotAllowed } from '../../../lib/api';
+import { isHttpError } from '../../../lib/auth';
 
 import { createAdminFlag } from '../../../lib/admin';
 import {
@@ -44,7 +45,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     return json({ success: true, item_id: created.itemId, duplicate: created.duplicate });
   } catch (error) {
-    console.error('discord/ingest failed', error);
+    if (isHttpError(error)) {
+      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
+    }
+    console.error('[api/discord/ingest]', error);
     return json({ error: 'Unable to ingest intel.' }, 500);
   }
 };

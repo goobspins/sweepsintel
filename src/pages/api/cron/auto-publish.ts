@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 
+import { isHttpError } from '../../../lib/auth';
 import { query } from '../../../lib/db';
 import { publishIntelItem } from '../../../lib/discord-intel';
 import { sendPushToSegment } from '../../../lib/push';
@@ -100,7 +101,10 @@ export const GET: APIRoute = async ({ request }) => {
 
     return json({ published });
   } catch (error) {
-    console.error('cron/auto-publish failed', error);
+    if (isHttpError(error)) {
+      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
+    }
+    console.error('[api/cron/auto-publish]', error);
     return json({ error: 'Unable to auto-publish intel.' }, 500);
   }
 };

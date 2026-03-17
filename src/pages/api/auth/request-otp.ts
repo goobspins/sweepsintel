@@ -5,6 +5,7 @@ import {
   generateOTP,
   generateSessionToken,
   hashToken,
+  isHttpError,
   isValidEmail,
   normalizeEmail,
 } from '../../../lib/auth';
@@ -112,7 +113,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     return json({ success: true });
   } catch (error) {
-    console.error('request-otp failed', error);
+    if (isHttpError(error)) {
+      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
+    }
+    console.error('[api/auth/request-otp]', error);
     return json({ error: 'Unable to send login code.' }, 500);
   }
 };

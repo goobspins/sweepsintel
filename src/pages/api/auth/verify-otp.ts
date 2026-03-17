@@ -4,6 +4,7 @@ import {
   generateSessionToken,
   getSessionCookieOptions,
   hashToken,
+  isHttpError,
   isValidEmail,
   normalizeEmail,
   SESSION_COOKIE_NAME,
@@ -105,7 +106,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     return json({ success: true, isNewUser: result.isNewUser });
   } catch (error) {
-    console.error('verify-otp failed', error);
+    if (isHttpError(error)) {
+      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
+    }
+    console.error('[api/auth/verify-otp]', error);
     return json({ error: 'Unable to verify login code.' }, 500);
   }
 };

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { DateTime } from 'luxon';
 
+import { isHttpError } from '../../../lib/auth';
 import { query } from '../../../lib/db';
 import { sendPushToUser } from '../../../lib/push';
 import { computeFixedResetPeriodStart } from '../../../lib/reset';
@@ -169,7 +170,10 @@ export const GET: APIRoute = async ({ request }) => {
 
     return json({ notified, skipped });
   } catch (error) {
-    console.error('cron/push-resets failed', error);
+    if (isHttpError(error)) {
+      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
+    }
+    console.error('[api/cron/push-resets]', error);
     return json({ error: 'Unable to send reset reminders.' }, 500);
   }
 };
