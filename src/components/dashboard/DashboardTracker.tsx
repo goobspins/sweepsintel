@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DateTime } from 'luxon';
 
 import type { SessionUser } from '../../lib/auth';
+import { formatAgo } from '../../lib/format';
 import HealthDot from '../health/HealthDot';
 import { computeFixedResetPeriodStart } from '../../lib/reset';
 import type { TrackerCasinoRow, TrackerStatusData } from '../../lib/tracker';
@@ -727,9 +728,6 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
               <button type="button" className="compact-toggle" onClick={() => void handleLayoutSwapToggle()}>
                 Swap sides
               </button>
-              <button type="button" className="compact-toggle" onClick={() => setDiscoveryCollapsed((current) => !current)}>
-                {discoveryCollapsed ? 'Show discovery' : 'Collapse discovery'}
-              </button>
             </div>
           </div>
         </div>
@@ -925,8 +923,8 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
                 {discovery.homeState ? `Personalized for ${discovery.homeState}` : 'Recommended for you'}
               </p>
               </div>
-              <button type="button" className="discovery-collapse" onClick={() => setDiscoveryCollapsed((current) => !current)}>
-                {discoveryCollapsed ? 'Expand' : 'Collapse'}
+              <button type="button" className="discovery-collapse" onClick={() => setDiscoveryCollapsed((current) => !current)} aria-label={discoveryCollapsed ? 'Expand discovery' : 'Collapse discovery'}>
+                {discoveryCollapsed ? '▸' : '◂'}
               </button>
             </div>
           </div>
@@ -1030,7 +1028,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
               <div className="eyebrow">Latest Signal</div>
               <strong>{discovery.latestSignal.title}</strong>
               <span className="muted">
-                {discovery.latestSignal.casino_name ?? 'Community'} · {new Date(discovery.latestSignal.created_at).toLocaleString()}
+                {discovery.latestSignal.casino_name ?? 'Community'} · {formatAgo(discovery.latestSignal.created_at)}
               </span>
               <a href="/intel" className="explore-link">View all signals {'->'}</a>
             </div>
@@ -1072,7 +1070,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .dashboard-main-sidebar { grid-template-columns: minmax(0, 1fr) 380px; }
         .dashboard-main-swapped .dashboard-column-primary { order: 2; }
         .dashboard-main-swapped .dashboard-column-secondary { order: 1; }
-        .dashboard-column { min-width: 0; display: grid; align-self: stretch; }
+        .dashboard-column { min-width: 0; display: grid; align-content: start; }
         .momentum-card, .dashboard-section, .discovery-sidebar { padding: 1.2rem; }
         .momentum-card { padding-block: 0.85rem; }
         .momentum-card-collapsed { min-height: 48px; }
@@ -1123,7 +1121,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           border-color: rgba(59, 130, 246, 0.35);
           background: rgba(59, 130, 246, 0.12);
         }
-        .dashboard-section { display: grid; gap: 1rem; overflow-x: hidden; min-width: 0; }
+        .dashboard-section { display: grid; gap: 1rem; overflow-x: hidden; min-width: 0; align-self: start; }
         .search-shell { position: relative; min-width: 0; }
         .search-input {
           width: 100%;
@@ -1230,7 +1228,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .discovery-sidebar-full { position: static; max-height: none; overflow: visible; }
         .discovery-header { display: grid; gap: 0.35rem; }
         .discovery-header-row { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
-        .discovery-collapse { border:none; background:transparent; color:var(--text-muted); font:inherit; font-weight:700; cursor:pointer; padding:0; }
+        .discovery-collapse { border:none; background:transparent; color:var(--text-muted); font:inherit; font-weight:800; cursor:pointer; padding:0; font-size:1rem; line-height:1; }
         .discovery-spotlight { display: grid; gap: 1rem; padding: 1rem; border-radius: 1.35rem; border: 1px solid rgba(59, 130, 246, 0.24); background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(17, 24, 39, 0.58)); }
         .spotlight-copy { display: grid; gap: 0.9rem; }
         .spotlight-topline { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }

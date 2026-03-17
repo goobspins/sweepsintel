@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 
 import { isHttpError, requireAuth } from '../../../../lib/auth';
+import { emailToDisplayName } from '../../../../lib/format';
 import { getSignalDetail } from '../../../../lib/intel';
 
 export const prerender = false;
@@ -46,9 +47,9 @@ export const GET: APIRoute = async ({ request, params }) => {
             }
           : null,
         attribution: signal.is_anonymous
-          ? { display_name: null, contributor_tier: signal.contributor_tier }
+          ? { display_name: null, contributor_tier: null }
           : {
-              display_name: signal.submitted_by === null ? 'SweepsIntel Team' : signal.submitted_by,
+              display_name: signal.submitted_by === null ? 'SweepsIntel Team' : emailToDisplayName(signal.submitted_by),
               contributor_tier: signal.submitted_by === null ? 'operator' : signal.contributor_tier,
             },
         related_signals: signal.related_signals,

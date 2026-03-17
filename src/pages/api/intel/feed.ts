@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 
 import { isHttpError, requireAuth } from '../../../lib/auth';
+import { emailToDisplayName } from '../../../lib/format';
 import { getIntelFeed } from '../../../lib/intel';
 
 export const prerender = false;
@@ -51,9 +52,9 @@ export const GET: APIRoute = async ({ request, url }) => {
             }
           : null,
         attribution: item.is_anonymous
-          ? { display_name: null, contributor_tier: item.contributor_tier }
+          ? { display_name: null, contributor_tier: null }
           : {
-              display_name: item.submitted_by === null ? 'SweepsIntel Team' : item.submitted_by,
+              display_name: item.submitted_by === null ? 'SweepsIntel Team' : emailToDisplayName(item.submitted_by),
               contributor_tier: item.submitted_by === null ? 'operator' : item.contributor_tier,
             },
       })),

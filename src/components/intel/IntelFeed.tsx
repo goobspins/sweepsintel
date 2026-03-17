@@ -15,6 +15,7 @@ export default function IntelFeed({ initialData }: IntelFeedProps) {
   const [items, setItems] = useState(initialData.items);
   const [typeFilter, setTypeFilter] = useState('all');
   const [timeFilter, setTimeFilter] = useState('7d');
+  const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [selectedCasinos, setSelectedCasinos] = useState<number[]>(
     initialData.trackedCasinos.map((casino) => casino.casino_id),
   );
@@ -117,15 +118,37 @@ export default function IntelFeed({ initialData }: IntelFeedProps) {
         </div>
       </section>
 
-      <SignalSubmitForm
-        casinos={initialData.trackedCasinos}
-        onCreated={(signal) => setItems((current) => [signal, ...current])}
-      />
+      <div className="submit-row">
+        <button
+          type="button"
+          className="submit-toggle"
+          onClick={() => setShowSubmitForm((value) => !value)}
+        >
+          {showSubmitForm ? 'Cancel' : '+ Submit Signal'}
+        </button>
+      </div>
+
+      {showSubmitForm ? (
+        <SignalSubmitForm
+          casinos={initialData.trackedCasinos}
+          onCreated={(signal) => {
+            setItems((current) => [signal, ...current]);
+            setShowSubmitForm(false);
+          }}
+        />
+      ) : null}
 
       <section className="signal-list">
-        {filteredItems.map((item) => (
-          <SignalCard key={item.id} item={item} onVote={handleVote} />
-        ))}
+        {filteredItems.length === 0 ? (
+          <div className="empty-state surface-card">
+            <p className="empty-title">No signals yet</p>
+            <p className="muted">Signals for your tracked casinos will appear here. Be the first to submit one!</p>
+          </div>
+        ) : (
+          filteredItems.map((item) => (
+            <SignalCard key={item.id} item={item} onVote={handleVote} />
+          ))
+        )}
       </section>
 
       <style>{`
@@ -136,7 +159,20 @@ export default function IntelFeed({ initialData }: IntelFeedProps) {
         .checkbox-pill { display:inline-flex; gap:.4rem; align-items:center; padding:.52rem .72rem; border-radius:999px; border:1px solid var(--color-border); background:rgba(17, 24, 39, 0.42); color:var(--text-secondary); }
         .checkbox-pill input { width:auto; }
         .toolbar-row select { border:1px solid var(--color-border); border-radius:999px; padding:.7rem .9rem; background:var(--bg-primary); color:var(--text-primary); }
+        .submit-row { display:flex; justify-content:flex-end; }
+        .submit-toggle {
+          border:none;
+          border-radius:999px;
+          background:var(--accent-green);
+          color:#0b1220;
+          padding:.8rem 1rem;
+          font:inherit;
+          font-weight:800;
+          cursor:pointer;
+        }
         .signal-list { display:grid; gap:.85rem; }
+        .empty-state { padding:1.2rem; display:grid; gap:.35rem; }
+        .empty-title { margin:0; font-weight:800; }
       `}</style>
     </div>
   );
