@@ -1,6 +1,4 @@
 ---
-import { getCollection } from 'astro:content';
-
 import AffiliateCTA from '../../components/casino/AffiliateCTA';
 import BanReportFeed from '../../components/casino/BanReportFeed';
 import CasinoDetailPanel from '../../components/casino/CasinoDetailPanel';
@@ -11,8 +9,15 @@ import EmailCaptureForm from '../../components/forms/EmailCaptureForm';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { hasJoinedCasino } from '../../lib/affiliate';
 import { getSessionUser } from '../../lib/auth';
-import { getCached } from '../../lib/cache';
-import { query } from '../../lib/db';
+import {
+  getCasinoBySlug,
+  getCasinoEditorialData,
+  getCasinoHealthSummary,
+  getCasinoReportsSummary,
+  getUserTimezoneForProfile,
+} from '../../lib/casino-profile';
+import { formatAgo } from '../../lib/format';
+import { SIGNAL_TYPE_LABELS } from '../../lib/intel-constants';
 import { getRedemptionStats } from '../../lib/redemption-stats';
 import { computeNextReset } from '../../lib/reset';
 
@@ -21,197 +26,28 @@ export const prerender = false;
 const slug = Astro.params.slug ?? '';
 const user = await getSessionUser(Astro.request);
 
-const casinoRows = await query<{
-  id: number;
-  slug: string;
-  name: string;
-  tier: string;
-  parent_company: string | null;
-  promoban_risk: string;
-  hardban_risk: string;
-  family_ban_propagation: boolean;
-  ban_confiscates_funds: boolean;
-  sc_to_usd_ratio: number | string | null;
-  redemption_speed_desc: string | null;
-  redemption_fee_desc: string | null;
-  min_redemption_usd: number | string | null;
-  reset_mode: string | null;
-  reset_time_local: string | null;
-  reset_timezone: string | null;
-  has_live_games: boolean;
-  has_affiliate_link: boolean;
-  affiliate_link_url: string | null;
-  is_excluded: boolean;
-}>(
-  `SELECT
-    id,
-    slug,
-    name,
-    tier,
-    parent_company,
-    promoban_risk,
-    hardban_risk,
-    family_ban_propagation,
-    ban_confiscates_funds,
-    sc_to_usd_ratio,
-    redemption_speed_desc,
-    redemption_fee_desc,
-    min_redemption_usd,
-    reset_mode,
-    reset_time_local,
-    reset_timezone,
-    has_live_games,
-    has_affiliate_link,
-    affiliate_link_url,
-    is_excluded
-  FROM casinos
-  WHERE slug = $1
-  LIMIT 1`,
-  [slug],
-);
-
-const currentCasino = casinoRows[0];
+const currentCasino = await getCasinoBySlug(slug);
 
 if (!currentCasino) {
   return new Response('Not found', { status: 404 });
 }
 
-const editorialEntries = await getCollection(
-  'casinos',
-  ({ data }) => data.slug === slug,
-);
-const editorialEntry = editorialEntries[0];
+const editorialEntry = await getCasinoEditorialData(slug);
 const renderedEntry = editorialEntry ? await editorialEntry.render() : null;
 const Content = renderedEntry?.Content ?? null;
 
-const profileData = await getCached(
-  `casino-profile:${slug}`,
-  5 * 60 * 1000,
-  async () => {
-    const [providers, games, banReports, uptick, intelItems, states] =
-      await Promise.all([
-        query<{ provider_id: number; name: string; slug: string }>(
-          `SELECT clgp.provider_id, gp.name, gp.slug
-          FROM casino_live_game_providers clgp
-          JOIN game_providers gp ON gp.id = clgp.provider_id
-          WHERE clgp.casino_id = $1`,
-          [currentCasino.id],
-        ),
-        query<{
-          id: number;
-          game_name: string;
-          provider_name: string | null;
-          is_cross_wash_relevant: boolean;
-          confidence: string;
-        }>(
-          `SELECT
-            cga.id,
-            cga.game_name,
-            gp.name AS provider_name,
-            cga.is_cross_wash_relevant,
-            cga.confidence
-          FROM casino_game_availability cga
-          LEFT JOIN game_providers gp ON gp.id = cga.provider_id
-          WHERE cga.casino_id = $1
-            AND cga.status != 'removed'
-          ORDER BY
-            CASE cga.confidence
-              WHEN 'high' THEN 1
-              WHEN 'medium' THEN 2
-              WHEN 'low' THEN 3
-              ELSE 4
-            END,
-            cga.game_name`,
-          [currentCasino.id],
-        ),
-        query<{
-          id: number;
-          report_type: string;
-          description: string;
-          submitted_at: string;
-        }>(
-          `SELECT id, report_type, description, submitted_at
-          FROM ban_reports
-          WHERE casino_id = $1
-            AND is_published = true
-          ORDER BY submitted_at DESC
-          LIMIT 20`,
-          [currentCasino.id],
-        ),
-        query<{ id: number }>(
-          `SELECT id
-          FROM ban_uptick_alerts
-          WHERE casino_id = $1
-            AND is_active = true
-          LIMIT 1`,
-          [currentCasino.id],
-        ),
-        query<{
-          id: number;
-          item_type: string;
-          title: string;
-          content: string;
-          confirm_count: number;
-          dispute_count: number;
-          created_at: string;
-        }>(
-          `SELECT
-            id,
-            item_type,
-            title,
-            content,
-            confirm_count,
-            dispute_count,
-            created_at
-          FROM discord_intel_items
-          WHERE casino_id = $1
-            AND is_published = true
-            AND (expires_at IS NULL OR expires_at > NOW())
-          ORDER BY created_at DESC
-          LIMIT 10`,
-          [currentCasino.id],
-        ),
-        query<{
-          state_code: string;
-          state_name: string;
-          status: string;
-          compliance_note: string | null;
-        }>(
-          `SELECT
-            csa.state_code,
-            sls.state_name,
-            csa.status,
-            csa.compliance_note
-          FROM casino_state_availability csa
-          JOIN state_legal_status sls ON sls.state_code = csa.state_code
-          WHERE csa.casino_id = $1`,
-          [currentCasino.id],
-        ),
-      ]);
-
-    return {
-      providers,
-      games,
-      banReports,
-      hasBanUptick: uptick.length > 0,
-      intelItems,
-      states,
-    };
-  },
-);
+const health = await getCasinoHealthSummary(currentCasino.id);
+const profileData = await getCasinoReportsSummary(slug, currentCasino.id);
 
 const redemptionStats = await getRedemptionStats(currentCasino.id);
 const joined = await hasJoinedCasino(user, currentCasino.id);
-const userTimezoneRows = user
-  ? await query<{ timezone: string }>(
-      'SELECT timezone FROM user_settings WHERE user_id = $1 LIMIT 1',
-      [user.userId],
-    )
-  : [];
+const userTimezone = user
+  ? await getUserTimezoneForProfile(user.userId)
+  : null;
 const resetSummary = user
   ? computeNextReset(
       currentCasino,
-      userTimezoneRows[0]?.timezone ?? 'America/New_York',
+      userTimezone ?? 'America/New_York',
     )
   : null;
 
@@ -230,6 +66,7 @@ const directUrl =
   joined || !currentCasino.has_affiliate_link
     ? `/casinos/${currentCasino.slug}`
     : currentCasino.affiliate_link_url ?? `/casinos/${currentCasino.slug}`;
+const recentSignals = profileData.intelItems.slice(0, 5);
 ---
 
 <BaseLayout
@@ -240,7 +77,7 @@ const directUrl =
 >
   <div class="page-shell page-stack">
     <section class="surface-card" style="padding: 1.5rem;">
-      <div style="display:grid;gap:1rem;">
+        <div style="display:grid;gap:1rem;">
         <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
           <div style="display:grid;gap:.45rem;">
             <h1 class="section-title" style="margin:0;">{currentCasino.name}</h1>
@@ -265,6 +102,20 @@ const directUrl =
         {profileData.hasBanUptick ? (
           <div style="padding:1rem;border-radius:1rem;background:rgba(245,158,11,.14);color:var(--accent-yellow);font-weight:700;">
             Elevated ban activity reported in the last 7 days.
+          </div>
+        ) : null}
+
+        {health && health.global_status !== 'healthy' ? (
+          <div class={`health-banner health-${health.global_status}`}>
+            <span class="health-dot"></span>
+            <span>
+              {health.global_status === 'critical'
+                ? 'Critical Risk'
+                : health.global_status === 'at_risk'
+                  ? 'At Risk'
+                  : 'Watch'}
+            </span>
+            {health.status_reason ? <span class="muted"> - {health.status_reason}</span> : null}
           </div>
         ) : null}
 
@@ -305,28 +156,32 @@ const directUrl =
       <p class="muted" style="margin:0;">Coming Soon</p>
     </section>
 
-    {profileData.intelItems.length > 0 ? (
+    <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
+      <h2 class="section-title" style="font-size:1.6rem;">About {currentCasino.name}</h2>
+      {Content ? (
+        <Content />
+      ) : (
+        <p class="muted" style="margin:0;">Editorial profile copy is coming soon.</p>
+      )}
+    </section>
+
+    {recentSignals.length > 0 ? (
       <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
-        <h2 class="section-title" style="font-size:1.6rem;">Community Intel</h2>
-        {profileData.intelItems.map((item) => (
-          <article style="padding:1rem;border:1px solid var(--color-border);border-radius:1.25rem;background:var(--color-surface);">
-            <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-              <strong>{item.title}</strong>
-              <span class="muted">{new Date(item.created_at).toLocaleDateString()}</span>
+        <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;">
+          <h2 class="section-title" style="font-size:1.6rem;margin:0;">Recent Intel</h2>
+          <a href="/intel" class="view-all-link">View all intel -&gt;</a>
+        </div>
+        <div class="signal-preview-list">
+          {recentSignals.map((signal) => (
+            <div class="signal-preview">
+              <span class={`signal-type-badge type-${signal.item_type}`}>
+                {SIGNAL_TYPE_LABELS[signal.item_type] ?? signal.item_type.replace(/_/g, ' ')}
+              </span>
+              <strong>{signal.title}</strong>
+              <span class="muted">{formatAgo(signal.created_at)}</span>
             </div>
-            <p class="muted" style="margin:.5rem 0 0;">{item.content}</p>
-            <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:.75rem;color:var(--color-muted);">
-              <span>Confirmed: {item.confirm_count}</span>
-              <span>Disputed: {item.dispute_count}</span>
-              {user ? (
-                <>
-                  <button type="button" disabled style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:999px;padding:.55rem .8rem;">Confirm</button>
-                  <button type="button" disabled style="border:1px solid var(--color-border);background:var(--color-surface);border-radius:999px;padding:.55rem .8rem;">Dispute</button>
-                </>
-              ) : null}
-            </div>
-          </article>
-        ))}
+          ))}
+        </div>
       </section>
     ) : null}
 
@@ -374,15 +229,6 @@ const directUrl =
         description="Get casino-specific public intel without creating a full account yet."
       />
     ) : null}
-
-    <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
-      <h2 class="section-title" style="font-size:1.6rem;">About {currentCasino.name}</h2>
-      {Content ? (
-        <Content />
-      ) : (
-        <p class="muted" style="margin:0;">Editorial profile copy is coming soon.</p>
-      )}
-    </section>
   </div>
 
   <AffiliateCTA
@@ -397,4 +243,62 @@ const directUrl =
     visitLabel={`Visit ${currentCasino.name} ->`}
     variant="bar"
   />
+  <style>
+    .health-banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+      padding: 0.9rem 1rem;
+      border-radius: 1rem;
+      font-weight: 700;
+    }
+    .health-watch {
+      background: rgba(245, 158, 11, 0.14);
+      color: var(--accent-yellow);
+    }
+    .health-at_risk,
+    .health-critical {
+      background: rgba(239, 68, 68, 0.14);
+      color: var(--accent-red);
+    }
+    .health-dot {
+      width: 0.7rem;
+      height: 0.7rem;
+      border-radius: 999px;
+      background: currentColor;
+      box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 18%, transparent);
+    }
+    .signal-preview-list {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .signal-preview {
+      display: grid;
+      gap: 0.45rem;
+      padding: 1rem;
+      border: 1px solid var(--color-border);
+      border-radius: 1rem;
+      background: rgba(17, 24, 39, 0.42);
+    }
+    .signal-type-badge {
+      display: inline-flex;
+      width: fit-content;
+      padding: 0.3rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+    .type-free_sc { background: rgba(16, 185, 129, 0.14); color: var(--accent-green); }
+    .type-promo_code { background: rgba(59, 130, 246, 0.14); color: var(--accent-blue); }
+    .type-flash_sale,
+    .type-playthrough_deal { background: rgba(245, 158, 11, 0.14); color: var(--accent-yellow); }
+    .type-platform_warning { background: rgba(239, 68, 68, 0.14); color: var(--accent-red); }
+    .type-general_tip { background: rgba(156, 163, 175, 0.14); color: var(--text-secondary); }
+    .view-all-link {
+      font-weight: 700;
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+  </style>
 </BaseLayout>
