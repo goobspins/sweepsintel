@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "check:full": "astro check && astro build",
     "preview": "astro preview",
     "deploy": "vercel"
   },
