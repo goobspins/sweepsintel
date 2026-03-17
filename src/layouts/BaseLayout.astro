@@ -145,6 +145,7 @@ const {
       <slot />
     </main>
     <Footer />
+    <!-- @ts-expect-error Astro component import from @vercel/analytics resolves at build time -->
     <Analytics />
     <script is:inline>
       if ('serviceWorker' in navigator) {

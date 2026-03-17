@@ -37,7 +37,8 @@ const settings = Object.fromEntries(settingsRows.map((row) => [row.key, row.valu
   <script>
     document.getElementById('admin-settings-form')?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const form = event.currentTarget;
+      const form = event.currentTarget as HTMLFormElement | null;
+      if (!form) return;
       const data = new FormData(form);
       await fetch('/api/admin/settings', {
         method: 'POST',

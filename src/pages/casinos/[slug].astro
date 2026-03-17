@@ -309,10 +309,7 @@ const directUrl =
       <section class="surface-card" style="padding:1.5rem;display:grid;gap:1rem;">
         <h2 class="section-title" style="font-size:1.6rem;">Community Intel</h2>
         {profileData.intelItems.map((item) => (
-          <article
-            key={item.id}
-            style="padding:1rem;border:1px solid var(--color-border);border-radius:1.25rem;background:var(--color-surface);"
-          >
+          <article style="padding:1rem;border:1px solid var(--color-border);border-radius:1.25rem;background:var(--color-surface);">
             <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
               <strong>{item.title}</strong>
               <span class="muted">{new Date(item.created_at).toLocaleDateString()}</span>

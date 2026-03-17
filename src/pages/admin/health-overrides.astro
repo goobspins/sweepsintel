@@ -1,5 +1,5 @@
 ---
-import HealthOverrides from '../../components/admin/HealthOverrides';
+import HealthOverridesPanel from '../../components/admin/HealthOverrides';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getSessionUser } from '../../lib/auth';
 import { query } from '../../lib/db';
@@ -35,6 +35,6 @@ const [rows, casinos] = await Promise.all([
 
 <BaseLayout title="Health Overrides | Admin" user={user} currentPath={Astro.url.pathname}>
   <div class="page-shell page-stack">
-    <HealthOverrides client:load initialRows={rows} casinos={casinos} />
+    <HealthOverridesPanel client:load initialRows={rows} casinos={casinos} />
   </div>
 </BaseLayout>

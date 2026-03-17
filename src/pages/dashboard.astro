@@ -1,24 +1,26 @@
 ---
 import SessionGate from '../components/auth/SessionGate';
 import DashboardTracker from '../components/dashboard/DashboardTracker';
+import type { DashboardDiscovery, DashboardSummary } from '../components/dashboard/types';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getSessionUser } from '../lib/auth';
 import { getCached } from '../lib/cache';
 import { query } from '../lib/db';
 import { getTrackerStatus } from '../lib/tracker';
+import type { TrackerStatusData } from '../lib/tracker';
 
 export const prerender = false;
 
 const user = await getSessionUser(Astro.request);
 
-let initialData = {
+let initialData: TrackerStatusData = {
   casinos: [],
   streakClaims: [],
   alerts: [],
   joinedCasinoIds: [],
 };
 
-let initialSummary = {
+let initialSummary: DashboardSummary = {
   dailyGoalUsd: 5,
   weeklyGoalUsd: null,
   momentumPeriod: 'daily',
@@ -33,7 +35,7 @@ let initialSummary = {
   pendingRedemptionsUsd: 0,
 };
 
-let initialDiscovery = {
+let initialDiscovery: DashboardDiscovery = {
   homeState: null,
   casinos: [],
   estimatedDailyUsd: 0,

@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import CasinoDirectory from '../../components/casino/CasinoDirectory';
 import { getCached } from '../../lib/cache';
 import { getSessionUser } from '../../lib/auth';
+import type { CasinoTier } from '../../lib/casino-tier';
 import { query } from '../../lib/db';
 
 export const prerender = false;
@@ -54,6 +55,7 @@ const joinedRows =
 const joinedSet = new Set(joinedRows.map((row) => row.casino_id));
 const directoryCasinos = casinos.map((casino) => ({
   ...casino,
+  tier: casino.tier as CasinoTier,
   joined: joinedSet.has(casino.id),
 }));
 ---
