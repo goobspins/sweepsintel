@@ -1,0 +1,40 @@
+---
+import HealthOverrides from '../../components/admin/HealthOverrides';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+
+const [rows, casinos] = await Promise.all([
+  query<{
+    casino_id: number;
+    casino_name: string;
+    admin_override_status: string | null;
+    admin_override_reason: string | null;
+    admin_override_at: string | null;
+  }>(
+    `SELECT c.id AS casino_id, c.name AS casino_name, ch.admin_override_status, ch.admin_override_reason, ch.admin_override_at
+    FROM casinos c
+    LEFT JOIN casino_health ch ON ch.casino_id = c.id
+    WHERE ch.admin_override_status IS NOT NULL
+    ORDER BY c.name ASC`,
+  ),
+  query<{ id: number; name: string }>(
+    `SELECT id, name
+    FROM casinos
+    WHERE source = 'admin'
+    ORDER BY name ASC`,
+  ),
+]);
+---
+
+<BaseLayout title="Health Overrides | Admin" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <HealthOverrides client:load initialRows={rows} casinos={casinos} />
+  </div>
+</BaseLayout>

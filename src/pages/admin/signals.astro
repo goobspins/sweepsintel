@@ -1,0 +1,94 @@
+---
+import SignalCreator from '../../components/admin/SignalCreator';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getSessionUser } from '../../lib/auth';
+import { query } from '../../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+if (!user) return Astro.redirect('/');
+if (!user.isAdmin) return new Response('Forbidden', { status: 403 });
+
+const [casinos, summaryRows, flaggedUsers, topContributors, items] = await Promise.all([
+  query<{ id: number; name: string }>(
+    `SELECT id, name
+    FROM casinos
+    WHERE source = 'admin'
+    ORDER BY name ASC`,
+  ),
+  query<any>(
+    `SELECT
+      COUNT(*)::int AS total_signals,
+      COUNT(*) FILTER (WHERE worked_count > didnt_work_count)::int AS worked_signals,
+      COUNT(*) FILTER (WHERE signal_status IN ('likely_outdated', 'collapsed'))::int AS disputed_signals,
+      COUNT(*) FILTER (WHERE confidence = 'unverified')::int AS unverified_signals
+    FROM discord_intel_items
+    WHERE created_at >= NOW() - INTERVAL '7 days'`,
+  ),
+  query<any>(
+    `SELECT user_id, trust_score, contributor_tier
+    FROM user_settings
+    WHERE COALESCE(trust_score, 0) < 0.20
+    ORDER BY trust_score ASC
+    LIMIT 20`,
+  ),
+  query<any>(
+    `SELECT
+      di.submitted_by AS user_id,
+      us.contributor_tier,
+      COUNT(*)::int AS signal_count,
+      COALESCE(SUM(di.worked_count), 0) AS worked_votes,
+      COALESCE(SUM(di.didnt_work_count), 0) AS didnt_work_votes
+    FROM discord_intel_items di
+    LEFT JOIN user_settings us ON us.user_id = di.submitted_by
+    WHERE di.source = 'user'
+      AND di.created_at >= NOW() - INTERVAL '7 days'
+      AND di.submitted_by IS NOT NULL
+    GROUP BY di.submitted_by, us.contributor_tier
+    ORDER BY signal_count DESC, worked_votes DESC
+    LIMIT 10`,
+  ),
+  query<any>(
+    `SELECT
+      di.id,
+      c.name AS casino_name,
+      di.source,
+      di.title,
+      di.item_type,
+      COALESCE(di.signal_status, 'active') AS signal_status,
+      COALESCE(di.worked_count, 0) AS worked_count,
+      COALESCE(di.didnt_work_count, 0) AS didnt_work_count,
+      di.created_at
+    FROM discord_intel_items di
+    LEFT JOIN casinos c ON c.id = di.casino_id
+    WHERE di.is_published = true
+    ORDER BY di.created_at DESC
+    LIMIT 100`,
+  ),
+]);
+---
+
+<BaseLayout title="Signals | Admin" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <SignalCreator
+      client:load
+      casinos={casinos}
+      digest={{
+        summary: summaryRows[0] ?? {},
+        flagged_users: flaggedUsers.map((row) => ({ ...row, trust_score: Number(row.trust_score ?? 0) })),
+        top_contributors: topContributors.map((row) => ({
+          ...row,
+          signal_count: Number(row.signal_count ?? 0),
+          worked_votes: Number(row.worked_votes ?? 0),
+          didnt_work_votes: Number(row.didnt_work_votes ?? 0),
+        })),
+      }}
+      items={items.map((row) => ({
+        ...row,
+        worked_count: Number(row.worked_count ?? 0),
+        didnt_work_count: Number(row.didnt_work_count ?? 0),
+      }))}
+    />
+  </div>
+</BaseLayout>

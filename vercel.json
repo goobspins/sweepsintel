@@ -1,6 +1,8 @@
 {
   "crons": [
     { "path": "/api/cron/auto-publish", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/push-resets", "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/push-resets", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/compute-health", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/compute-trust", "schedule": "0 */2 * * *" }
   ]
 }

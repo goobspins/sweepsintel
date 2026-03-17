@@ -1,11 +1,15 @@
 import ClaimModal from './ClaimModal';
 import ResetCountdown from './ResetCountdown';
+import HealthDot from '../health/HealthDot';
 
 export interface CasinoRowViewModel {
   casinoId: number;
   name: string;
   slug: string;
   tier: string;
+  healthStatus?: string | null;
+  promobanRisk?: string | null;
+  redemptionSpeedDesc?: string | null;
   source: string;
   dailyBonusDesc: string | null;
   sortOrder: number | null;
@@ -99,24 +103,21 @@ export default function CasinoRow({
     ledgerMode === 'advanced' && isClaimed && casino.todaySc !== null
       ? `Claimed ${casino.todaySc} SC`
       : 'Claimed';
+  const infoTooltip = [
+    `Tier: ${casino.tier || 'Unknown'}`,
+    `PB risk: ${casino.promobanRisk || 'Unknown'}`,
+    `Redeem speed: ${casino.redemptionSpeedDesc || 'Unknown'}`,
+  ].join('\n');
 
   return (
     <article className={rowClass}>
       <div className="row-main">
         <div className="row-copy">
-          {casino.source === 'admin' ? (
-            <a
-              href={casino.destinationUrl}
-              className="casino-link"
-              onClick={(event) => void handleCasinoClick(event)}
-              target={casino.destinationKind !== 'profile' ? '_blank' : undefined}
-              rel={casino.destinationKind !== 'profile' ? 'noopener' : undefined}
-            >
-              {casino.name}
-            </a>
-          ) : (
-            <span className="casino-link">{casino.name}</span>
-          )}
+          <div className="name-row">
+            <HealthDot status={casino.healthStatus} size={10} pulse={casino.healthStatus === 'critical'} />
+            <a href={`/casinos/${casino.slug}`} className="casino-link">{casino.name}</a>
+            <span className="info-chip" title={infoTooltip} aria-label={infoTooltip}>i</span>
+          </div>
           <div className="row-meta">
             {isNoDaily ? (
               <span className="no-daily-label">No daily reward</span>
@@ -197,12 +198,33 @@ export default function CasinoRow({
           gap: 0.5rem;
         }
 
+        .name-row {
+          display: flex;
+          align-items: center;
+          gap: 0.55rem;
+          flex-wrap: wrap;
+        }
+
         .casino-link {
           color: var(--color-ink);
           text-decoration: none;
           font-size: 1.15rem;
           font-weight: 800;
           letter-spacing: -0.03em;
+        }
+
+        .info-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 1.15rem;
+          height: 1.15rem;
+          border-radius: 999px;
+          border: 1px solid var(--color-border);
+          color: var(--color-muted);
+          font-size: 0.72rem;
+          font-weight: 800;
+          cursor: help;
         }
 
         .row-meta {

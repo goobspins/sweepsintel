@@ -23,8 +23,9 @@ async function loadSettings(userId: string) {
       weekly_goal_usd: number | string | null;
       kpi_cards: unknown;
       momentum_style: unknown;
+      layout_swap: boolean | null;
     }>(
-      `SELECT timezone, home_state, ledger_mode, daily_goal_usd, weekly_goal_usd, kpi_cards, momentum_style
+      `SELECT timezone, home_state, ledger_mode, daily_goal_usd, weekly_goal_usd, kpi_cards, momentum_style, layout_swap
       FROM user_settings
       WHERE user_id = $1
       LIMIT 1`,
@@ -53,6 +54,7 @@ async function loadSettings(userId: string) {
     weekly_goal_usd: null,
     kpi_cards: null,
     momentum_style: null,
+    layout_swap: false,
   };
 
   return {
@@ -65,6 +67,7 @@ async function loadSettings(userId: string) {
       settings.weekly_goal_usd === null ? null : Number(settings.weekly_goal_usd) || null,
     kpi_cards: normalizeKpiCards(settings.kpi_cards),
     momentum_style: normalizeMomentumStyle(settings.momentum_style),
+    layout_swap: Boolean(settings.layout_swap),
     state_subscriptions: subscriptionRows.map((row) => row.state_code),
     states,
   };
@@ -174,6 +177,8 @@ export const POST: APIRoute = async ({ request }) => {
       ['rainbow', 'green', 'blue', 'amber', 'purple'].includes(body.momentum_style)
         ? body.momentum_style
         : undefined;
+    const layoutSwap =
+      !hasOwn('layout_swap') ? undefined : Boolean(body?.layout_swap);
 
     await transaction(async (tx) => {
       await tx.query(
@@ -185,6 +190,7 @@ export const POST: APIRoute = async ({ request }) => {
             weekly_goal_usd = CASE WHEN $7::boolean THEN $8 ELSE weekly_goal_usd END,
             kpi_cards = COALESCE($9::jsonb, kpi_cards),
             momentum_style = COALESCE($10::jsonb, momentum_style),
+            layout_swap = CASE WHEN $11::boolean THEN $12 ELSE layout_swap END,
             updated_at = NOW()
         WHERE user_id = $1`,
         [
@@ -206,6 +212,8 @@ export const POST: APIRoute = async ({ request }) => {
               : null,
           kpiCards && kpiCards.length >= 3 && kpiCards.length <= 4 ? JSON.stringify(kpiCards) : null,
           momentumStyle ? JSON.stringify(momentumStyle) : null,
+          layoutSwap !== undefined,
+          layoutSwap ?? false,
         ],
       );
 

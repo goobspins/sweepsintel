@@ -21,8 +21,9 @@ const [settingsRows, subscriptionRows, states] = await Promise.all([
     weekly_goal_usd: number | string | null;
     kpi_cards: unknown;
     momentum_style: unknown;
+    layout_swap: boolean | null;
   }>(
-    `SELECT timezone, home_state, ledger_mode, daily_goal_usd, weekly_goal_usd, kpi_cards, momentum_style
+    `SELECT timezone, home_state, ledger_mode, daily_goal_usd, weekly_goal_usd, kpi_cards, momentum_style, layout_swap
     FROM user_settings
     WHERE user_id = $1
     LIMIT 1`,
@@ -70,6 +71,7 @@ const settings = settingsRows[0] ?? {
   weekly_goal_usd: null,
   kpi_cards: null,
   momentum_style: null,
+  layout_swap: false,
 };
 const vapidPublicKey = import.meta.env.VAPID_PUBLIC_KEY ?? '';
 
@@ -122,6 +124,7 @@ function normalizeMomentumStyle(value: unknown) {
         weekly_goal_usd: settings.weekly_goal_usd === null ? null : Number(settings.weekly_goal_usd) || null,
         kpi_cards: normalizeKpiCards(settings.kpi_cards),
         momentum_style: normalizeMomentumStyle(settings.momentum_style),
+        layout_swap: Boolean(settings.layout_swap),
         state_subscriptions: subscriptionRows.map((row) => row.state_code),
         states,
         vapid_public_key: vapidPublicKey,

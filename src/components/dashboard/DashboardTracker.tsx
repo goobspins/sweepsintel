@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DateTime } from 'luxon';
 
 import type { SessionUser } from '../../lib/auth';
+import HealthDot from '../health/HealthDot';
 import { computeFixedResetPeriodStart } from '../../lib/reset';
 import type { TrackerCasinoRow, TrackerStatusData } from '../../lib/tracker';
 
@@ -40,11 +41,21 @@ type DashboardDiscoveryCasino = {
   affiliate_link_url: string | null;
   intel_count: number;
   tracker_count: number;
+  estimated_daily_usd?: number;
 };
 
 type DashboardDiscovery = {
   homeState: string | null;
   casinos: DashboardDiscoveryCasino[];
+  estimatedDailyUsd?: number;
+  stateRequired?: boolean;
+  latestSignal?: {
+    id: number;
+    title: string;
+    item_type: string;
+    created_at: string;
+    casino_name: string | null;
+  } | null;
 };
 
 type DashboardSearchResult = {
@@ -78,6 +89,10 @@ type CasinoRowModel = {
   noDailyReward: boolean;
   lastClaimedAt: string | null;
   scToUsdRatio: number;
+  healthStatus: string | null;
+  promobanRisk: string | null;
+  redemptionSpeedDesc: string | null;
+  dailyBonusDesc: string | null;
   status: CasinoStatus;
 };
 
@@ -149,6 +164,8 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const [searchOpen, setSearchOpen] = useState(false);
   const [momentumPeriod, setMomentumPeriod] = useState<'daily' | 'weekly'>(() => initialSummary.momentumPeriod ?? 'daily');
   const [compactMode, setCompactMode] = useState(false);
+  const [layoutSwap, setLayoutSwap] = useState(Boolean(user.layoutSwap));
+  const [discoveryCollapsed, setDiscoveryCollapsed] = useState(false);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowTs(Date.now()), 60_000);
@@ -201,6 +218,17 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   useEffect(() => {
     window.localStorage.setItem('si-compact-mode', compactMode ? 'true' : 'false');
   }, [compactMode]);
+
+  useEffect(() => {
+    const saved = window.sessionStorage.getItem('si-discovery-collapsed');
+    if (saved === 'true') {
+      setDiscoveryCollapsed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.sessionStorage.setItem('si-discovery-collapsed', discoveryCollapsed ? 'true' : 'false');
+  }, [discoveryCollapsed]);
 
   useEffect(() => {
     if (!toast) return;
@@ -287,7 +315,8 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
   const compactDiscovery = discovery.casinos.slice(1);
   const trackedCasinoIds = useMemo(() => new Set(casinos.map((casino) => casino.casino_id)), [casinos]);
   const normalizedSearch = useMemo(() => normalizeCasinoName(searchQuery), [searchQuery]);
-  const useSidebarDiscovery = casinoRows.length >= 6;
+  const useSidebarDiscovery = casinoRows.length >= 6 && !discoveryCollapsed;
+  const fullDiscovery = discovery.casinos;
   const momentumFillStyle = useMemo(
     () => ({ width: `${progressPct}%`, background: MOMENTUM_GRADIENTS[summary.momentumStyle] ?? MOMENTUM_GRADIENTS.rainbow }),
     [progressPct, summary.momentumStyle],
@@ -339,6 +368,26 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
       setToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to save goal.' });
     } finally {
       setGoalSaving(false);
+    }
+  }
+
+  async function handleLayoutSwapToggle() {
+    const nextValue = !layoutSwap;
+    setLayoutSwap(nextValue);
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layout_swap: nextValue }),
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok) {
+        throw new Error(data.error ?? 'Unable to save dashboard layout.');
+      }
+    } catch (error) {
+      console.error(error);
+      setLayoutSwap((current) => !current);
+      setToast({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to save dashboard layout.' });
     }
   }
 
@@ -659,10 +708,12 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         ) : null}
       </section>
 
-      <div className={`dashboard-main ${useSidebarDiscovery ? 'dashboard-main-sidebar' : 'dashboard-main-stacked'}`}>
+      <div className={`dashboard-main ${useSidebarDiscovery ? 'dashboard-main-sidebar' : 'dashboard-main-stacked'} ${layoutSwap ? 'dashboard-main-swapped' : ''}`}>
+      <div className="dashboard-column dashboard-column-primary">
       <section className="surface-card dashboard-section">
         <div className="section-header">
           <div>
+            <div className="eyebrow">Casino Dashboard</div>
             <h2 className="section-title">Dashboard</h2>
             <div className="section-toolbar">
               <p className="muted section-copy">{casinoRows.length} tracked casinos. Available rows float to the top.</p>
@@ -672,6 +723,12 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
                 onClick={() => setCompactMode((current) => !current)}
               >
                 Compact
+              </button>
+              <button type="button" className="compact-toggle" onClick={() => void handleLayoutSwapToggle()}>
+                Swap sides
+              </button>
+              <button type="button" className="compact-toggle" onClick={() => setDiscoveryCollapsed((current) => !current)}>
+                {discoveryCollapsed ? 'Show discovery' : 'Collapse discovery'}
               </button>
             </div>
           </div>
@@ -771,16 +828,19 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
               const purchasePending = pendingKey === `purchase:${casino.casinoId}`;
               const statusDisplay = getCasinoStatusDisplay(casino, user.timezone, nowTs);
               const inputError = inputErrorByCasino[casino.casinoId];
+              const infoTooltip = buildCasinoInfoTooltip(casino);
 
               return (
                 <article key={casino.casinoId} id={`casino-${casino.casinoId}`} className={`casino-row ${statusDisplay.isDue ? 'casino-row-due' : ''} ${compactMode ? 'casino-row-compact' : ''}`}>
                   <div className="casino-main">
                     <div className="casino-copy">
                       <div className="casino-heading">
+                        <HealthDot status={casino.healthStatus} size={10} pulse={casino.healthStatus === 'critical'} />
                         <a href={`/casinos/${casino.slug}`} className="casino-link">{casino.name}</a>
                         {casino.tier ? (
                           <span className="tier-badge" style={getTierBadgeStyle(casino.tier)}>{casino.tier}</span>
                         ) : null}
+                        <span className="casino-info-chip" title={infoTooltip} aria-label={infoTooltip}>i</span>
                       </div>
                       <div className="casino-meta">
                         {casino.noDailyReward ? (
@@ -852,15 +912,22 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           </div>
         )}
       </section>
+      </div>
 
       {spotlightCasino ? (
+        <div className="dashboard-column dashboard-column-secondary">
         <aside className={`surface-card discovery-sidebar ${useSidebarDiscovery ? 'discovery-sidebar-docked' : 'discovery-sidebar-full'}`}>
           <div className="discovery-header">
-            <div>
+            <div className="discovery-header-row">
+              <div>
               <div className="eyebrow">Casinos you're missing</div>
               <p className="muted section-copy">
                 {discovery.homeState ? `Personalized for ${discovery.homeState}` : 'Recommended for you'}
               </p>
+              </div>
+              <button type="button" className="discovery-collapse" onClick={() => setDiscoveryCollapsed((current) => !current)}>
+                {discoveryCollapsed ? 'Expand' : 'Collapse'}
+              </button>
             </div>
           </div>
 
@@ -941,13 +1008,71 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           ) : null}
           <a href="/casinos" className="explore-link">Explore All Casinos {'->'}</a>
         </aside>
+        </div>
       ) : null}
       </div>
 
+      <section className="surface-card dashboard-section underfold-section">
+        <div className="underfold-grid">
+          <div className="earnings-prompt">
+            <div className="eyebrow">Earnings Prompt</div>
+            <h3 className="underfold-title">Growth prompt</h3>
+            <p className="muted underfold-copy">
+              {discovery.stateRequired
+                ? 'Set your state in Settings to see personalized recommendations.'
+                : discovery.estimatedDailyUsd && discovery.estimatedDailyUsd > 0
+                  ? `You're tracking ${casinoRows.length} casinos. Adding these ${fullDiscovery.length} could earn you an estimated $${discovery.estimatedDailyUsd.toFixed(2)} more per day in daily bonuses.`
+                  : `There are ${fullDiscovery.length} casinos available in your state you haven't signed up at yet.`}
+            </p>
+          </div>
+          {discovery.latestSignal ? (
+            <div className="latest-signal-card">
+              <div className="eyebrow">Latest Signal</div>
+              <strong>{discovery.latestSignal.title}</strong>
+              <span className="muted">
+                {discovery.latestSignal.casino_name ?? 'Community'} · {new Date(discovery.latestSignal.created_at).toLocaleString()}
+              </span>
+              <a href="/intel" className="explore-link">View all signals {'->'}</a>
+            </div>
+          ) : null}
+        </div>
+        {fullDiscovery.length > 0 ? (
+          <div className="full-discovery-grid">
+            {fullDiscovery.map((casino) => (
+              <article key={casino.id} className="discovery-card" style={getDiscoveryCardAccentStyle(casino.tier)}>
+                <div className="discovery-card-head">
+                  <div>
+                    <a href={`/casinos/${casino.slug}`} className="discovery-card-title">{casino.name}</a>
+                    <div className="discovery-card-meta">
+                      <span>{getDiscoveryLead(casino)}</span>
+                    </div>
+                  </div>
+                  {casino.tier ? (
+                    <span className="tier-badge" style={getTierBadgeStyle(casino.tier)}>{casino.tier}</span>
+                  ) : null}
+                </div>
+                {buildCompactPitch(casino) ? <p className="discovery-card-copy">{buildCompactPitch(casino)}</p> : null}
+                <div className="discovery-card-actions">
+                  <a href={`/casinos/${casino.slug}`} className="discovery-link">Profile</a>
+                  {hasDiscoveryAffiliateLink(casino) ? (
+                    <a href={casino.affiliate_link_url!} className="discovery-link discovery-link-primary" target="_blank" rel="noopener noreferrer">
+                      Sign Up
+                    </a>
+                  ) : null}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
       <style>{`
         .dashboard-shell { display: grid; gap: 1.25rem; min-width: 0; overflow-x: clip; }
-        .dashboard-main { display: grid; gap: 1.2rem; align-items: start; min-width: 0; overflow-x: clip; grid-template-columns: 1fr; }
+        .dashboard-main { display: grid; gap: 1.2rem; align-items: stretch; min-width: 0; overflow-x: clip; grid-template-columns: 1fr; }
         .dashboard-main-sidebar { grid-template-columns: minmax(0, 1fr) 380px; }
+        .dashboard-main-swapped .dashboard-column-primary { order: 2; }
+        .dashboard-main-swapped .dashboard-column-secondary { order: 1; }
+        .dashboard-column { min-width: 0; display: grid; align-self: stretch; }
         .momentum-card, .dashboard-section, .discovery-sidebar { padding: 1.2rem; }
         .momentum-card { padding-block: 0.85rem; }
         .momentum-card-collapsed { min-height: 48px; }
@@ -998,7 +1123,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           border-color: rgba(59, 130, 246, 0.35);
           background: rgba(59, 130, 246, 0.12);
         }
-        .dashboard-section { display: grid; gap: 1rem; max-height: calc(100vh - 165px); overflow-y: auto; overflow-x: hidden; min-width: 0; }
+        .dashboard-section { display: grid; gap: 1rem; overflow-x: hidden; min-width: 0; }
         .search-shell { position: relative; min-width: 0; }
         .search-input {
           width: 100%;
@@ -1053,6 +1178,20 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .casino-main { display: flex; gap: 1rem; justify-content: space-between; align-items: center; min-width: 0; }
         .casino-copy { display: grid; gap: 0.45rem; min-width: 0; }
         .casino-heading { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; }
+        .casino-info-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 1.2rem;
+          height: 1.2rem;
+          border-radius: 999px;
+          border: 1px solid var(--color-border);
+          color: var(--text-muted);
+          font-size: 0.72rem;
+          font-weight: 800;
+          cursor: help;
+          background: rgba(17, 24, 39, 0.55);
+        }
         .casino-link { color: var(--text-primary); text-decoration: none; font-size: 1.08rem; font-weight: 800; letter-spacing: -0.03em; }
         .tier-badge { display: inline-flex; min-width: 2rem; justify-content: center; border-radius: 999px; padding: 0.25rem 0.55rem; font-size: 0.78rem; font-weight: 800; border: 1px solid transparent; }
         .casino-meta { display: flex; gap: 0.85rem; flex-wrap: wrap; align-items: center; font-size: 0.92rem; }
@@ -1085,10 +1224,13 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
           gap: 1rem;
           background: rgba(17, 24, 39, 0.65);
           border-left: 1px solid var(--color-border);
+          align-content: start;
         }
-        .discovery-sidebar-docked { position: sticky; top: 80px; max-height: calc(100vh - 100px); overflow-y: auto; }
+        .discovery-sidebar-docked { position: static; max-height: none; overflow: visible; }
         .discovery-sidebar-full { position: static; max-height: none; overflow: visible; }
         .discovery-header { display: grid; gap: 0.35rem; }
+        .discovery-header-row { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
+        .discovery-collapse { border:none; background:transparent; color:var(--text-muted); font:inherit; font-weight:700; cursor:pointer; padding:0; }
         .discovery-spotlight { display: grid; gap: 1rem; padding: 1rem; border-radius: 1.35rem; border: 1px solid rgba(59, 130, 246, 0.24); background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(17, 24, 39, 0.58)); }
         .spotlight-copy { display: grid; gap: 0.9rem; }
         .spotlight-topline { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
@@ -1113,6 +1255,12 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .discovery-card-meta { display: flex; align-items: center; gap: 0.45rem; color: var(--text-muted); font-size: 0.86rem; margin-top: 0.3rem; }
         .discovery-card-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
         .explore-link { color: var(--accent-blue); text-decoration: none; font-weight: 700; }
+        .underfold-section { display:grid; gap:1rem; }
+        .underfold-grid { display:grid; gap:1rem; grid-template-columns:repeat(2, minmax(0, 1fr)); }
+        .earnings-prompt, .latest-signal-card { display:grid; gap:.45rem; padding:1rem; border:1px solid var(--color-border); border-radius:1rem; background:rgba(17,24,39,.42); }
+        .underfold-title { margin:0; font-size:1.1rem; }
+        .underfold-copy { margin:0; line-height:1.6; }
+        .full-discovery-grid { display:grid; gap:.9rem; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
         .toast { position: sticky; top: 1rem; z-index: 15; justify-self: center; padding: 0.8rem 1rem; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3); }
         .toast-success { background: rgba(16, 185, 129, 0.16); color: var(--accent-green); }
         .toast-error { background: rgba(239, 68, 68, 0.16); color: var(--accent-red); }
@@ -1126,7 +1274,7 @@ export default function DashboardTracker({ user, initialData, initialSummary, in
         .casino-row-compact .status-secondary,
         .casino-row-compact .status-secondary-amber { display: none; }
         @media (max-width: 1180px) { .purchase-grid, .spotlight-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 1024px) { .dashboard-main, .dashboard-main-sidebar { grid-template-columns: 1fr; } .dashboard-section, .discovery-sidebar { max-height: none; overflow: visible; position: static; } .discovery-grid, .discovery-sidebar-full .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 1024px) { .dashboard-main, .dashboard-main-sidebar, .underfold-grid { grid-template-columns: 1fr; } .dashboard-section, .discovery-sidebar { max-height: none; overflow: visible; position: static; } .discovery-grid, .discovery-sidebar-full .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 780px) { .momentum-strip { grid-template-columns: 1fr; } .casino-main { flex-direction: column; align-items: stretch; } .action-stack { width: 100%; justify-items: stretch; } .mode-toggle, .entry-row, .purchase-actions, .momentum-inline-kpis { justify-content: flex-start; } .momentum-body { align-items: stretch; } .momentum-summary { justify-items: start; } }
         @media (max-width: 640px) { .purchase-grid, .spotlight-facts, .discovery-grid { grid-template-columns: 1fr; } .entry-row input, .purchase-grid input, .save-button, .purchase-save, .ghost-button, .spotlight-primary, .spotlight-secondary, .discovery-link { width: 100%; } .spotlight-actions, .discovery-card-actions { grid-auto-flow: row; display: grid; } }
       `}</style>
@@ -1160,6 +1308,10 @@ function buildCasinoRowModel(casino: TrackerCasinoRow, claims: string[], nowTs: 
     noDailyReward: casino.no_daily_reward,
     lastClaimedAt,
     scToUsdRatio: toNumber(casino.sc_to_usd_ratio, 1),
+    healthStatus: casino.health_status ?? 'healthy',
+    promobanRisk: casino.promoban_risk,
+    redemptionSpeedDesc: casino.redemption_speed_desc,
+    dailyBonusDesc: casino.daily_bonus_desc,
     status,
   };
 }
@@ -1412,6 +1564,20 @@ function getDiscoveryLead(casino: DashboardDiscoveryCasino) {
   if (casino.intel_count > 0) return `${casino.intel_count} intel note${casino.intel_count === 1 ? '' : 's'}`;
   if (casino.tracker_count > 0) return `${casino.tracker_count} tracker${casino.tracker_count === 1 ? '' : 's'}`;
   return 'New on SweepsIntel';
+}
+
+function buildCasinoInfoTooltip(casino: CasinoRowModel) {
+  return [
+    `Health: ${formatTooltipValue(casino.healthStatus)}`,
+    `Tier: ${formatTooltipValue(casino.tier)}`,
+    `PB risk: ${formatTooltipValue(casino.promobanRisk)}`,
+    `Redeem speed: ${formatTooltipValue(casino.redemptionSpeedDesc)}`,
+    `Daily bonus: ${formatTooltipValue(casino.dailyBonusDesc)}`,
+  ].join('\n');
+}
+
+function formatTooltipValue(value: string | null) {
+  return value && value.trim() ? value.trim() : 'Unknown';
 }
 
 function formatLastClaim(value: string, timezone: string) {

@@ -1,0 +1,74 @@
+---
+import SessionGate from '../components/auth/SessionGate';
+import IntelFeed from '../components/intel/IntelFeed';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getSessionUser } from '../lib/auth';
+import { getIntelFeed } from '../lib/intel';
+import { query } from '../lib/db';
+
+export const prerender = false;
+
+const user = await getSessionUser(Astro.request);
+
+let initialData = {
+  items: [],
+  trackedCasinos: [],
+};
+
+if (user) {
+  const trackedCasinos = await query<{ casino_id: number; name: string; slug: string }>(
+    `SELECT ucs.casino_id, c.name, c.slug
+    FROM user_casino_settings ucs
+    JOIN casinos c ON c.id = ucs.casino_id
+    WHERE ucs.user_id = $1
+      AND ucs.removed_at IS NULL
+    ORDER BY c.name ASC`,
+    [user.userId],
+  );
+
+  const items = await getIntelFeed({ userId: user.userId, limit: 50 });
+  initialData = {
+    trackedCasinos,
+    items: items.map((item) => ({
+      id: item.id,
+      item_type: item.item_type,
+      title: item.title,
+      content: item.content,
+      created_at: item.created_at,
+      expires_at: item.expires_at,
+      confidence: item.confidence,
+      signal_status: item.signal_status,
+      worked_count: Number(item.worked_count ?? 0),
+      didnt_work_count: Number(item.didnt_work_count ?? 0),
+      casino: item.casino_id
+        ? {
+            id: item.casino_id,
+            name: item.casino_name,
+            slug: item.casino_slug,
+            tier: item.tier_label,
+          }
+        : null,
+      attribution: item.is_anonymous
+        ? { display_name: null, contributor_tier: item.contributor_tier }
+        : {
+            display_name: item.submitted_by === null ? 'SweepsIntel Team' : item.submitted_by,
+            contributor_tier: item.submitted_by === null ? 'operator' : item.contributor_tier,
+          },
+    })),
+  };
+}
+---
+
+<BaseLayout title="Intel | SweepsIntel" user={user} currentPath={Astro.url.pathname}>
+  <div class="page-shell page-stack">
+    <SessionGate
+      client:load
+      user={user}
+      redirectTo="/intel"
+      title="Log in to view the Intel Feed"
+      description="See live community intelligence for the casinos you track."
+    >
+      {user ? <IntelFeed client:load user={user} initialData={initialData} /> : null}
+    </SessionGate>
+  </div>
+</BaseLayout>

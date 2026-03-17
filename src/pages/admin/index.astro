@@ -81,6 +81,8 @@ const queue = counts[0];
         <a class="admin-card" href="/admin/discord"><strong>Intel</strong><span>{queue.pending_intel}</span></a>
         <a class="admin-card" href="/admin/casinos"><strong>Suggested</strong><span>{queue.user_suggested}</span></a>
         <a class="admin-card" href="/admin/import-casinos"><strong>Import Casinos</strong><span>CSV/XLSX</span></a>
+        <a class="admin-card" href="/admin/health-overrides"><strong>Health Overrides</strong><span>Manage</span></a>
+        <a class="admin-card" href="/admin/signals"><strong>Signals</strong><span>Live</span></a>
       </div>
     </section>
 
@@ -125,8 +127,10 @@ const queue = counts[0];
         '3': '/admin/discord',
         '4': '/admin/casinos',
         '5': '/admin/import-casinos',
+        '6': '/admin/health-overrides',
+        '7': '/admin/signals',
       };
-      const destination = routes[event.key as '1' | '2' | '3' | '4' | '5'];
+      const destination = routes[event.key as '1' | '2' | '3' | '4' | '5' | '6' | '7'];
       if (destination) {
         window.location.assign(destination);
       }

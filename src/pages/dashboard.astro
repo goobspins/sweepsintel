@@ -36,6 +36,9 @@ let initialSummary = {
 let initialDiscovery = {
   homeState: null,
   casinos: [],
+  estimatedDailyUsd: 0,
+  stateRequired: false,
+  latestSignal: null,
 };
 
 let trackerError: string | null = null;
@@ -211,6 +214,7 @@ if (user) {
           affiliate_link_url: string | null;
           intel_count: number | string | null;
           tracker_count: number | string | null;
+          estimated_daily_usd: number | string | null;
         }>(
           `SELECT
             c.id,
@@ -224,7 +228,8 @@ if (user) {
             c.has_affiliate_link,
             c.affiliate_link_url,
             COALESCE(intel.intel_count, 0) AS intel_count,
-            COALESCE(pop.tracker_count, 0) AS tracker_count
+            COALESCE(pop.tracker_count, 0) AS tracker_count,
+            COALESCE(c.daily_bonus_sc_avg * c.sc_to_usd_ratio, 0) AS estimated_daily_usd
           FROM casinos c
           LEFT JOIN (
             SELECT casino_id, COUNT(*)::int AS intel_count
@@ -269,12 +274,42 @@ if (user) {
             COALESCE(intel.intel_count, 0) DESC,
             COALESCE(pop.tracker_count, 0) DESC,
             c.name ASC
-          LIMIT 5`,
+          LIMIT 24`,
           [trackedIds.length > 0 ? trackedIds : null, homeState],
         ),
       ),
     [],
   );
+
+  const latestSignalRows =
+    trackedIds.length > 0
+      ? await safeDashboardQuery(
+          'latest-signal',
+          () =>
+            query<{
+              id: number;
+              title: string;
+              item_type: string;
+              created_at: string;
+              casino_name: string | null;
+            }>(
+              `SELECT
+                di.id,
+                di.title,
+                di.item_type,
+                di.created_at,
+                c.name AS casino_name
+              FROM discord_intel_items di
+              LEFT JOIN casinos c ON c.id = di.casino_id
+              WHERE di.is_published = true
+                AND di.casino_id = ANY($1::int[])
+              ORDER BY di.created_at DESC
+              LIMIT 1`,
+              [trackedIds],
+            ),
+          [],
+        )
+      : [];
 
   initialDiscovery = {
     homeState,
@@ -282,7 +317,14 @@ if (user) {
       ...casino,
       intel_count: Number(casino.intel_count ?? 0),
       tracker_count: Number(casino.tracker_count ?? 0),
+      estimated_daily_usd: Number(casino.estimated_daily_usd ?? 0),
     })),
+    estimatedDailyUsd: discoveryRows.reduce(
+      (sum, casino) => sum + Number(casino.estimated_daily_usd ?? 0),
+      0,
+    ),
+    stateRequired: !homeState,
+    latestSignal: latestSignalRows[0] ?? null,
   };
 }
 ---

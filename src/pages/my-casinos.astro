@@ -20,6 +20,12 @@ if (user) {
     slug: string;
     tier: string | null;
     notes: string | null;
+    health_status: string | null;
+    health_reason: string | null;
+    alert_count: number | string | null;
+    promoban_risk: string | null;
+    redemption_speed_desc: string | null;
+    daily_bonus_desc: string | null;
     website_url: string | null;
     claim_url: string | null;
     affiliate_link_url: string | null;
@@ -36,6 +42,12 @@ if (user) {
       c.slug,
       c.tier_label AS tier,
       COALESCE(ucs.notes, ucs.personal_notes) AS notes,
+      COALESCE(ch.admin_override_status, ch.global_status, 'healthy') AS health_status,
+      COALESCE(ch.admin_override_reason, ch.status_reason) AS health_reason,
+      COALESCE(alerts.alert_count, 0) AS alert_count,
+      c.promoban_risk,
+      c.redemption_speed_desc,
+      c.daily_bonus_desc,
       c.website_url,
       c.claim_url,
       c.affiliate_link_url,
@@ -47,6 +59,15 @@ if (user) {
       MAX(COALESCE(le.entry_at, le.entry_date::timestamptz)) AS last_activity_at
     FROM user_casino_settings ucs
     JOIN casinos c ON c.id = ucs.casino_id
+    LEFT JOIN casino_health ch ON ch.casino_id = c.id
+    LEFT JOIN (
+      SELECT casino_id, COUNT(*)::int AS alert_count
+      FROM discord_intel_items
+      WHERE is_published = true
+        AND item_type = 'platform_warning'
+        AND casino_id IS NOT NULL
+      GROUP BY casino_id
+    ) alerts ON alerts.casino_id = c.id
     LEFT JOIN ledger_entries le
       ON le.user_id = ucs.user_id
       AND le.casino_id = ucs.casino_id
@@ -59,6 +80,14 @@ if (user) {
       c.tier_label,
       ucs.notes,
       ucs.personal_notes,
+      ch.admin_override_status,
+      ch.global_status,
+      ch.admin_override_reason,
+      ch.status_reason,
+      alerts.alert_count,
+      c.promoban_risk,
+      c.redemption_speed_desc,
+      c.daily_bonus_desc,
       c.website_url,
       c.claim_url,
       c.affiliate_link_url,
@@ -123,6 +152,12 @@ if (user) {
       slug: row.slug,
       tier: row.tier,
       notes: row.notes ?? '',
+      health_status: row.health_status,
+      health_reason: row.health_reason,
+      alert_count: Number(row.alert_count ?? 0),
+      promoban_risk: row.promoban_risk,
+      redemption_speed_desc: row.redemption_speed_desc,
+      daily_bonus_desc: row.daily_bonus_desc,
       claim_url: row.claim_url,
       visit_url: row.website_url ?? row.affiliate_link_url ?? row.claim_url,
       sc_balance: Number(row.sc_balance ?? 0),

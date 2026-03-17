@@ -8,6 +8,9 @@ export interface SessionUser {
   isAdmin: boolean;
   timezone: string;
   ledgerMode: 'simple' | 'advanced';
+  trustScore: number;
+  contributorTier: string;
+  layoutSwap: boolean;
 }
 
 export const SESSION_COOKIE_NAME = 'session_token';
@@ -112,6 +115,9 @@ export async function validateSession(
     is_admin: boolean | null;
     timezone: string | null;
     ledger_mode: 'simple' | 'advanced' | null;
+    trust_score: number | string | null;
+    contributor_tier: string | null;
+    layout_swap: boolean | null;
     last_active_at: string;
   }>(
     `SELECT
@@ -120,6 +126,9 @@ export async function validateSession(
       us.is_admin,
       us.timezone,
       us.ledger_mode,
+      us.trust_score,
+      us.contributor_tier,
+      us.layout_swap,
       s.last_active_at
     FROM auth_sessions s
     LEFT JOIN user_settings us ON us.user_id = s.user_id
@@ -151,6 +160,9 @@ export async function validateSession(
     isAdmin: Boolean(session.is_admin),
     timezone: session.timezone ?? 'America/New_York',
     ledgerMode: session.ledger_mode ?? 'simple',
+    trustScore: Number(session.trust_score ?? 0.5),
+    contributorTier: session.contributor_tier ?? 'newcomer',
+    layoutSwap: Boolean(session.layout_swap),
   };
 }
 

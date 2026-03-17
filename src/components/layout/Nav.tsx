@@ -27,6 +27,7 @@ function buildToolItems(user: SessionUser | null): NavItem[] {
 
   return [
     { href: '/dashboard', label: 'Dashboard' },
+    { href: '/intel', label: 'Intel' },
     { href: '/my-casinos', label: 'My Casinos' },
     { href: '/ledger', label: 'Ledger' },
     { href: '/reports', label: 'Reports' },

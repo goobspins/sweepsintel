@@ -20,6 +20,9 @@ export interface TrackerCasinoRow {
   affiliate_link_url: string | null;
   source: string;
   daily_bonus_desc: string | null;
+  promoban_risk: string | null;
+  redemption_speed_desc: string | null;
+  health_status: string | null;
   today_claim_id: number | null;
   today_sc: number | string | null;
   today_claimed_at: string | null;
@@ -194,10 +197,12 @@ export async function getTrackerStatus(userId: string): Promise<TrackerStatusDat
           ucs.casino_id, ucs.sort_order, ucs.no_daily_reward, ucs.typical_daily_sc, ucs.personal_notes,
           c.name, c.slug, c.tier_label AS tier, c.claim_url, c.reset_mode, c.reset_time_local, c.reset_timezone, c.reset_interval_hours,
           c.has_streaks, c.sc_to_usd_ratio, c.has_affiliate_link, c.affiliate_link_url, c.source,
-          c.daily_bonus_desc,
+          c.daily_bonus_desc, c.promoban_risk, c.redemption_speed_desc,
+          ch.global_status AS health_status,
           dbc.id AS today_claim_id, dbc.sc_amount AS today_sc, dbc.claimed_at AS today_claimed_at
         FROM user_casino_settings ucs
         JOIN casinos c ON c.id = ucs.casino_id
+        LEFT JOIN casino_health ch ON ch.casino_id = c.id
         LEFT JOIN LATERAL (
           SELECT id, sc_amount, claimed_at
           FROM daily_bonus_claims

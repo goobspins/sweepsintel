@@ -18,6 +18,7 @@ interface SettingsPanelProps {
     weekly_goal_usd?: number | null;
     kpi_cards?: string[];
     momentum_style?: string | null;
+    layout_swap?: boolean;
     state_subscriptions: string[];
     states: Array<{ state_code: string; state_name: string }>;
     vapid_public_key: string;
@@ -29,6 +30,14 @@ interface SettingsPanelProps {
     }>;
   };
 }
+
+type NotificationPreferences = {
+  push_warnings: boolean;
+  push_deals: boolean;
+  push_free_sc: boolean;
+  push_streak_reminders: boolean;
+  email_digest_frequency: 'none' | 'daily' | 'weekly';
+};
 
 type ToastState = { tone: 'success' | 'error'; message: string } | null;
 
@@ -99,6 +108,13 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
     initialSettings.momentum_style ?? 'rainbow',
   );
   const [stateSubscriptions, setStateSubscriptions] = useState(initialSettings.state_subscriptions);
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>({
+    push_warnings: true,
+    push_deals: true,
+    push_free_sc: true,
+    push_streak_reminders: false,
+    email_digest_frequency: 'none',
+  });
   const [pushOptIn, setPushOptIn] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [trackedCasinos, setTrackedCasinos] = useState(initialSettings.tracked_casinos);
@@ -133,9 +149,13 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
 
     async function loadSettings() {
       try {
-        const response = await fetch('/api/settings');
-        const data = await response.json();
-        if (!response.ok || cancelled) {
+        const [settingsResponse, prefsResponse] = await Promise.all([
+          fetch('/api/settings'),
+          fetch('/api/notifications/preferences'),
+        ]);
+        const data = await settingsResponse.json();
+        const prefsData = await prefsResponse.json();
+        if (!settingsResponse.ok || cancelled) {
           return;
         }
 
@@ -155,6 +175,17 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         );
         setMomentumStyle(typeof data.momentum_style === 'string' ? data.momentum_style : 'rainbow');
         setStateSubscriptions(Array.isArray(data.state_subscriptions) ? data.state_subscriptions : []);
+        if (prefsResponse.ok) {
+          setNotificationPreferences({
+            push_warnings: Boolean(prefsData.push_warnings ?? true),
+            push_deals: Boolean(prefsData.push_deals ?? true),
+            push_free_sc: Boolean(prefsData.push_free_sc ?? true),
+            push_streak_reminders: Boolean(prefsData.push_streak_reminders ?? false),
+            email_digest_frequency: ['daily', 'weekly'].includes(prefsData.email_digest_frequency)
+              ? prefsData.email_digest_frequency
+              : 'none',
+          });
+        }
       } catch (error) {
         console.error(error);
       }
@@ -187,6 +218,15 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error ?? 'Unable to save settings.');
+      }
+      const prefsResponse = await fetch('/api/notifications/preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notificationPreferences),
+      });
+      if (!prefsResponse.ok) {
+        const prefsData = await prefsResponse.json();
+        throw new Error(prefsData.error ?? 'Unable to save notification preferences.');
       }
       setToast({ tone: 'success', message: 'Settings saved.' });
       setTimezone(data.timezone);
@@ -399,6 +439,68 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
       </div>
 
       <div className="field">
+        <span>Notification Preferences</span>
+        <div className="notification-grid">
+          <label className="toggle-copy">
+            <input
+              type="checkbox"
+              checked={notificationPreferences.push_warnings}
+              onChange={(event) =>
+                setNotificationPreferences((current) => ({ ...current, push_warnings: event.target.checked }))
+              }
+            />
+            <span>Push warnings</span>
+          </label>
+          <label className="toggle-copy">
+            <input
+              type="checkbox"
+              checked={notificationPreferences.push_deals}
+              onChange={(event) =>
+                setNotificationPreferences((current) => ({ ...current, push_deals: event.target.checked }))
+              }
+            />
+            <span>Push deals</span>
+          </label>
+          <label className="toggle-copy">
+            <input
+              type="checkbox"
+              checked={notificationPreferences.push_free_sc}
+              onChange={(event) =>
+                setNotificationPreferences((current) => ({ ...current, push_free_sc: event.target.checked }))
+              }
+            />
+            <span>Push free SC</span>
+          </label>
+          <label className="toggle-copy">
+            <input
+              type="checkbox"
+              checked={notificationPreferences.push_streak_reminders}
+              onChange={(event) =>
+                setNotificationPreferences((current) => ({ ...current, push_streak_reminders: event.target.checked }))
+              }
+            />
+            <span>Push streak reminders</span>
+          </label>
+        </div>
+        <label className="goal-field">
+          <span>Email digest</span>
+          <select
+            value={notificationPreferences.email_digest_frequency}
+            onChange={(event) =>
+              setNotificationPreferences((current) => ({
+                ...current,
+                email_digest_frequency: event.target.value as NotificationPreferences['email_digest_frequency'],
+              }))
+            }
+          >
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="field">
         <span>Tracked Casinos</span>
         {trackedCasinos.length === 0 ? (
           <div className="muted">Add casinos to your tracker before changing per-casino reward behavior.</div>
@@ -482,6 +584,7 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         }
         .swatch-button-active { transform:scale(1.06); box-shadow:0 0 0 2px rgba(255,255,255,.18); }
         .casino-settings-list { display:grid; gap:.75rem; }
+        .notification-grid { display:grid; gap:.65rem; grid-template-columns:repeat(2, minmax(0, 1fr)); }
         .casino-setting-row {
           display:flex; justify-content:space-between; gap:1rem; align-items:center; flex-wrap:wrap;
           border:1px solid var(--color-border); border-radius:1rem; padding:.85rem .95rem; background:var(--color-surface);
@@ -504,7 +607,7 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
         }
         .toast-success { background:rgba(16, 185, 129, 0.16); color:var(--accent-green); }
         .toast-error { background:rgba(239, 68, 68, 0.16); color:var(--accent-red); }
-        @media (max-width: 720px) { .goal-grid, .kpi-picker { grid-template-columns:1fr; } }
+        @media (max-width: 720px) { .goal-grid, .kpi-picker, .notification-grid { grid-template-columns:1fr; } }
       `}</style>
     </section>
   );

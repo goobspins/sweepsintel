@@ -16,6 +16,16 @@ export interface DiscordIntelPayload {
   confidence_reason: string;
 }
 
+function sanitizeIntelContent(value: string) {
+  return value
+    .replace(/@[a-z0-9._-]+/gi, 'community member')
+    .replace(/#[a-z0-9._-]+/gi, 'community note')
+    .replace(/\bdiscord\b/gi, 'community')
+    .replace(/\bbearcave\b/gi, 'community')
+    .replace(/\breddit\b/gi, 'community')
+    .trim();
+}
+
 export interface PublishedIntelItem {
   id: number;
   title: string;
@@ -80,9 +90,11 @@ export async function resolveProviderBySlug(slug?: string | null) {
 
 export async function createIntelItem(payload: DiscordIntelPayload) {
   const casino = await resolveCasinoBySlug(payload.casino_slug);
+  const sanitizedTitle = sanitizeIntelContent(payload.title);
+  const sanitizedContent = sanitizeIntelContent(payload.content);
   const contentHash = crypto
     .createHash('sha256')
-    .update(`${payload.title}\n${payload.content}`)
+    .update(`${sanitizedTitle}\n${sanitizedContent}`)
     .digest('hex');
 
   const existing = await query<{ id: number }>(
@@ -109,15 +121,18 @@ export async function createIntelItem(payload: DiscordIntelPayload) {
       expires_at,
       confidence,
       confidence_reason,
-      is_published
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false)
+      is_published,
+      source,
+      submitted_by,
+      is_anonymous
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, false, 'discord', NULL, true)
     RETURNING id`,
     [
       payload.item_type,
       casino?.id ?? null,
       casino ? null : payload.casino_slug ?? null,
-      payload.title,
-      payload.content,
+      sanitizedTitle,
+      sanitizedContent,
       contentHash,
       payload.source_channel,
       payload.expires_at ?? null,
