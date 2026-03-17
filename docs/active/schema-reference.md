@@ -1,4 +1,4 @@
-# SweepsIntel — Canonical Schema Reference
+# SweepsIntel -- Canonical Schema Reference
 
 > **Generated:** 2026-03-17
 > **Database:** Neon Postgres (serverless)
@@ -121,38 +121,38 @@ All transaction types tracked in the ledger.
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | Surrogate identifier |
-| `slug` | VARCHAR(50) | NO | — | UNIQUE NOT NULL | URL-safe identifier (e.g. `chumba-casino`) used in routes and affiliate links |
-| `name` | VARCHAR(100) | NO | — | NOT NULL | Display name |
-| `normalized_name` | VARCHAR(200) | YES | NULL | — | Lowercase, stripped of common noise words (`casino`, `sweeps`, `.com`) for fuzzy matching. Added via migration. |
-| `tier` | VARCHAR(1) | YES | `'B'` | — | **Vestigial.** Original single-char tier column. Superseded by `tier_label`; no TypeScript code reads this column directly. |
-| `tier_label` | VARCHAR(2) | YES | NULL | — | Active tier label displayed in UI (values: `S`, `A`, `B`, `C`). Added via migration. All TypeScript code aliases this as `tier`. |
-| `claim_url` | TEXT | YES | NULL | — | URL for the daily claim page at this casino |
-| `website_url` | TEXT | YES | NULL | — | Top-level website URL. Added via migration. |
+| `slug` | VARCHAR(50) | NO | -- | UNIQUE NOT NULL | URL-safe identifier (e.g. `chumba-casino`) used in routes and affiliate links |
+| `name` | VARCHAR(100) | NO | -- | NOT NULL | Display name |
+| `normalized_name` | VARCHAR(200) | YES | NULL | -- | Lowercase, stripped of common noise words (`casino`, `sweeps`, `.com`) for fuzzy matching. Added via migration. |
+| `tier` | VARCHAR(1) | YES | `'B'` | -- | **Vestigial.** Original single-char tier column. Superseded by `tier_label`; no TypeScript code reads this column directly. |
+| `tier_label` | VARCHAR(2) | YES | NULL | -- | Active tier label displayed in UI (values: `S`, `A`, `B`, `C`). Added via migration. All TypeScript code aliases this as `tier`. |
+| `claim_url` | TEXT | YES | NULL | -- | URL for the daily claim page at this casino |
+| `website_url` | TEXT | YES | NULL | -- | Top-level website URL. Added via migration. |
 | `reset_mode` | VARCHAR(20) | YES | `'rolling'` | CHECK (`rolling` or `fixed`) | Controls how the daily reset period is calculated. `rolling` = 24h from last claim; `fixed` = resets at a specific time daily. |
-| `reset_time_local` | VARCHAR(5) | YES | NULL | — | For `fixed` reset mode: local time of reset in `HH:MM` format |
-| `reset_timezone` | VARCHAR(50) | YES | NULL | — | IANA timezone name for `reset_time_local` (e.g. `America/New_York`) |
-| `reset_interval_hours` | INT | NO | `24` | — | Hours between fixed resets (usually 24; some casinos use 48h) |
-| `has_streaks` | BOOLEAN | YES | `FALSE` | — | Whether this casino has a streak/consecutive-day bonus mechanic |
-| `sc_to_usd_ratio` | DECIMAL(6,4) | YES | `1.0` | — | Conversion rate from sweeps coins to USD for display and P&L calculations |
-| `parent_company` | VARCHAR(100) | YES | NULL | — | Corporate parent, used for family-ban propagation logic |
-| `promoban_risk` | VARCHAR(20) | YES | `'unknown'` | — | Risk level for promo/bonus abuse bans (values observed: `low`, `medium`, `high`, `unknown`) — no CHECK constraint |
-| `hardban_risk` | VARCHAR(20) | YES | `'unknown'` | — | Risk level for permanent account bans — no CHECK constraint |
-| `family_ban_propagation` | BOOLEAN | YES | `FALSE` | — | Whether a ban at one property propagates to sister casinos |
-| `ban_confiscates_funds` | BOOLEAN | YES | `FALSE` | — | Whether a ban results in forfeiture of remaining SC balance |
-| `daily_bonus_desc` | VARCHAR(100) | YES | NULL | — | Human-readable description of the daily bonus (e.g. `"Up to 300 SC"`) |
-| `daily_bonus_sc_avg` | INT | YES | NULL | — | Admin-entered estimate of average daily SC value; used as fallback when no claims data exists |
-| `has_live_games` | BOOLEAN | YES | `FALSE` | — | Whether this casino offers live dealer games. Redundant with `casino_live_game_providers`; not queried in TS. |
-| `redemption_speed_desc` | VARCHAR(100) | YES | NULL | — | Human-readable description of redemption speed (e.g. `"1–3 business days"`) |
-| `redemption_fee_desc` | VARCHAR(100) | YES | NULL | — | Description of any redemption fees |
-| `min_redemption_usd` | DECIMAL(10,2) | YES | NULL | — | Minimum redemption amount in USD |
-| `has_affiliate_link` | BOOLEAN | YES | `FALSE` | — | Whether a tracked affiliate link exists for this casino |
-| `affiliate_link_url` | TEXT | YES | NULL | — | The affiliate URL used for click-tracking and deep-linking |
-| `affiliate_type` | VARCHAR(20) | YES | NULL | — | Type of affiliate relationship (e.g. `cpa`, `revshare`) |
-| `affiliate_enrollment_verified` | BOOLEAN | YES | `FALSE` | — | Whether affiliate enrollment has been manually confirmed |
-| `source` | VARCHAR(20) | YES | `'admin'` | — | Origin of the record: `admin` (staff-curated) or `user_suggested` (created by a user via the tracker add flow) |
-| `is_excluded` | BOOLEAN | YES | `FALSE` | — | Soft-exclude from suggestions and public listings without deleting |
-| `last_updated_at` | TIMESTAMP | YES | `NOW()` | — | Last time any casino field was updated |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | Record creation timestamp |
+| `reset_time_local` | VARCHAR(5) | YES | NULL | -- | For `fixed` reset mode: local time of reset in `HH:MM` format |
+| `reset_timezone` | VARCHAR(50) | YES | NULL | -- | IANA timezone name for `reset_time_local` (e.g. `America/New_York`) |
+| `reset_interval_hours` | INT | NO | `24` | -- | Hours between fixed resets (usually 24; some casinos use 48h) |
+| `has_streaks` | BOOLEAN | YES | `FALSE` | -- | Whether this casino has a streak/consecutive-day bonus mechanic |
+| `sc_to_usd_ratio` | DECIMAL(6,4) | YES | `1.0` | -- | Conversion rate from sweeps coins to USD for display and P&L calculations |
+| `parent_company` | VARCHAR(100) | YES | NULL | -- | Corporate parent, used for family-ban propagation logic |
+| `promoban_risk` | VARCHAR(20) | YES | `'unknown'` | -- | Risk level for promo/bonus abuse bans (values observed: `low`, `medium`, `high`, `unknown`) -- no CHECK constraint |
+| `hardban_risk` | VARCHAR(20) | YES | `'unknown'` | -- | Risk level for permanent account bans -- no CHECK constraint |
+| `family_ban_propagation` | BOOLEAN | YES | `FALSE` | -- | Whether a ban at one property propagates to sister casinos |
+| `ban_confiscates_funds` | BOOLEAN | YES | `FALSE` | -- | Whether a ban results in forfeiture of remaining SC balance |
+| `daily_bonus_desc` | VARCHAR(100) | YES | NULL | -- | Human-readable description of the daily bonus (e.g. `"Up to 300 SC"`) |
+| `daily_bonus_sc_avg` | INT | YES | NULL | -- | Admin-entered estimate of average daily SC value; used as fallback when no claims data exists |
+| `has_live_games` | BOOLEAN | YES | `FALSE` | -- | Whether this casino offers live dealer games. Redundant with `casino_live_game_providers`; not queried in TS. |
+| `redemption_speed_desc` | VARCHAR(100) | YES | NULL | -- | Human-readable description of redemption speed (e.g. `"1-3 business days"`) |
+| `redemption_fee_desc` | VARCHAR(100) | YES | NULL | -- | Description of any redemption fees |
+| `min_redemption_usd` | DECIMAL(10,2) | YES | NULL | -- | Minimum redemption amount in USD |
+| `has_affiliate_link` | BOOLEAN | YES | `FALSE` | -- | Whether a tracked affiliate link exists for this casino |
+| `affiliate_link_url` | TEXT | YES | NULL | -- | The affiliate URL used for click-tracking and deep-linking |
+| `affiliate_type` | VARCHAR(20) | YES | NULL | -- | Type of affiliate relationship (e.g. `cpa`, `revshare`) |
+| `affiliate_enrollment_verified` | BOOLEAN | YES | `FALSE` | -- | Whether affiliate enrollment has been manually confirmed |
+| `source` | VARCHAR(20) | YES | `'admin'` | -- | Origin of the record: `admin` (staff-curated) or `user_suggested` (created by a user via the tracker add flow) |
+| `is_excluded` | BOOLEAN | YES | `FALSE` | -- | Soft-exclude from suggestions and public listings without deleting |
+| `last_updated_at` | TIMESTAMP | YES | `NOW()` | -- | Last time any casino field was updated |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | Record creation timestamp |
 
 #### Indexes
 
@@ -160,34 +160,34 @@ All transaction types tracked in the ledger.
 |---|---|---|---|
 | `casinos_pkey` | `id` | Primary key | |
 | `casinos_slug_key` | `slug` | Unique | |
-| `idx_casinos_tier` | `tier` | B-tree | Filters by tier in suggestion queries. Points at vestigial `tier` column — should target `tier_label`. |
+| `idx_casinos_tier` | `tier` | B-tree | Filters by tier in suggestion queries. Points at vestigial `tier` column -- should target `tier_label`. |
 | `idx_casinos_normalized_name` | `normalized_name` | B-tree | Supports fuzzy-match lookups in `addCasinoToTracker` |
 | `idx_casinos_user_suggested` | `id` WHERE `source = 'user_suggested'` | Partial | Used in admin review of user-suggested casinos |
 
-**Missing indexes:** `(is_excluded, source)` — `getTrackerSuggestions` filters on both; a composite index would help as the casino table grows.
+**Missing indexes:** `(is_excluded, source)` -- `getTrackerSuggestions` filters on both; a composite index would help as the casino table grows.
 
 #### Relationships
 
 | Relation | Type | Details |
 |---|---|---|
-| `casino_live_game_providers.casino_id` | FK → `casinos.id` ON DELETE CASCADE | Providers linked to this casino |
-| `casino_game_availability.casino_id` | FK → `casinos.id` ON DELETE CASCADE | Games at this casino |
-| `game_volatility_reports.casino_id` | FK → `casinos.id` ON DELETE CASCADE | Volatility reports for this casino |
-| `user_casino_settings.casino_id` | FK → `casinos.id` ON DELETE CASCADE | User tracker entries |
-| `casino_state_availability.casino_id` | FK → `casinos.id` ON DELETE CASCADE | State-level availability |
-| `casino_health.casino_id` | FK → `casinos.id` (PRIMARY KEY) | Computed health record |
-| `state_pullout_alerts.casino_id` | FK → `casinos.id` NO ACTION | Alerts for this casino |
-| `reset_time_suggestions.casino_id` | FK → `casinos.id` NO ACTION | User-submitted reset suggestions |
-| `daily_bonus_claims.casino_id` | FK → `casinos.id` NO ACTION | Claims at this casino |
-| `redemptions.casino_id` | FK → `casinos.id` NO ACTION | Redemptions at this casino |
-| `ledger_entries.casino_id` | FK → `casinos.id` NO ACTION | Ledger entries at this casino |
-| `user_notifications.casino_id` | FK → `casinos.id` NO ACTION | Notifications referencing this casino |
-| `admin_flags.casino_id` | FK → `casinos.id` NO ACTION | Admin flags referencing this casino |
-| `ban_reports.casino_id` | FK → `casinos.id` NO ACTION | Ban reports |
-| `ban_uptick_alerts.casino_id` | FK → `casinos.id` NO ACTION | Ban uptick alerts |
-| `clicks.casino_id` | FK → `casinos.id` NO ACTION | Affiliate click log |
-| `discord_intel_items.casino_id` | FK → `casinos.id` NO ACTION | Intel items |
-| `state_availability_reports.casino_id` | FK → `casinos.id` NO ACTION | State availability reports |
+| `casino_live_game_providers.casino_id` | FK -> `casinos.id` ON DELETE CASCADE | Providers linked to this casino |
+| `casino_game_availability.casino_id` | FK -> `casinos.id` ON DELETE CASCADE | Games at this casino |
+| `game_volatility_reports.casino_id` | FK -> `casinos.id` ON DELETE CASCADE | Volatility reports for this casino |
+| `user_casino_settings.casino_id` | FK -> `casinos.id` ON DELETE CASCADE | User tracker entries |
+| `casino_state_availability.casino_id` | FK -> `casinos.id` ON DELETE CASCADE | State-level availability |
+| `casino_health.casino_id` | FK -> `casinos.id` (PRIMARY KEY) | Computed health record |
+| `state_pullout_alerts.casino_id` | FK -> `casinos.id` NO ACTION | Alerts for this casino |
+| `reset_time_suggestions.casino_id` | FK -> `casinos.id` NO ACTION | User-submitted reset suggestions |
+| `daily_bonus_claims.casino_id` | FK -> `casinos.id` NO ACTION | Claims at this casino |
+| `redemptions.casino_id` | FK -> `casinos.id` NO ACTION | Redemptions at this casino |
+| `ledger_entries.casino_id` | FK -> `casinos.id` NO ACTION | Ledger entries at this casino |
+| `user_notifications.casino_id` | FK -> `casinos.id` NO ACTION | Notifications referencing this casino |
+| `admin_flags.casino_id` | FK -> `casinos.id` NO ACTION | Admin flags referencing this casino |
+| `ban_reports.casino_id` | FK -> `casinos.id` NO ACTION | Ban reports |
+| `ban_uptick_alerts.casino_id` | FK -> `casinos.id` NO ACTION | Ban uptick alerts |
+| `clicks.casino_id` | FK -> `casinos.id` NO ACTION | Affiliate click log |
+| `discord_intel_items.casino_id` | FK -> `casinos.id` NO ACTION | Intel items |
+| `state_availability_reports.casino_id` | FK -> `casinos.id` NO ACTION | State availability reports |
 
 #### Query Patterns
 
@@ -220,11 +220,11 @@ All transaction types tracked in the ledger.
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `slug` | VARCHAR(50) | NO | — | UNIQUE NOT NULL | URL-safe identifier used in Discord ingest and API lookups |
-| `name` | VARCHAR(100) | NO | — | NOT NULL | Display name |
-| `is_live_game_provider` | BOOLEAN | YES | `FALSE` | — | Whether this provider offers live dealer games specifically |
-| `notes` | TEXT | YES | NULL | — | Internal admin notes |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `slug` | VARCHAR(50) | NO | -- | UNIQUE NOT NULL | URL-safe identifier used in Discord ingest and API lookups |
+| `name` | VARCHAR(100) | NO | -- | NOT NULL | Display name |
+| `is_live_game_provider` | BOOLEAN | YES | `FALSE` | -- | Whether this provider offers live dealer games specifically |
+| `notes` | TEXT | YES | NULL | -- | Internal admin notes |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Indexes
 
@@ -237,12 +237,12 @@ All transaction types tracked in the ledger.
 
 | Relation | Type |
 |---|---|
-| `casino_live_game_providers.provider_id` | FK → `game_providers.id` ON DELETE CASCADE |
-| `provider_state_availability.provider_id` | FK → `game_providers.id` ON DELETE CASCADE |
-| `casino_game_availability.provider_id` | FK → `game_providers.id` NO ACTION |
-| `game_volatility_reports.provider_id` | FK → `game_providers.id` NO ACTION |
-| `state_pullout_alerts.provider_id` | FK → `game_providers.id` NO ACTION |
-| `state_availability_reports.provider_id` | FK → `game_providers.id` NO ACTION |
+| `casino_live_game_providers.provider_id` | FK -> `game_providers.id` ON DELETE CASCADE |
+| `provider_state_availability.provider_id` | FK -> `game_providers.id` ON DELETE CASCADE |
+| `casino_game_availability.provider_id` | FK -> `game_providers.id` NO ACTION |
+| `game_volatility_reports.provider_id` | FK -> `game_providers.id` NO ACTION |
+| `state_pullout_alerts.provider_id` | FK -> `game_providers.id` NO ACTION |
+| `state_availability_reports.provider_id` | FK -> `game_providers.id` NO ACTION |
 
 #### Query Patterns
 
@@ -263,9 +263,9 @@ All transaction types tracked in the ledger.
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
-| `casino_id` | INT | NO | — | FK → `casinos.id` CASCADE | |
-| `provider_id` | INT | NO | — | FK → `game_providers.id` CASCADE | |
-| — | — | — | — | PRIMARY KEY `(casino_id, provider_id)` | |
+| `casino_id` | INT | NO | -- | FK -> `casinos.id` CASCADE | |
+| `provider_id` | INT | NO | -- | FK -> `game_providers.id` CASCADE | |
+| -- | -- | -- | -- | PRIMARY KEY `(casino_id, provider_id)` | |
 
 #### Indexes
 
@@ -273,11 +273,11 @@ All transaction types tracked in the ledger.
 |---|---|
 | `casino_live_game_providers_pkey` | `(casino_id, provider_id)` |
 
-**Missing index:** `(provider_id)` — the cascade query in `admin.ts` filters by `provider_id` only; without this, the join scans by PK left-to-right. Postgres may be able to use the PK partially, but an explicit index on `provider_id` would be cleaner.
+**Missing index:** `(provider_id)` -- the cascade query in `admin.ts` filters by `provider_id` only; without this, the join scans by PK left-to-right. Postgres may be able to use the PK partially, but an explicit index on `provider_id` would be cleaner.
 
 #### Data Volume Estimate
 
-**Slow growth.** ~50–300 rows (one per casino-provider pairing).
+**Slow growth.** ~50-300 rows (one per casino-provider pairing).
 
 ---
 
@@ -289,12 +289,12 @@ All transaction types tracked in the ledger.
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
-| `state_code` | CHAR(2) | NO | — | PRIMARY KEY | Two-letter US state abbreviation (e.g. `NY`, `TX`) |
-| `state_name` | VARCHAR(50) | NO | — | NOT NULL | Full state name |
-| `sweepstakes_legal` | BOOLEAN | NO | — | NOT NULL | `TRUE` if sweepstakes play is treated as legal/available |
-| `legal_notes` | TEXT | YES | NULL | — | Human-readable notes about restrictions or special rules |
-| `last_verified` | DATE | YES | NULL | — | Date the legal status was last confirmed by research |
-| `source_url` | TEXT | YES | NULL | — | Citation URL for legal status (currently NULL for all seeded rows) |
+| `state_code` | CHAR(2) | NO | -- | PRIMARY KEY | Two-letter US state abbreviation (e.g. `NY`, `TX`) |
+| `state_name` | VARCHAR(50) | NO | -- | NOT NULL | Full state name |
+| `sweepstakes_legal` | BOOLEAN | NO | -- | NOT NULL | `TRUE` if sweepstakes play is treated as legal/available |
+| `legal_notes` | TEXT | YES | NULL | -- | Human-readable notes about restrictions or special rules |
+| `last_verified` | DATE | YES | NULL | -- | Date the legal status was last confirmed by research |
+| `source_url` | TEXT | YES | NULL | -- | Citation URL for legal status (currently NULL for all seeded rows) |
 
 #### Indexes
 
@@ -327,12 +327,12 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `provider_id` | INT | YES | NULL | FK → `game_providers.id` CASCADE | |
-| `state_code` | CHAR(2) | YES | NULL | FK → `state_legal_status.state_code` | |
+| `provider_id` | INT | YES | NULL | FK -> `game_providers.id` CASCADE | |
+| `state_code` | CHAR(2) | YES | NULL | FK -> `state_legal_status.state_code` | |
 | `status` | state_avail_status | NO | `'available'` | NOT NULL | Availability status |
-| `notes` | TEXT | YES | NULL | — | Context for the status |
-| `last_updated_at` | TIMESTAMP | YES | `NOW()` | — | |
-| — | — | — | — | UNIQUE `(provider_id, state_code)` | |
+| `notes` | TEXT | YES | NULL | -- | Context for the status |
+| `last_updated_at` | TIMESTAMP | YES | `NOW()` | -- | |
+| -- | -- | -- | -- | UNIQUE `(provider_id, state_code)` | |
 
 #### Indexes
 
@@ -360,21 +360,21 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` CASCADE | |
-| `provider_id` | INT | YES | NULL | FK → `game_providers.id` NO ACTION | |
-| `game_name` | VARCHAR(100) | NO | — | NOT NULL | Name of the game (e.g. `"Sweet Bonanza"`) |
-| `game_type` | VARCHAR(50) | YES | NULL | — | Type: `slot`, `table`, `live`, etc. |
-| `is_cross_wash_relevant` | BOOLEAN | YES | `FALSE` | — | Whether this game is relevant to cross-wash bonus abuse detection |
-| `confidence` | VARCHAR(20) | YES | `'unverified'` | — | Signal confidence: `unverified`, `medium`, `high` |
-| `positive_signal_count` | INT | YES | `0` | — | Number of community-positive availability signals |
-| `negative_signal_count` | INT | YES | `0` | — | Number of community-negative availability signals |
-| `last_confirmed_at` | TIMESTAMP | YES | NULL | — | Last time a positive signal was received |
-| `last_negative_at` | TIMESTAMP | YES | NULL | — | Last time a negative signal was received |
-| `status` | VARCHAR(20) | YES | `'available'` | — | Current availability: `available`, `unavailable`, `unverified` |
-| `notes` | TEXT | YES | NULL | — | Internal notes |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
-| `updated_at` | TIMESTAMP | YES | `NOW()` | — | |
-| — | — | — | — | UNIQUE `(casino_id, game_name)` | |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` CASCADE | |
+| `provider_id` | INT | YES | NULL | FK -> `game_providers.id` NO ACTION | |
+| `game_name` | VARCHAR(100) | NO | -- | NOT NULL | Name of the game (e.g. `"Sweet Bonanza"`) |
+| `game_type` | VARCHAR(50) | YES | NULL | -- | Type: `slot`, `table`, `live`, etc. |
+| `is_cross_wash_relevant` | BOOLEAN | YES | `FALSE` | -- | Whether this game is relevant to cross-wash bonus abuse detection |
+| `confidence` | VARCHAR(20) | YES | `'unverified'` | -- | Signal confidence: `unverified`, `medium`, `high` |
+| `positive_signal_count` | INT | YES | `0` | -- | Number of community-positive availability signals |
+| `negative_signal_count` | INT | YES | `0` | -- | Number of community-negative availability signals |
+| `last_confirmed_at` | TIMESTAMP | YES | NULL | -- | Last time a positive signal was received |
+| `last_negative_at` | TIMESTAMP | YES | NULL | -- | Last time a negative signal was received |
+| `status` | VARCHAR(20) | YES | `'available'` | -- | Current availability: `available`, `unavailable`, `unverified` |
+| `notes` | TEXT | YES | NULL | -- | Internal notes |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
+| `updated_at` | TIMESTAMP | YES | `NOW()` | -- | |
+| -- | -- | -- | -- | UNIQUE `(casino_id, game_name)` | |
 
 #### Indexes
 
@@ -404,18 +404,18 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` CASCADE | |
-| `game_name` | VARCHAR(100) | NO | — | NOT NULL | |
-| `provider_id` | INT | YES | NULL | FK → `game_providers.id` NO ACTION | |
-| `reported_volatility` | VARCHAR(20) | NO | — | NOT NULL | e.g. `low`, `medium`, `high` |
-| `reported_rtp_pct` | DECIMAL(5,2) | YES | NULL | — | Reported return-to-player percentage |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | Reporter's user ID (no FK constraint) |
-| `trust_score_at_report` | DECIMAL(3,2) | YES | `1.0` | — | Reporter's trust score snapshot at submission time |
-| `notes` | TEXT | YES | NULL | — | |
-| `is_flagged` | BOOLEAN | YES | `FALSE` | — | Admin-flagged for review |
-| `is_published` | BOOLEAN | YES | `FALSE` | — | Whether report is publicly visible |
-| `admin_notes` | TEXT | YES | NULL | — | Internal admin notes |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` CASCADE | |
+| `game_name` | VARCHAR(100) | NO | -- | NOT NULL | |
+| `provider_id` | INT | YES | NULL | FK -> `game_providers.id` NO ACTION | |
+| `reported_volatility` | VARCHAR(20) | NO | -- | NOT NULL | e.g. `low`, `medium`, `high` |
+| `reported_rtp_pct` | DECIMAL(5,2) | YES | NULL | -- | Reported return-to-player percentage |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | Reporter's user ID (no FK constraint) |
+| `trust_score_at_report` | DECIMAL(3,2) | YES | `1.0` | -- | Reporter's trust score snapshot at submission time |
+| `notes` | TEXT | YES | NULL | -- | |
+| `is_flagged` | BOOLEAN | YES | `FALSE` | -- | Admin-flagged for review |
+| `is_published` | BOOLEAN | YES | `FALSE` | -- | Whether report is publicly visible |
+| `admin_notes` | TEXT | YES | NULL | -- | Internal admin notes |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Indexes
 
@@ -442,22 +442,22 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
-| `user_id` | VARCHAR(255) | NO | — | PRIMARY KEY | The user's email address (used as identifier throughout the system) |
-| `timezone` | VARCHAR(50) | YES | `'America/New_York'` | — | IANA timezone for reset-period calculations and display formatting |
-| `home_state` | CHAR(2) | YES | NULL | — | User's home state; used for state-pullout notification targeting |
-| `ledger_mode` | VARCHAR(20) | YES | `'simple'` | — | UI mode: `simple` (just track) or `advanced` (full ledger) |
-| `is_admin` | BOOLEAN | YES | `FALSE` | — | Platform admin flag; gates admin API routes |
-| `trust_score` | DECIMAL(3,2) | YES | `0.50` | — | Computed trust score 0.00–1.00 (updated by cron). Default changed from `1.0` to `0.50` in intelligence-layer migration. |
-| `trust_score_updated_at` | TIMESTAMP | YES | NULL | — | Last time the trust score was recomputed |
+| `user_id` | VARCHAR(255) | NO | -- | PRIMARY KEY | The user's email address (used as identifier throughout the system) |
+| `timezone` | VARCHAR(50) | YES | `'America/New_York'` | -- | IANA timezone for reset-period calculations and display formatting |
+| `home_state` | CHAR(2) | YES | NULL | -- | User's home state; used for state-pullout notification targeting |
+| `ledger_mode` | VARCHAR(20) | YES | `'simple'` | -- | UI mode: `simple` (just track) or `advanced` (full ledger) |
+| `is_admin` | BOOLEAN | YES | `FALSE` | -- | Platform admin flag; gates admin API routes |
+| `trust_score` | DECIMAL(3,2) | YES | `0.50` | -- | Computed trust score 0.00-1.00 (updated by cron). Default changed from `1.0` to `0.50` in intelligence-layer migration. |
+| `trust_score_updated_at` | TIMESTAMP | YES | NULL | -- | Last time the trust score was recomputed |
 | `contributor_tier` | VARCHAR(30) | YES | `'newcomer'` | CHECK (`newcomer`, `scout`, `insider`, `operator`) | Signal-submission contributor tier |
-| `layout_swap` | BOOLEAN | YES | `FALSE` | — | UI layout preference toggle. Added in intelligence-layer migration. |
-| `daily_goal_usd` | DECIMAL(10,2) | YES | `5.00` | — | User's daily earnings goal in USD. Added in dashboard-foundation migration. |
-| `weekly_goal_usd` | DECIMAL(10,2) | YES | NULL | — | User's weekly earnings goal. Added in dashboard-foundation migration. |
+| `layout_swap` | BOOLEAN | YES | `FALSE` | -- | UI layout preference toggle. Added in intelligence-layer migration. |
+| `daily_goal_usd` | DECIMAL(10,2) | YES | `5.00` | -- | User's daily earnings goal in USD. Added in dashboard-foundation migration. |
+| `weekly_goal_usd` | DECIMAL(10,2) | YES | NULL | -- | User's weekly earnings goal. Added in dashboard-foundation migration. |
 | `momentum_period` | TEXT | YES | `'daily'` | CHECK (`daily`, `weekly`) | Dashboard momentum display period. Added in dashboard-foundation migration. |
-| `momentum_style` | JSONB | YES | NULL | — | JSONB blob for momentum widget configuration. Added in dashboard-foundation migration. |
-| `kpi_cards` | JSONB | YES | NULL | — | JSONB array defining which KPI cards to display and in what order. Added in dashboard-foundation migration. |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | Account creation timestamp |
-| `updated_at` | TIMESTAMP | YES | `NOW()` | — | Last settings update |
+| `momentum_style` | JSONB | YES | NULL | -- | JSONB blob for momentum widget configuration. Added in dashboard-foundation migration. |
+| `kpi_cards` | JSONB | YES | NULL | -- | JSONB array defining which KPI cards to display and in what order. Added in dashboard-foundation migration. |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | Account creation timestamp |
+| `updated_at` | TIMESTAMP | YES | `NOW()` | -- | Last settings update |
 
 #### Indexes
 
@@ -465,7 +465,7 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 |---|---|
 | `user_settings_pkey` | `user_id` |
 
-**Missing indexes:** No indexes on `user_id` beyond PK (redundant). The trust computation cron (`computeAllTrustScores`) does a full table scan with `SELECT user_id FROM user_settings` — acceptable at small scale.
+**Missing indexes:** No indexes on `user_id` beyond PK (redundant). The trust computation cron (`computeAllTrustScores`) does a full table scan with `SELECT user_id FROM user_settings` -- acceptable at small scale.
 
 #### Relationships
 
@@ -494,16 +494,16 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | User identifier (no FK; implicit reference to `user_settings.user_id`) |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` CASCADE | |
-| `typical_daily_sc` | DECIMAL(8,2) | YES | NULL | — | User's personal estimate of their average daily SC at this casino |
-| `personal_notes` | TEXT | YES | NULL | — | **Potentially vestigial.** Older notes field. The `notes` column was added later via migration. |
-| `notes` | TEXT | YES | NULL | — | Notes field added via `2026-03-16-user-casino-settings-notes.sql` migration. Used by the notes API endpoint. |
-| `sort_order` | INT | YES | NULL | — | User-defined sort position in the tracker list |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | User identifier (no FK; implicit reference to `user_settings.user_id`) |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` CASCADE | |
+| `typical_daily_sc` | DECIMAL(8,2) | YES | NULL | -- | User's personal estimate of their average daily SC at this casino |
+| `personal_notes` | TEXT | YES | NULL | -- | **Potentially vestigial.** Older notes field. The `notes` column was added later via migration. |
+| `notes` | TEXT | YES | NULL | -- | Notes field added via `2026-03-16-user-casino-settings-notes.sql` migration. Used by the notes API endpoint. |
+| `sort_order` | INT | YES | NULL | -- | User-defined sort position in the tracker list |
 | `no_daily_reward` | BOOLEAN | NO | `FALSE` | NOT NULL | Flag indicating this casino has no daily reward (suppress "unclaimed" reminders) |
-| `added_at` | TIMESTAMP | YES | `NOW()` | — | When the casino was added to the tracker |
-| `removed_at` | TIMESTAMP | YES | NULL | — | Soft-delete timestamp; NULL means currently tracked |
-| — | — | — | — | UNIQUE `(user_id, casino_id)` | |
+| `added_at` | TIMESTAMP | YES | `NOW()` | -- | When the casino was added to the tracker |
+| `removed_at` | TIMESTAMP | YES | NULL | -- | Soft-delete timestamp; NULL means currently tracked |
+| -- | -- | -- | -- | UNIQUE `(user_id, casino_id)` | |
 
 #### Indexes
 
@@ -524,11 +524,11 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 
 #### Active vs. Vestigial Columns
 
-- `personal_notes`: Uncertain. The tracker interface defines `personal_notes` and the query returns it, but the notes API endpoint likely targets `notes`. Both exist simultaneously — probable duplication.
+- `personal_notes`: Uncertain. The tracker interface defines `personal_notes` and the query returns it, but the notes API endpoint likely targets `notes`. Both exist simultaneously -- probable duplication.
 
 #### Data Volume Estimate
 
-**Fast growth.** Each user × casino pairing = one row. With soft-deletes, rows are never removed. Could reach tens of thousands.
+**Fast growth.** Each user x casino pairing = one row. With soft-deletes, rows are never removed. Could reach tens of thousands.
 
 ---
 
@@ -541,15 +541,15 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` CASCADE | |
-| `state_code` | CHAR(2) | YES | NULL | FK → `state_legal_status.state_code` | |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` CASCADE | |
+| `state_code` | CHAR(2) | YES | NULL | FK -> `state_legal_status.state_code` | |
 | `status` | state_avail_status | NO | `'available'` | NOT NULL | |
-| `compliance_note` | TEXT | YES | NULL | — | Explanation of the status |
-| `community_reported` | BOOLEAN | YES | `FALSE` | — | Whether the status came from a community report |
-| `reported_at` | TIMESTAMP | YES | NULL | — | When a community report was filed |
-| `verified` | BOOLEAN | YES | `FALSE` | — | Whether an admin has verified this status |
-| `last_updated_at` | TIMESTAMP | YES | `NOW()` | — | |
-| — | — | — | — | UNIQUE `(casino_id, state_code)` | |
+| `compliance_note` | TEXT | YES | NULL | -- | Explanation of the status |
+| `community_reported` | BOOLEAN | YES | `FALSE` | -- | Whether the status came from a community report |
+| `reported_at` | TIMESTAMP | YES | NULL | -- | When a community report was filed |
+| `verified` | BOOLEAN | YES | `FALSE` | -- | Whether an admin has verified this status |
+| `last_updated_at` | TIMESTAMP | YES | `NOW()` | -- | |
+| -- | -- | -- | -- | UNIQUE `(casino_id, state_code)` | |
 
 #### Indexes
 
@@ -565,7 +565,7 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 
 #### Data Volume Estimate
 
-**Slow growth.** At most `num_casinos × 51` rows (~10,000 upper bound). Most casinos won't have explicit entries for all states.
+**Slow growth.** At most `num_casinos x 51` rows (~10,000 upper bound). Most casinos won't have explicit entries for all states.
 
 ---
 
@@ -578,17 +578,17 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | Nullable; a report can be about a provider without a specific casino |
-| `provider_id` | INT | YES | NULL | FK → `game_providers.id` NO ACTION | Nullable; a report can be about a casino without a specific provider |
-| `state_code` | CHAR(2) | YES | NULL | — | No FK constraint (schema debt) |
-| `reported_status` | state_avail_status | NO | — | NOT NULL | The status the reporter observed |
-| `report_text` | TEXT | NO | — | NOT NULL | Reporter's description |
-| `reporter_ip_hash` | VARCHAR(64) | YES | NULL | — | SHA-256 hash of reporter's IP for deduplication |
-| `reporter_user_id` | VARCHAR(255) | YES | NULL | — | Reporter's user ID if logged in (no FK constraint) |
-| `is_flagged` | BOOLEAN | YES | `FALSE` | — | Flagged by admin for follow-up |
-| `is_published` | BOOLEAN | YES | `FALSE` | — | Whether this report has been acted upon/published |
-| `admin_notes` | TEXT | YES | NULL | — | |
-| `submitted_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | Nullable; a report can be about a provider without a specific casino |
+| `provider_id` | INT | YES | NULL | FK -> `game_providers.id` NO ACTION | Nullable; a report can be about a casino without a specific provider |
+| `state_code` | CHAR(2) | YES | NULL | -- | No FK constraint (schema debt) |
+| `reported_status` | state_avail_status | NO | -- | NOT NULL | The status the reporter observed |
+| `report_text` | TEXT | NO | -- | NOT NULL | Reporter's description |
+| `reporter_ip_hash` | VARCHAR(64) | YES | NULL | -- | SHA-256 hash of reporter's IP for deduplication |
+| `reporter_user_id` | VARCHAR(255) | YES | NULL | -- | Reporter's user ID if logged in (no FK constraint) |
+| `is_flagged` | BOOLEAN | YES | `FALSE` | -- | Flagged by admin for follow-up |
+| `is_published` | BOOLEAN | YES | `FALSE` | -- | Whether this report has been acted upon/published |
+| `admin_notes` | TEXT | YES | NULL | -- | |
+| `submitted_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Indexes
 
@@ -612,13 +612,13 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | |
-| `provider_id` | INT | YES | NULL | FK → `game_providers.id` NO ACTION | |
-| `state_code` | CHAR(2) | YES | NULL | — | No FK constraint (schema debt) |
-| `alert_message` | TEXT | YES | NULL | — | Human-readable alert content |
-| `was_broadcast` | BOOLEAN | YES | `FALSE` | — | Whether a push/in-app notification was sent |
-| `broadcast_at` | TIMESTAMP | YES | NULL | — | When broadcast was sent |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | |
+| `provider_id` | INT | YES | NULL | FK -> `game_providers.id` NO ACTION | |
+| `state_code` | CHAR(2) | YES | NULL | -- | No FK constraint (schema debt) |
+| `alert_message` | TEXT | YES | NULL | -- | Human-readable alert content |
+| `was_broadcast` | BOOLEAN | YES | `FALSE` | -- | Whether a push/in-app notification was sent |
+| `broadcast_at` | TIMESTAMP | YES | NULL | -- | When broadcast was sent |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Relationships
 
@@ -639,9 +639,9 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | No FK constraint (implicit reference to `user_settings.user_id`) |
-| `state_code` | CHAR(2) | YES | NULL | FK → `state_legal_status.state_code` | |
-| — | — | — | — | UNIQUE `(user_id, state_code)` | |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | No FK constraint (implicit reference to `user_settings.user_id`) |
+| `state_code` | CHAR(2) | YES | NULL | FK -> `state_legal_status.state_code` | |
+| -- | -- | -- | -- | UNIQUE `(user_id, state_code)` | |
 
 #### Query Patterns
 
@@ -651,7 +651,7 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 
 #### Data Volume Estimate
 
-**Slow growth.** Most users subscribe to 1–3 states.
+**Slow growth.** Most users subscribe to 1-3 states.
 
 ---
 
@@ -664,16 +664,16 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | |
-| `suggested_reset_mode` | VARCHAR(20) | YES | NULL | — | `rolling` or `fixed` |
-| `suggested_reset_time` | VARCHAR(5) | YES | NULL | — | `HH:MM` if fixed mode suggested |
-| `suggested_timezone` | VARCHAR(50) | YES | NULL | — | IANA timezone if fixed mode suggested |
-| `evidence_text` | TEXT | YES | NULL | — | Reporter's evidence/rationale |
-| `reporter_ip_hash` | VARCHAR(64) | YES | NULL | — | Deduplication hash |
-| `reporter_user_id` | VARCHAR(255) | YES | NULL | — | No FK constraint |
-| `status` | VARCHAR(20) | YES | `'pending'` | — | `pending`, `accepted`, `rejected` |
-| `admin_notes` | TEXT | YES | NULL | — | |
-| `submitted_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | |
+| `suggested_reset_mode` | VARCHAR(20) | YES | NULL | -- | `rolling` or `fixed` |
+| `suggested_reset_time` | VARCHAR(5) | YES | NULL | -- | `HH:MM` if fixed mode suggested |
+| `suggested_timezone` | VARCHAR(50) | YES | NULL | -- | IANA timezone if fixed mode suggested |
+| `evidence_text` | TEXT | YES | NULL | -- | Reporter's evidence/rationale |
+| `reporter_ip_hash` | VARCHAR(64) | YES | NULL | -- | Deduplication hash |
+| `reporter_user_id` | VARCHAR(255) | YES | NULL | -- | No FK constraint |
+| `status` | VARCHAR(20) | YES | `'pending'` | -- | `pending`, `accepted`, `rejected` |
+| `admin_notes` | TEXT | YES | NULL | -- | |
+| `submitted_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Indexes
 
@@ -697,15 +697,15 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | No FK constraint |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | No FK constraint |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | |
 | `claim_type` | VARCHAR(20) | NO | `'daily'` | NOT NULL | Type of claim: `daily` (standard), others possible |
-| `sc_amount` | DECIMAL(8,2) | YES | NULL | — | SC amount received in this claim |
-| `notes` | TEXT | YES | NULL | — | Optional user note |
-| `claimed_at` | TIMESTAMP | YES | `NOW()` | — | Exact timestamp of claim |
-| `claimed_date` | DATE | YES | `CURRENT_DATE` | — | Calendar date (used in original UNIQUE constraint) |
-| `reset_period_start` | TIMESTAMPTZ | YES | NULL | — | Start of the reset period this claim belongs to (timezone-aware). Added in dashboard-foundation migration. Used for fixed-mode casinos. |
-| — | — | — | — | UNIQUE `(user_id, casino_id, claimed_date, claim_type)` | Original calendar-day deduplication |
+| `sc_amount` | DECIMAL(8,2) | YES | NULL | -- | SC amount received in this claim |
+| `notes` | TEXT | YES | NULL | -- | Optional user note |
+| `claimed_at` | TIMESTAMP | YES | `NOW()` | -- | Exact timestamp of claim |
+| `claimed_date` | DATE | YES | `CURRENT_DATE` | -- | Calendar date (used in original UNIQUE constraint) |
+| `reset_period_start` | TIMESTAMPTZ | YES | NULL | -- | Start of the reset period this claim belongs to (timezone-aware). Added in dashboard-foundation migration. Used for fixed-mode casinos. |
+| -- | -- | -- | -- | UNIQUE `(user_id, casino_id, claimed_date, claim_type)` | Original calendar-day deduplication |
 
 #### Indexes
 
@@ -718,11 +718,11 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 
 #### Relationships
 
-- `ledger_entries.source_claim_id` → `daily_bonus_claims.id` (implicit traceability)
+- `ledger_entries.source_claim_id` -> `daily_bonus_claims.id` (implicit traceability)
 
 #### Query Patterns
 
-- **Tracker status** (`tracker.ts`): LATERAL subquery `SELECT id, sc_amount, claimed_at FROM daily_bonus_claims WHERE user_id = $1 AND casino_id = $2 AND claim_type = 'daily' ORDER BY claimed_at DESC LIMIT 1` — gets most recent claim per casino.
+- **Tracker status** (`tracker.ts`): LATERAL subquery `SELECT id, sc_amount, claimed_at FROM daily_bonus_claims WHERE user_id = $1 AND casino_id = $2 AND claim_type = 'daily' ORDER BY claimed_at DESC LIMIT 1` -- gets most recent claim per casino.
 - **Streak tracking**: `SELECT casino_id, claimed_at FROM daily_bonus_claims WHERE user_id = $1 AND casino_id = ANY($2) AND claim_type = 'daily' ORDER BY casino_id ASC, claimed_at DESC`
 - **Trust score** (`trust.ts`): `COUNT(DISTINCT (COALESCE(reset_period_start, claimed_at))::date)` for claim consistency scoring.
 - **Suggestions** (`tracker.ts`): Aggregated `AVG(sc_amount) GROUP BY casino_id` to compute platform-wide average SC.
@@ -733,7 +733,7 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 
 #### Data Volume Estimate
 
-**Append-only, fast growth.** Every daily login generates a row. At 1,000 active users × 10 casinos × 365 days = 3.65M rows/year.
+**Append-only, fast growth.** Every daily login generates a row. At 1,000 active users x 10 casinos x 365 days = 3.65M rows/year.
 
 ---
 
@@ -746,19 +746,19 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | No FK constraint |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | |
-| `sc_amount` | DECIMAL(10,2) | NO | — | NOT NULL | Sweeps coins being redeemed |
-| `usd_amount` | DECIMAL(10,2) | NO | — | NOT NULL | Expected USD payout |
-| `fees_usd` | DECIMAL(10,2) | YES | `0` | — | Any fees deducted |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | No FK constraint |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | |
+| `sc_amount` | DECIMAL(10,2) | NO | -- | NOT NULL | Sweeps coins being redeemed |
+| `usd_amount` | DECIMAL(10,2) | NO | -- | NOT NULL | Expected USD payout |
+| `fees_usd` | DECIMAL(10,2) | YES | `0` | -- | Any fees deducted |
 | `method` | redemption_method | NO | `'ach'` | NOT NULL | Payout method |
-| `is_crypto` | BOOLEAN | YES | `FALSE` | — | **Redundant** with `method = 'crypto'`. Schema debt. |
-| `bank_note` | VARCHAR(255) | YES | NULL | — | User's note about the bank/account used |
+| `is_crypto` | BOOLEAN | YES | `FALSE` | -- | **Redundant** with `method = 'crypto'`. Schema debt. |
+| `bank_note` | VARCHAR(255) | YES | NULL | -- | User's note about the bank/account used |
 | `status` | redemption_status | NO | `'pending'` | NOT NULL | Current status in the lifecycle |
-| `notes` | TEXT | YES | NULL | — | User or admin notes |
-| `submitted_at` | TIMESTAMP | YES | `NOW()` | — | When redemption was requested |
-| `confirmed_at` | TIMESTAMP | YES | NULL | — | When funds were confirmed received |
-| `cancelled_at` | TIMESTAMP | YES | NULL | — | When cancelled (if applicable) |
+| `notes` | TEXT | YES | NULL | -- | User or admin notes |
+| `submitted_at` | TIMESTAMP | YES | `NOW()` | -- | When redemption was requested |
+| `confirmed_at` | TIMESTAMP | YES | NULL | -- | When funds were confirmed received |
+| `cancelled_at` | TIMESTAMP | YES | NULL | -- | When cancelled (if applicable) |
 
 #### Indexes
 
@@ -770,7 +770,7 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 
 #### Relationships
 
-- `ledger_entries.source_redemption_id` → `redemptions.id` (trace ledger back to redemption)
+- `ledger_entries.source_redemption_id` -> `redemptions.id` (trace ledger back to redemption)
 
 #### Query Patterns
 
@@ -782,7 +782,7 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 
 #### Data Volume Estimate
 
-**Append-only, moderate growth.** ~5–20 redemptions per user per month × user count.
+**Append-only, moderate growth.** ~5-20 redemptions per user per month x user count.
 
 ---
 
@@ -795,21 +795,21 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | No FK constraint |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | |
-| `entry_type` | ledger_entry_type | NO | — | NOT NULL | Transaction classification |
-| `sc_amount` | DECIMAL(10,2) | YES | NULL | — | SC value of this entry (positive = received, negative = spent) |
-| `usd_amount` | DECIMAL(10,2) | YES | NULL | — | USD value (used for purchases and redemptions) |
-| `is_crypto` | BOOLEAN | YES | `FALSE` | — | Whether the USD value is in cryptocurrency |
-| `notes` | TEXT | YES | NULL | — | User note |
-| `source_redemption_id` | INT | YES | NULL | FK → `redemptions.id` NO ACTION | Links a `redeem_confirmed` entry back to its redemption |
-| `source_claim_id` | INT | YES | NULL | FK → `daily_bonus_claims.id` NO ACTION | Links a `daily` entry back to its claim record |
-| `linked_entry_id` | INT | YES | NULL | FK → `ledger_entries.id` ON DELETE SET NULL | Self-referential link for paired entries (e.g. purchase + purchase_credit). Added via migration. |
-| `link_id` | VARCHAR(255) | YES | NULL | — | String grouping key for related entries. Purpose unclear; not observed in any TypeScript queries reviewed. Potentially vestigial or reserved for future use. |
-| `margin_pct` | DECIMAL(8,4) | YES | NULL | — | Purchase margin percentage. Added in dashboard-foundation migration. |
-| `promo_code` | TEXT | YES | NULL | — | Promo code used for this entry, if any. Added in dashboard-foundation migration. |
-| `entry_at` | TIMESTAMPTZ | YES | `NOW()` | — | Exact timestamp (timezone-aware). Converted from TIMESTAMP in dashboard-foundation migration. |
-| `entry_date` | DATE | YES | `CURRENT_DATE` | — | Calendar date for date-range filtering |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | No FK constraint |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | |
+| `entry_type` | ledger_entry_type | NO | -- | NOT NULL | Transaction classification |
+| `sc_amount` | DECIMAL(10,2) | YES | NULL | -- | SC value of this entry (positive = received, negative = spent) |
+| `usd_amount` | DECIMAL(10,2) | YES | NULL | -- | USD value (used for purchases and redemptions) |
+| `is_crypto` | BOOLEAN | YES | `FALSE` | -- | Whether the USD value is in cryptocurrency |
+| `notes` | TEXT | YES | NULL | -- | User note |
+| `source_redemption_id` | INT | YES | NULL | FK -> `redemptions.id` NO ACTION | Links a `redeem_confirmed` entry back to its redemption |
+| `source_claim_id` | INT | YES | NULL | FK -> `daily_bonus_claims.id` NO ACTION | Links a `daily` entry back to its claim record |
+| `linked_entry_id` | INT | YES | NULL | FK -> `ledger_entries.id` ON DELETE SET NULL | Self-referential link for paired entries (e.g. purchase + purchase_credit). Added via migration. |
+| `link_id` | VARCHAR(255) | YES | NULL | -- | String grouping key for related entries. Purpose unclear; not observed in any TypeScript queries reviewed. Potentially vestigial or reserved for future use. |
+| `margin_pct` | DECIMAL(8,4) | YES | NULL | -- | Purchase margin percentage. Added in dashboard-foundation migration. |
+| `promo_code` | TEXT | YES | NULL | -- | Promo code used for this entry, if any. Added in dashboard-foundation migration. |
+| `entry_at` | TIMESTAMPTZ | YES | `NOW()` | -- | Exact timestamp (timezone-aware). Converted from TIMESTAMP in dashboard-foundation migration. |
+| `entry_date` | DATE | YES | `CURRENT_DATE` | -- | Calendar date for date-range filtering |
 
 #### Indexes
 
@@ -830,7 +830,7 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 - **Available SC** (`balance.ts`): `SUM(sc_amount) WHERE user_id AND casino_id AND entry_type IN ('daily', 'free_sc', 'purchase_credit')`
 - **Balance breakdown**: Grouped by `casino_id`, same type filter.
 - **SC exposure** (`health.ts`): `SUM(CASE WHEN entry_type IN ('daily','free_sc','purchase_credit','adjustment') THEN sc_amount ELSE 0 END)` per casino.
-- **Joined casinos** (`tracker.ts`): `SELECT DISTINCT casino_id FROM ledger_entries WHERE user_id = $1 AND casino_id = ANY($2)` — checks whether a user has "joined" (interacted with) a casino.
+- **Joined casinos** (`tracker.ts`): `SELECT DISTINCT casino_id FROM ledger_entries WHERE user_id = $1 AND casino_id = ANY($2)` -- checks whether a user has "joined" (interacted with) a casino.
 - **Trust score** (`trust.ts`): `SUM(COALESCE(usd_amount, 0)) FROM ledger_entries WHERE user_id = $1` for net P&L.
 - **Ledger API** (`api/ledger/entries.ts`): Filtered by `user_id`, optional `casino_id`, optional `entry_type`, optional date range; paginated at 20 per page.
 - **CSV export**: All entries for user ordered by `entry_at DESC`.
@@ -849,8 +849,8 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
-| `user_id` | TEXT | NO | — | FK → `user_settings.user_id` | |
-| `agg_date` | DATE | NO | — | | |
+| `user_id` | TEXT | NO | -- | FK -> `user_settings.user_id` | |
+| `agg_date` | DATE | NO | -- | | |
 | `sc_earned` | DECIMAL(12,2) | YES | `0` | | Total SC earned that day |
 | `usd_earned` | DECIMAL(10,2) | YES | `0` | | Total USD earned |
 | `usd_spent` | DECIMAL(10,2) | YES | `0` | | Total USD spent |
@@ -858,7 +858,7 @@ Implicit: `state_code` references `state_legal_status.state_code` with no FK con
 | `claim_count` | INT | YES | `0` | | Number of daily claims |
 | `free_sc_count` | INT | YES | `0` | | Number of free_sc entries |
 | `updated_at` | TIMESTAMPTZ | YES | `NOW()` | | Last upsert time |
-| — | — | — | — | PRIMARY KEY `(user_id, agg_date)` | |
+| -- | -- | -- | -- | PRIMARY KEY `(user_id, agg_date)` | |
 
 #### Indexes
 
@@ -879,22 +879,22 @@ The table is defined and indexed, but no write path was found in the reviewed li
 
 ### `user_notifications`
 
-**Purpose:** In-app notification inbox — one row per notification delivered to a user, supporting unread counts and notification history.
+**Purpose:** In-app notification inbox -- one row per notification delivered to a user, supporting unread counts and notification history.
 
 #### Columns
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | No FK constraint |
-| `notification_type` | notification_type | NO | — | NOT NULL | `state_pullout`, `ban_uptick`, or `system` |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | Referenced casino, if applicable |
-| `state_code` | CHAR(2) | YES | NULL | — | Referenced state, if applicable. No FK constraint. |
-| `title` | VARCHAR(255) | NO | — | NOT NULL | Short notification title |
-| `message` | TEXT | NO | — | NOT NULL | Full notification body |
-| `action_url` | TEXT | YES | NULL | — | Deep-link URL for the notification's call to action |
-| `is_read` | BOOLEAN | YES | `FALSE` | — | Whether the user has read this notification |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | No FK constraint |
+| `notification_type` | notification_type | NO | -- | NOT NULL | `state_pullout`, `ban_uptick`, or `system` |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | Referenced casino, if applicable |
+| `state_code` | CHAR(2) | YES | NULL | -- | Referenced state, if applicable. No FK constraint. |
+| `title` | VARCHAR(255) | NO | -- | NOT NULL | Short notification title |
+| `message` | TEXT | NO | -- | NOT NULL | Full notification body |
+| `action_url` | TEXT | YES | NULL | -- | Deep-link URL for the notification's call to action |
+| `is_read` | BOOLEAN | YES | `FALSE` | -- | Whether the user has read this notification |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Indexes
 
@@ -923,7 +923,7 @@ The table is defined and indexed, but no write path was found in the reviewed li
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
-| `user_id` | VARCHAR(255) | NO | — | PRIMARY KEY, FK → `user_settings.user_id` | |
+| `user_id` | VARCHAR(255) | NO | -- | PRIMARY KEY, FK -> `user_settings.user_id` | |
 | `push_warnings` | BOOLEAN | YES | `TRUE` | | Receive push notifications for platform warnings |
 | `push_deals` | BOOLEAN | YES | `TRUE` | | Receive push for deal signals |
 | `push_free_sc` | BOOLEAN | YES | `TRUE` | | Receive push for free SC signals |
@@ -943,24 +943,24 @@ The table is defined and indexed, but no write path was found in the reviewed li
 
 ### `admin_flags`
 
-**Purpose:** Internal queue of items requiring admin attention — automated anomalies, community reports escalated for review, or manually created audit entries.
+**Purpose:** Internal queue of items requiring admin attention -- automated anomalies, community reports escalated for review, or manually created audit entries.
 
 #### Columns
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `source` | VARCHAR(50) | NO | — | NOT NULL | Origin of flag: `report`, `intel`, `manual`, `system`, etc. |
-| `flag_type` | VARCHAR(50) | NO | — | NOT NULL | Classification: `ban_report`, `state_report`, `reset_suggestion`, `data_anomaly`, etc. |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | |
-| `state_code` | CHAR(2) | YES | NULL | — | No FK constraint (schema debt) |
-| `flag_content` | TEXT | NO | — | NOT NULL | The full content of what triggered the flag |
-| `ai_summary` | TEXT | YES | NULL | — | AI-generated summary of the flag (if applicable) |
-| `proposed_action` | TEXT | YES | NULL | — | Suggested admin action; appended when admin adds notes |
-| `status` | VARCHAR(20) | YES | `'pending'` | — | `pending`, `actioned`, `dismissed` |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
-| `actioned_at` | TIMESTAMP | YES | NULL | — | When the flag was resolved |
-| `actioned_by` | VARCHAR(255) | YES | NULL | — | Admin user ID who resolved the flag (no FK) |
+| `source` | VARCHAR(50) | NO | -- | NOT NULL | Origin of flag: `report`, `intel`, `manual`, `system`, etc. |
+| `flag_type` | VARCHAR(50) | NO | -- | NOT NULL | Classification: `ban_report`, `state_report`, `reset_suggestion`, `data_anomaly`, etc. |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | |
+| `state_code` | CHAR(2) | YES | NULL | -- | No FK constraint (schema debt) |
+| `flag_content` | TEXT | NO | -- | NOT NULL | The full content of what triggered the flag |
+| `ai_summary` | TEXT | YES | NULL | -- | AI-generated summary of the flag (if applicable) |
+| `proposed_action` | TEXT | YES | NULL | -- | Suggested admin action; appended when admin adds notes |
+| `status` | VARCHAR(20) | YES | `'pending'` | -- | `pending`, `actioned`, `dismissed` |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
+| `actioned_at` | TIMESTAMP | YES | NULL | -- | When the flag was resolved |
+| `actioned_by` | VARCHAR(255) | YES | NULL | -- | Admin user ID who resolved the flag (no FK) |
 
 #### Indexes
 
@@ -990,15 +990,15 @@ The table is defined and indexed, but no write path was found in the reviewed li
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | |
-| `report_type` | VARCHAR(50) | NO | — | NOT NULL | Type of ban: e.g. `promoban`, `hardban`, `shadowban` |
-| `description` | TEXT | NO | — | NOT NULL | Reporter's description of the ban |
-| `reporter_ip_hash` | VARCHAR(64) | YES | NULL | — | SHA-256 IP hash for deduplication |
-| `reporter_user_id` | VARCHAR(255) | YES | NULL | — | No FK constraint |
-| `is_flagged` | BOOLEAN | YES | `FALSE` | — | Admin flagged for review |
-| `is_published` | BOOLEAN | YES | `FALSE` | — | Published/actioned |
-| `admin_notes` | TEXT | YES | NULL | — | |
-| `submitted_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | |
+| `report_type` | VARCHAR(50) | NO | -- | NOT NULL | Type of ban: e.g. `promoban`, `hardban`, `shadowban` |
+| `description` | TEXT | NO | -- | NOT NULL | Reporter's description of the ban |
+| `reporter_ip_hash` | VARCHAR(64) | YES | NULL | -- | SHA-256 IP hash for deduplication |
+| `reporter_user_id` | VARCHAR(255) | YES | NULL | -- | No FK constraint |
+| `is_flagged` | BOOLEAN | YES | `FALSE` | -- | Admin flagged for review |
+| `is_published` | BOOLEAN | YES | `FALSE` | -- | Published/actioned |
+| `admin_notes` | TEXT | YES | NULL | -- | |
+| `submitted_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Indexes
 
@@ -1023,11 +1023,11 @@ The table is defined and indexed, but no write path was found in the reviewed li
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | |
-| `report_count` | INT | NO | — | NOT NULL | Number of reports that triggered the alert |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | |
+| `report_count` | INT | NO | -- | NOT NULL | Number of reports that triggered the alert |
 | `window_days` | INT | YES | `7` | | Rolling window evaluated |
 | `is_active` | BOOLEAN | YES | `TRUE` | | Whether this alert is still active |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Active vs. Vestigial
 
@@ -1048,13 +1048,13 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | The authenticated user's ID |
-| `email` | VARCHAR(255) | NO | — | NOT NULL | User's email at session creation time |
-| `session_token_hash` | VARCHAR(64) | NO | — | UNIQUE NOT NULL | SHA-256 hash of the session token stored in the cookie |
-| `otp_token_hash` | VARCHAR(64) | YES | NULL | — | SHA-256 hash of the OTP during the login flow; cleared after verification |
-| `otp_expires_at` | TIMESTAMP | YES | NULL | — | OTP expiry (15 minutes from generation) |
-| `last_active_at` | TIMESTAMP | YES | `NOW()` | — | Updated on every authenticated request; used for 90-day session expiry |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | The authenticated user's ID |
+| `email` | VARCHAR(255) | NO | -- | NOT NULL | User's email at session creation time |
+| `session_token_hash` | VARCHAR(64) | NO | -- | UNIQUE NOT NULL | SHA-256 hash of the session token stored in the cookie |
+| `otp_token_hash` | VARCHAR(64) | YES | NULL | -- | SHA-256 hash of the OTP during the login flow; cleared after verification |
+| `otp_expires_at` | TIMESTAMP | YES | NULL | -- | OTP expiry (15 minutes from generation) |
+| `last_active_at` | TIMESTAMP | YES | `NOW()` | -- | Updated on every authenticated request; used for 90-day session expiry |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Indexes
 
@@ -1063,7 +1063,7 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 | `auth_sessions_pkey` | `id` |
 | `auth_sessions_session_token_hash_key` | `session_token_hash` (unique) |
 
-**Missing index:** `(user_id)` — used in `DELETE FROM auth_sessions WHERE session_token_hash = $1` (point lookup, covered by unique index) but also in logout by user (if implemented). Low priority.
+**Missing index:** `(user_id)` -- used in `DELETE FROM auth_sessions WHERE session_token_hash = $1` (point lookup, covered by unique index) but also in logout by user (if implemented). Low priority.
 
 #### Query Patterns
 
@@ -1087,10 +1087,10 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | |
-| `user_id` | VARCHAR(255) | YES | NULL | — | No FK constraint; nullable for anonymous clicks |
-| `referrer_source` | VARCHAR(50) | YES | NULL | — | Context of the click (e.g. `tracker_suggestions`, `directory`) |
-| `clicked_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | |
+| `user_id` | VARCHAR(255) | YES | NULL | -- | No FK constraint; nullable for anonymous clicks |
+| `referrer_source` | VARCHAR(50) | YES | NULL | -- | Context of the click (e.g. `tracker_suggestions`, `directory`) |
+| `clicked_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Data Volume Estimate
 
@@ -1107,11 +1107,11 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `email` | VARCHAR(255) | NO | — | UNIQUE NOT NULL | |
-| `source` | VARCHAR(50) | YES | NULL | — | Where the signup came from (e.g. `landing_page`) |
-| `captured_at` | TIMESTAMP | YES | `NOW()` | — | |
-| `converted_user_id` | VARCHAR(255) | YES | NULL | — | The `user_id` they later registered with (no FK) |
-| `converted_at` | TIMESTAMP | YES | NULL | — | When they converted to a full account |
+| `email` | VARCHAR(255) | NO | -- | UNIQUE NOT NULL | |
+| `source` | VARCHAR(50) | YES | NULL | -- | Where the signup came from (e.g. `landing_page`) |
+| `captured_at` | TIMESTAMP | YES | `NOW()` | -- | |
+| `converted_user_id` | VARCHAR(255) | YES | NULL | -- | The `user_id` they later registered with (no FK) |
+| `converted_at` | TIMESTAMP | YES | NULL | -- | When they converted to a full account |
 
 #### Data Volume Estimate
 
@@ -1121,35 +1121,35 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 
 ### `discord_intel_items`
 
-**Purpose:** The central content store for all intelligence signals — warnings, promos, free SC announcements — sourced from Discord ingestion, admin creation, or user submissions.
+**Purpose:** The central content store for all intelligence signals -- warnings, promos, free SC announcements -- sourced from Discord ingestion, admin creation, or user submissions.
 
 #### Columns
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `item_type` | VARCHAR(50) | NO | — | NOT NULL | Signal type: `platform_warning`, `promo_code`, `flash_sale`, `free_sc`, `general_tip`, `playthrough_deal` |
-| `casino_id` | INT | YES | NULL | FK → `casinos.id` NO ACTION | Associated casino; NULL for platform-wide signals |
-| `casino_name_raw` | VARCHAR(100) | YES | NULL | — | Raw casino name from ingest when slug couldn't be resolved |
-| `title` | VARCHAR(255) | NO | — | NOT NULL | Signal headline |
-| `content` | TEXT | NO | — | NOT NULL | Full signal body (sanitized) |
-| `content_hash` | VARCHAR(64) | YES | NULL | — | SHA-256 of `title + content` for deduplication. Not enforced as UNIQUE — checked manually in code. |
-| `source_channel` | VARCHAR(100) | YES | NULL | — | Discord channel name or `admin`/`user` |
-| `is_published` | BOOLEAN | YES | `FALSE` | — | Whether this signal is visible to end users |
-| `expires_at` | TIMESTAMP | YES | NULL | — | Optional expiry timestamp for time-limited signals |
-| `confidence` | VARCHAR(20) | YES | `'unverified'` | — | `high`, `medium`, `low`, `unverified` |
-| `confidence_reason` | TEXT | YES | NULL | — | Explanation of the confidence level |
-| `auto_published` | BOOLEAN | YES | `FALSE` | — | Whether published automatically by cron |
-| `confirm_count` | INT | YES | `0` | — | **Potentially vestigial.** Original reaction counter; superseded by `worked_count`. |
-| `dispute_count` | INT | YES | `0` | — | **Potentially vestigial.** Original dispute counter; superseded by `didnt_work_count`. |
+| `item_type` | VARCHAR(50) | NO | -- | NOT NULL | Signal type: `platform_warning`, `promo_code`, `flash_sale`, `free_sc`, `general_tip`, `playthrough_deal` |
+| `casino_id` | INT | YES | NULL | FK -> `casinos.id` NO ACTION | Associated casino; NULL for platform-wide signals |
+| `casino_name_raw` | VARCHAR(100) | YES | NULL | -- | Raw casino name from ingest when slug couldn't be resolved |
+| `title` | VARCHAR(255) | NO | -- | NOT NULL | Signal headline |
+| `content` | TEXT | NO | -- | NOT NULL | Full signal body (sanitized) |
+| `content_hash` | VARCHAR(64) | YES | NULL | -- | SHA-256 of `title + content` for deduplication. Not enforced as UNIQUE -- checked manually in code. |
+| `source_channel` | VARCHAR(100) | YES | NULL | -- | Discord channel name or `admin`/`user` |
+| `is_published` | BOOLEAN | YES | `FALSE` | -- | Whether this signal is visible to end users |
+| `expires_at` | TIMESTAMP | YES | NULL | -- | Optional expiry timestamp for time-limited signals |
+| `confidence` | VARCHAR(20) | YES | `'unverified'` | -- | `high`, `medium`, `low`, `unverified` |
+| `confidence_reason` | TEXT | YES | NULL | -- | Explanation of the confidence level |
+| `auto_published` | BOOLEAN | YES | `FALSE` | -- | Whether published automatically by cron |
+| `confirm_count` | INT | YES | `0` | -- | **Potentially vestigial.** Original reaction counter; superseded by `worked_count`. |
+| `dispute_count` | INT | YES | `0` | -- | **Potentially vestigial.** Original dispute counter; superseded by `didnt_work_count`. |
 | `source` | VARCHAR(20) | YES | `'discord'` | CHECK (`discord`, `admin`, `user`) | Signal origin. Added in intelligence-layer migration. |
-| `submitted_by` | VARCHAR(255) | YES | NULL | — | User ID if `source = 'user'`. No FK constraint. Added in intelligence-layer migration. |
-| `is_anonymous` | BOOLEAN | YES | `FALSE` | — | Whether the submitter chose to be anonymous. Added in intelligence-layer migration. |
-| `worked_count` | INT | YES | `0` | — | Count of `worked` votes from `signal_votes`. Added in intelligence-layer migration. |
-| `didnt_work_count` | INT | YES | `0` | — | Count of `didnt_work` votes. Added in intelligence-layer migration. |
+| `submitted_by` | VARCHAR(255) | YES | NULL | -- | User ID if `source = 'user'`. No FK constraint. Added in intelligence-layer migration. |
+| `is_anonymous` | BOOLEAN | YES | `FALSE` | -- | Whether the submitter chose to be anonymous. Added in intelligence-layer migration. |
+| `worked_count` | INT | YES | `0` | -- | Count of `worked` votes from `signal_votes`. Added in intelligence-layer migration. |
+| `didnt_work_count` | INT | YES | `0` | -- | Count of `didnt_work` votes. Added in intelligence-layer migration. |
 | `signal_status` | TEXT | YES | `'active'` | CHECK (`active`, `conditional`, `likely_outdated`, `collapsed`) | Derived status based on vote ratios. Added in intelligence-layer migration. |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
-| `published_at` | TIMESTAMP | YES | NULL | — | When the signal was published |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
+| `published_at` | TIMESTAMP | YES | NULL | -- | When the signal was published |
 
 #### Indexes
 
@@ -1163,8 +1163,8 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 
 #### Relationships
 
-- `discord_intel_reactions.item_id` → `discord_intel_items.id` CASCADE
-- `signal_votes.signal_id` → `discord_intel_items.id` NO ACTION
+- `discord_intel_reactions.item_id` -> `discord_intel_items.id` CASCADE
+- `signal_votes.signal_id` -> `discord_intel_items.id` NO ACTION
 
 #### Query Patterns
 
@@ -1193,11 +1193,11 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `item_id` | INT | YES | NULL | FK → `discord_intel_items.id` CASCADE | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | |
-| `reaction` | VARCHAR(10) | NO | — | NOT NULL | Emoji or reaction string |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
-| — | — | — | — | UNIQUE `(item_id, user_id)` | |
+| `item_id` | INT | YES | NULL | FK -> `discord_intel_items.id` CASCADE | |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | |
+| `reaction` | VARCHAR(10) | NO | -- | NOT NULL | Emoji or reaction string |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
+| -- | -- | -- | -- | UNIQUE `(item_id, user_id)` | |
 
 #### Active vs. Vestigial
 
@@ -1211,18 +1211,18 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 
 ### `signal_votes`
 
-**Purpose:** Records structured community votes on intel signals — whether a signal "worked" or "didn't work" — used to compute signal status and contributor trust scores.
+**Purpose:** Records structured community votes on intel signals -- whether a signal "worked" or "didn't work" -- used to compute signal status and contributor trust scores.
 
 #### Columns
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | UUID | NO | `gen_random_uuid()` | PRIMARY KEY | UUID primary key (unlike most tables which use SERIAL) |
-| `signal_id` | INT | NO | — | NOT NULL, FK → `discord_intel_items.id` NO ACTION | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL, FK → `user_settings.user_id` NO ACTION | |
-| `vote` | VARCHAR(12) | NO | — | NOT NULL, CHECK (`worked`, `didnt_work`) | The vote cast |
-| `created_at` | TIMESTAMPTZ | YES | `NOW()` | — | |
-| — | — | — | — | UNIQUE `(signal_id, user_id)` | One vote per user per signal |
+| `signal_id` | INT | NO | -- | NOT NULL, FK -> `discord_intel_items.id` NO ACTION | |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL, FK -> `user_settings.user_id` NO ACTION | |
+| `vote` | VARCHAR(12) | NO | -- | NOT NULL, CHECK (`worked`, `didnt_work`) | The vote cast |
+| `created_at` | TIMESTAMPTZ | YES | `NOW()` | -- | |
+| -- | -- | -- | -- | UNIQUE `(signal_id, user_id)` | One vote per user per signal |
 
 #### Indexes
 
@@ -1236,7 +1236,7 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 #### Query Patterns
 
 - **Vote cast** (`intel.ts:voteOnSignal`): Upsert on `(signal_id, user_id)` conflict; then updates `worked_count`/`didnt_work_count` in `discord_intel_items` via COUNT subqueries.
-- **Trust computation** (`trust.ts`): `SUM(di.worked_count - di.didnt_work_count)` on `discord_intel_items` — does not query `signal_votes` directly for trust; reads denormalized counts.
+- **Trust computation** (`trust.ts`): `SUM(di.worked_count - di.didnt_work_count)` on `discord_intel_items` -- does not query `signal_votes` directly for trust; reads denormalized counts.
 
 #### Data Volume Estimate
 
@@ -1252,15 +1252,15 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
-| `casino_id` | INT | NO | — | PRIMARY KEY, FK → `casinos.id` | One row per casino |
+| `casino_id` | INT | NO | -- | PRIMARY KEY, FK -> `casinos.id` | One row per casino |
 | `global_status` | VARCHAR(20) | NO | `'healthy'` | NOT NULL | Computed status: `healthy`, `watch`, `at_risk`, `critical` |
-| `status_reason` | TEXT | YES | NULL | — | Human-readable explanation of the status |
-| `active_warning_count` | INT | YES | `0` | — | Number of active (non-expired, non-collapsed) warning signals |
-| `redemption_trend` | DECIMAL(6,2) | YES | NULL | — | Ratio of recent-7d to 30d avg redemption time (>1.0 = slower) |
-| `last_computed_at` | TIMESTAMPTZ | YES | `NOW()` | — | When the cron last updated this row |
-| `admin_override_status` | VARCHAR(20) | YES | NULL | — | Admin-set manual override status (takes precedence over computed) |
-| `admin_override_reason` | TEXT | YES | NULL | — | Explanation for the override |
-| `admin_override_at` | TIMESTAMPTZ | YES | NULL | — | When the override was applied |
+| `status_reason` | TEXT | YES | NULL | -- | Human-readable explanation of the status |
+| `active_warning_count` | INT | YES | `0` | -- | Number of active (non-expired, non-collapsed) warning signals |
+| `redemption_trend` | DECIMAL(6,2) | YES | NULL | -- | Ratio of recent-7d to 30d avg redemption time (>1.0 = slower) |
+| `last_computed_at` | TIMESTAMPTZ | YES | `NOW()` | -- | When the cron last updated this row |
+| `admin_override_status` | VARCHAR(20) | YES | NULL | -- | Admin-set manual override status (takes precedence over computed) |
+| `admin_override_reason` | TEXT | YES | NULL | -- | Explanation for the override |
+| `admin_override_at` | TIMESTAMPTZ | YES | NULL | -- | When the override was applied |
 
 #### Indexes
 
@@ -1271,7 +1271,7 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 
 #### Query Patterns
 
-- **Tracker load** (`tracker.ts`): LEFT JOIN `casino_health ch ON ch.casino_id = c.id` — reads `global_status` as `health_status`.
+- **Tracker load** (`tracker.ts`): LEFT JOIN `casino_health ch ON ch.casino_id = c.id` -- reads `global_status` as `health_status`.
 - **Health detail** (`health.ts:getCasinoHealth`): Point lookup by `casino_id`.
 - **Health update** (`health.ts:computeAllCasinoHealth`): Upserts all casinos in a transaction; cron-driven.
 
@@ -1289,9 +1289,9 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
-| `key` | VARCHAR(50) | NO | — | PRIMARY KEY | Setting name |
-| `value` | TEXT | NO | — | NOT NULL | Setting value (stored as string) |
-| `updated_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `key` | VARCHAR(50) | NO | -- | PRIMARY KEY | Setting name |
+| `value` | TEXT | NO | -- | NOT NULL | Setting value (stored as string) |
+| `updated_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 Seeded with:
 - `auto_publish_enabled` = `'false'`
@@ -1317,10 +1317,10 @@ Seeded with:
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | No FK constraint |
-| `subscription_json` | TEXT | NO | — | NOT NULL | Full JSON of the browser PushSubscription object (endpoint + keys) |
-| `created_at` | TIMESTAMP | YES | `NOW()` | — | |
-| `is_active` | BOOLEAN | YES | `TRUE` | — | Set to `false` when endpoint returns 404/410 (expired subscription) |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | No FK constraint |
+| `subscription_json` | TEXT | NO | -- | NOT NULL | Full JSON of the browser PushSubscription object (endpoint + keys) |
+| `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
+| `is_active` | BOOLEAN | YES | `TRUE` | -- | Set to `false` when endpoint returns 404/410 (expired subscription) |
 
 #### Indexes
 
@@ -1352,9 +1352,9 @@ Seeded with:
 | Column | Type | Nullable | Default | Constraints | Description |
 |---|---|---|---|---|---|
 | `id` | SERIAL | NO | auto | PRIMARY KEY | |
-| `user_id` | VARCHAR(255) | NO | — | NOT NULL | |
-| `payload_title` | VARCHAR(255) | YES | NULL | — | Title of the notification sent |
-| `sent_at` | TIMESTAMP | YES | `NOW()` | — | |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | |
+| `payload_title` | VARCHAR(255) | YES | NULL | -- | Title of the notification sent |
+| `sent_at` | TIMESTAMP | YES | `NOW()` | -- | |
 
 #### Indexes
 
@@ -1414,30 +1414,30 @@ casinos (no deps)
     ↑ user_casino_settings.casino_id (FK CASCADE)
     ↑ casino_state_availability.casino_id (FK CASCADE)
     ↑ casino_health.casino_id (FK PK)
-    ↑ state_pullout_alerts.casino_id (FK NO ACTION) ← blocks delete
-    ↑ reset_time_suggestions.casino_id (FK NO ACTION) ← blocks delete
-    ↑ daily_bonus_claims.casino_id (FK NO ACTION) ← blocks delete
-    ↑ redemptions.casino_id (FK NO ACTION) ← blocks delete
-    ↑ ledger_entries.casino_id (FK NO ACTION) ← blocks delete
-    ↑ user_notifications.casino_id (FK NO ACTION) ← blocks delete
-    ↑ admin_flags.casino_id (FK NO ACTION) ← blocks delete
-    ↑ ban_reports.casino_id (FK NO ACTION) ← blocks delete
-    ↑ ban_uptick_alerts.casino_id (FK NO ACTION) ← blocks delete
-    ↑ clicks.casino_id (FK NO ACTION) ← blocks delete
-    ↑ discord_intel_items.casino_id (FK NO ACTION) ← blocks delete
-    ↑ state_availability_reports.casino_id (FK NO ACTION) ← blocks delete
+    ↑ state_pullout_alerts.casino_id (FK NO ACTION) <- blocks delete
+    ↑ reset_time_suggestions.casino_id (FK NO ACTION) <- blocks delete
+    ↑ daily_bonus_claims.casino_id (FK NO ACTION) <- blocks delete
+    ↑ redemptions.casino_id (FK NO ACTION) <- blocks delete
+    ↑ ledger_entries.casino_id (FK NO ACTION) <- blocks delete
+    ↑ user_notifications.casino_id (FK NO ACTION) <- blocks delete
+    ↑ admin_flags.casino_id (FK NO ACTION) <- blocks delete
+    ↑ ban_reports.casino_id (FK NO ACTION) <- blocks delete
+    ↑ ban_uptick_alerts.casino_id (FK NO ACTION) <- blocks delete
+    ↑ clicks.casino_id (FK NO ACTION) <- blocks delete
+    ↑ discord_intel_items.casino_id (FK NO ACTION) <- blocks delete
+    ↑ state_availability_reports.casino_id (FK NO ACTION) <- blocks delete
 
-discord_intel_items → casinos
+discord_intel_items -> casinos
     ↑ discord_intel_reactions.item_id (FK CASCADE)
-    ↑ signal_votes.signal_id (FK NO ACTION) ← blocks delete
+    ↑ signal_votes.signal_id (FK NO ACTION) <- blocks delete
 
-redemptions → casinos
+redemptions -> casinos
     ↑ ledger_entries.source_redemption_id (FK NO ACTION)
 
-daily_bonus_claims → casinos
+daily_bonus_claims -> casinos
     ↑ ledger_entries.source_claim_id (FK NO ACTION)
 
-ledger_entries → casinos, redemptions, daily_bonus_claims
+ledger_entries -> casinos, redemptions, daily_bonus_claims
     ↑ ledger_entries.linked_entry_id (self-referential FK ON DELETE SET NULL)
 ```
 
@@ -1597,8 +1597,8 @@ Based on query patterns observed in `src/lib/` and `src/pages/api/`, the followi
 | Table | Columns | Type | Rationale |
 |---|---|---|---|
 | `redemptions` | `(user_id, casino_id, status)` | B-tree | `health.ts` and `balance.ts` filter by all three; current index covers `(user_id, status)` only |
-| `ledger_entries` | `(user_id, casino_id, entry_type)` | B-tree | `balance.ts` and `health.ts` filter on `entry_type IN (...)` per user+casino; partially covered by `idx_ledger_user_casino_type` (added in dashboard migration) — verify that index is active |
-| `discord_intel_items` | `(submitted_by, source)` | B-tree | `trust.ts:computeTrustScore` queries `WHERE submitted_by = $1 AND source = 'user'` — no covering index today |
+| `ledger_entries` | `(user_id, casino_id, entry_type)` | B-tree | `balance.ts` and `health.ts` filter on `entry_type IN (...)` per user+casino; partially covered by `idx_ledger_user_casino_type` (added in dashboard migration) -- verify that index is active |
+| `discord_intel_items` | `(submitted_by, source)` | B-tree | `trust.ts:computeTrustScore` queries `WHERE submitted_by = $1 AND source = 'user'` -- no covering index today |
 | `casinos` | `(is_excluded, source)` | B-tree | `getTrackerSuggestions` filters `is_excluded = false AND source = 'admin'`; full scan today |
 | `auth_sessions` | `(user_id)` | B-tree | Logout by user, session cleanup |
 | `signal_votes` | `(user_id)` | B-tree | May be needed if per-user vote history is queried |

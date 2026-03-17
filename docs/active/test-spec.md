@@ -1,9 +1,9 @@
-# SweepsIntel — Comprehensive Test Specification
+# SweepsIntel -- Comprehensive Test Specification
 
 **Version:** 1.0
 **Date:** 2026-03-17
 **Stack:** Astro 4.0 + React 18 + Neon Postgres
-**Coverage scope:** 56 API endpoints · 21 library files · 4 cron jobs
+**Coverage scope:** 56 API endpoints * 21 library files * 4 cron jobs
 
 ---
 
@@ -11,9 +11,9 @@
 
 1. [Authentication & Session Management](#1-authentication--session-management)
 2. [OTP Rate Limiting](#2-otp-rate-limiting)
-3. [Tracker — Casino Management](#3-tracker--casino-management)
-4. [Tracker — Daily Claims](#4-tracker--daily-claims)
-5. [Tracker — Purchases & Free SC](#5-tracker--purchases--free-sc)
+3. [Tracker -- Casino Management](#3-tracker--casino-management)
+4. [Tracker -- Daily Claims](#4-tracker--daily-claims)
+5. [Tracker -- Purchases & Free SC](#5-tracker--purchases--free-sc)
 6. [Ledger](#6-ledger)
 7. [Redemptions](#7-redemptions)
 8. [Intel Feed & Signals](#8-intel-feed--signals)
@@ -25,30 +25,30 @@
 14. [Affiliate Clicks](#14-affiliate-clicks)
 15. [User Settings](#15-user-settings)
 16. [Waitlist](#16-waitlist)
-17. [Admin — Casino Management](#17-admin--casino-management)
-18. [Admin — Health Override](#18-admin--health-override)
-19. [Admin — Trust Score Override](#19-admin--trust-score-override)
-20. [Admin — Flag Actions](#20-admin--flag-actions)
-21. [Admin — Report Actions](#21-admin--report-actions)
-22. [Admin — State & Provider Updates](#22-admin--state--provider-updates)
-23. [Admin — Signal Creation](#23-admin--signal-creation)
-24. [Admin — Notifications & Settings](#24-admin--notifications--settings)
-25. [Admin — Community Digest](#25-admin--community-digest)
-26. [Admin — Casino Import (XLSX)](#26-admin--casino-import-xlsx)
+17. [Admin -- Casino Management](#17-admin--casino-management)
+18. [Admin -- Health Override](#18-admin--health-override)
+19. [Admin -- Trust Score Override](#19-admin--trust-score-override)
+20. [Admin -- Flag Actions](#20-admin--flag-actions)
+21. [Admin -- Report Actions](#21-admin--report-actions)
+22. [Admin -- State & Provider Updates](#22-admin--state--provider-updates)
+23. [Admin -- Signal Creation](#23-admin--signal-creation)
+24. [Admin -- Notifications & Settings](#24-admin--notifications--settings)
+25. [Admin -- Community Digest](#25-admin--community-digest)
+26. [Admin -- Casino Import (XLSX)](#26-admin--casino-import-xlsx)
 27. [Discord Ingestion](#27-discord-ingestion)
-28. [Cron — compute-health](#28-cron--compute-health)
-29. [Cron — compute-trust](#29-cron--compute-trust)
-30. [Cron — auto-publish](#30-cron--auto-publish)
-31. [Cron — push-resets](#31-cron--push-resets)
-32. [Business Logic — Trust Score Calculation](#32-business-logic--trust-score-calculation)
-33. [Business Logic — Contributor Tier Evaluation](#33-business-logic--contributor-tier-evaluation)
-34. [Business Logic — Health Score Computation](#34-business-logic--health-score-computation)
-35. [Business Logic — Reset Period Calculation](#35-business-logic--reset-period-calculation)
-36. [Business Logic — Redemption Stats](#36-business-logic--redemption-stats)
-37. [Business Logic — Signal Status Transitions](#37-business-logic--signal-status-transitions)
-38. [Security — Cross-User Data Access](#38-security--cross-user-data-access)
-39. [Security — Admin Endpoint Protection](#39-security--admin-endpoint-protection)
-40. [Security — PII Exposure](#40-security--pii-exposure)
+28. [Cron -- compute-health](#28-cron--compute-health)
+29. [Cron -- compute-trust](#29-cron--compute-trust)
+30. [Cron -- auto-publish](#30-cron--auto-publish)
+31. [Cron -- push-resets](#31-cron--push-resets)
+32. [Business Logic -- Trust Score Calculation](#32-business-logic--trust-score-calculation)
+33. [Business Logic -- Contributor Tier Evaluation](#33-business-logic--contributor-tier-evaluation)
+34. [Business Logic -- Health Score Computation](#34-business-logic--health-score-computation)
+35. [Business Logic -- Reset Period Calculation](#35-business-logic--reset-period-calculation)
+36. [Business Logic -- Redemption Stats](#36-business-logic--redemption-stats)
+37. [Business Logic -- Signal Status Transitions](#37-business-logic--signal-status-transitions)
+38. [Security -- Cross-User Data Access](#38-security--cross-user-data-access)
+39. [Security -- Admin Endpoint Protection](#39-security--admin-endpoint-protection)
+40. [Security -- PII Exposure](#40-security--pii-exposure)
 41. [Test Infrastructure Recommendations](#41-test-infrastructure-recommendations)
 
 ---
@@ -180,7 +180,7 @@
 
 ---
 
-## 3. Tracker — Casino Management
+## 3. Tracker -- Casino Management
 
 ### TRACK-001
 **Description:** Adding a known casino by ID inserts `user_casino_settings` row.
@@ -310,7 +310,7 @@
 
 ---
 
-## 4. Tracker — Daily Claims
+## 4. Tracker -- Daily Claims
 
 ### CLAIM-001
 **Description:** Successful daily claim creates `daily_bonus_claims` and `ledger_entries` rows atomically.
@@ -391,7 +391,7 @@
 
 ---
 
-## 5. Tracker — Purchases & Free SC
+## 5. Tracker -- Purchases & Free SC
 
 ### PURCHASE-001
 **Description:** Successful purchase creates two ledger entries (purchase + purchase_credit) linked together.
@@ -457,7 +457,7 @@
 **Description:** Pagination with `page=2` returns the correct offset.
 **Given:** User has 25 ledger entries.
 **When:** GET `/api/ledger/entries?page=2`.
-**Then:** Entries 21–25 returned; `page: 2` in response.
+**Then:** Entries 21-25 returned; `page: 2` in response.
 **Priority:** P1
 
 ### LEDGER-003
@@ -763,8 +763,8 @@
 
 ### VOTE-007
 **Description:** Signal at exactly the threshold boundary (total=8, negative_ratio exactly 0.8) transitions to `likely_outdated`.
-**Given:** 8 total votes, 2 worked + 6 didnt_work (ratio = 0.75 — below threshold).
-**Then:** Status remains `active`. — With 1 worked + 7 didnt_work (ratio = 0.875), transitions to `likely_outdated`.
+**Given:** 8 total votes, 2 worked + 6 didnt_work (ratio = 0.75 -- below threshold).
+**Then:** Status remains `active`. -- With 1 worked + 7 didnt_work (ratio = 0.875), transitions to `likely_outdated`.
 **Priority:** P1
 
 ---
@@ -1076,7 +1076,7 @@
 
 ---
 
-## 17. Admin — Casino Management
+## 17. Admin -- Casino Management
 
 ### ADMIN-CASINO-001
 **Description:** POST `/api/admin/casinos` creates new casino and returns its ID; requires admin.
@@ -1121,7 +1121,7 @@
 
 ---
 
-## 18. Admin — Health Override
+## 18. Admin -- Health Override
 
 ### ADMIN-HEALTH-001
 **Description:** Admin can override casino health status with reason.
@@ -1145,7 +1145,7 @@
 
 ---
 
-## 19. Admin — Trust Score Override
+## 19. Admin -- Trust Score Override
 
 ### ADMIN-TRUST-001
 **Description:** Admin can manually set a user's trust score.
@@ -1168,7 +1168,7 @@
 
 ---
 
-## 20. Admin — Flag Actions
+## 20. Admin -- Flag Actions
 
 ### ADMIN-FLAG-001
 **Description:** Dismiss action marks flag as dismissed regardless of flag type.
@@ -1206,7 +1206,7 @@
 
 ---
 
-## 21. Admin — Report Actions
+## 21. Admin -- Report Actions
 
 ### ADMIN-REPORT-001
 **Description:** Publishing a `ban` report sets `is_published = true`.
@@ -1251,7 +1251,7 @@
 
 ---
 
-## 22. Admin — State & Provider Updates
+## 22. Admin -- State & Provider Updates
 
 ### ADMIN-STATE-001
 **Description:** Admin state update with `legal_but_pulled_out` triggers pullout flow and push notification.
@@ -1282,7 +1282,7 @@
 
 ---
 
-## 23. Admin — Signal Creation
+## 23. Admin -- Signal Creation
 
 ### ADMIN-SIG-001
 **Description:** Admin can create a high-confidence published signal directly.
@@ -1306,7 +1306,7 @@
 
 ---
 
-## 24. Admin — Notifications & Settings
+## 24. Admin -- Notifications & Settings
 
 ### ADMIN-NOTIF-001
 **Description:** Admin broadcast to all users creates notifications for every user.
@@ -1330,7 +1330,7 @@
 
 ---
 
-## 25. Admin — Community Digest
+## 25. Admin -- Community Digest
 
 ### ADMIN-DIGEST-001
 **Description:** Community digest returns signal stats, flagged users, and top contributors.
@@ -1354,7 +1354,7 @@
 
 ---
 
-## 26. Admin — Casino Import (XLSX)
+## 26. Admin -- Casino Import (XLSX)
 
 ### ADMIN-IMPORT-001
 **Description:** XLSX preview upload returns parsed headers and up to 10 preview rows.
@@ -1441,7 +1441,7 @@
 **Priority:** P1
 
 ### DISCORD-007
-**Description:** Game availability confidence formula: mixed signals (>=1 positive, >=1 negative) → `low`.
+**Description:** Game availability confidence formula: mixed signals (>=1 positive, >=1 negative) -> `low`.
 **Given:** Game with `positive_signal_count = 2`, `negative_signal_count = 1`.
 **When:** Query confidence after update.
 **Then:** `confidence = 'low'`.
@@ -1455,7 +1455,7 @@
 
 ---
 
-## 28. Cron — compute-health
+## 28. Cron -- compute-health
 
 ### CRON-HEALTH-001
 **Description:** Unauthorized request returns 401.
@@ -1507,7 +1507,7 @@
 
 ---
 
-## 29. Cron — compute-trust
+## 29. Cron -- compute-trust
 
 ### CRON-TRUST-001
 **Description:** Unauthorized request returns 401.
@@ -1537,7 +1537,7 @@
 
 ---
 
-## 30. Cron — auto-publish
+## 30. Cron -- auto-publish
 
 ### CRON-PUB-001
 **Description:** Returns `{ published: 0, skipped: 'disabled' }` when `auto_publish_enabled = false`.
@@ -1583,7 +1583,7 @@
 
 ---
 
-## 31. Cron — push-resets
+## 31. Cron -- push-resets
 
 ### CRON-RESET-001
 **Description:** Unauthorized request returns 401.
@@ -1621,7 +1621,7 @@
 
 ---
 
-## 32. Business Logic — Trust Score Calculation
+## 32. Business Logic -- Trust Score Calculation
 
 ### TRUST-001
 **Description:** Brand-new user with no activity returns default score of 0.5.
@@ -1638,7 +1638,7 @@
 **Priority:** P1
 
 ### TRUST-003
-**Description:** Account activity is clamped to [0, 1] — age > 90 days does not increase score above 1.
+**Description:** Account activity is clamped to [0, 1] -- age > 90 days does not increase score above 1.
 **Given:** `accountAgeDays = 200`, `claimCount = 200`.
 **When:** Trust score computed.
 **Then:** Account activity contribution = `0.20 * 1.0 = 0.20` (not > 0.20).
@@ -1652,21 +1652,21 @@
 **Priority:** P1
 
 ### TRUST-005
-**Description:** Community standing is clamped at 0 and 1: net votes of -10 or less → 0; net votes ≥ 10 → 1.
+**Description:** Community standing is clamped at 0 and 1: net votes of -10 or less -> 0; net votes ≥ 10 -> 1.
 **Given:** Case A: `net_positive_votes = -10`; Case B: `net_positive_votes = 10`.
 **When:** Trust score computed (COMMUNITY_STANDING_OFFSET = 10, DIVISOR = 20).
 **Then:** Case A: `clamp((-10+10)/20, 0, 1) = 0`; Case B: `clamp((10+10)/20, 0, 1) = 1.0`.
 **Priority:** P1
 
 ### TRUST-006
-**Description:** Portfolio PL — positive net_pl_usd of $1000 yields portfolioPl = 1.0 (clamped max).
+**Description:** Portfolio PL -- positive net_pl_usd of $1000 yields portfolioPl = 1.0 (clamped max).
 **Given:** `netPlUsd = 1000` (PORTFOLIO_POSITIVE_PL_MATURITY_USD = 1000).
 **When:** Trust score computed.
 **Then:** `portfolioPl = clamp(1000/1000, 0.5, 1) = 1.0`.
 **Priority:** P1
 
 ### TRUST-007
-**Description:** Portfolio PL — negative net_pl_usd of -$1000 yields portfolioPl at floor 0.3.
+**Description:** Portfolio PL -- negative net_pl_usd of -$1000 yields portfolioPl at floor 0.3.
 **Given:** `netPlUsd = -1000` (PORTFOLIO_NEGATIVE_PL_DIVISOR_USD = 2000; floor = 0.3).
 **When:** Trust score computed.
 **Then:** `portfolioPl = clamp(0.5 + (-1000/2000), 0.3, 0.5) = clamp(0.0, 0.3, 0.5) = 0.3`.
@@ -1697,7 +1697,7 @@
 
 ---
 
-## 33. Business Logic — Contributor Tier Evaluation
+## 33. Business Logic -- Contributor Tier Evaluation
 
 ### TIER-001
 **Description:** `operator` tier is never changed by the algorithm.
@@ -1757,31 +1757,31 @@
 
 ---
 
-## 34. Business Logic — Health Score Computation
+## 34. Business Logic -- Health Score Computation
 
 ### HLTH-001
-**Description:** Zero warnings → `healthy` status.
+**Description:** Zero warnings -> `healthy` status.
 **Given:** Casino with no published `platform_warning` items.
 **When:** Health computed.
 **Then:** `global_status = 'healthy'`; `active_warning_count = 0`.
 **Priority:** P0
 
 ### HLTH-002
-**Description:** 1 active (unexpired) warning with no disputes → score = 1.0 → status = `watch` (threshold ≥ 1.5 = watch).
+**Description:** 1 active (unexpired) warning with no disputes -> score = 1.0 -> status = `watch` (threshold ≥ 1.5 = watch).
 **Given:** 1 warning, no votes, no expiry.
 **When:** Health computed.
 **Then:** Score ≈ 1.0 < 1.5; `global_status = 'healthy'`. (Note: single undisputed warning with weight 1.0 does NOT reach 'watch' at threshold 1.5.)
 **Priority:** P1
 
 ### HLTH-003
-**Description:** 2 active warnings with no disputes → score = 2.0 → `watch` status (>= 1.5, < 3.0).
+**Description:** 2 active warnings with no disputes -> score = 2.0 -> `watch` status (>= 1.5, < 3.0).
 **Given:** 2 unexpired warnings, no votes.
 **When:** Health computed.
 **Then:** `global_status = 'watch'`.
 **Priority:** P0
 
 ### HLTH-004
-**Description:** Warning expired 24–48 hours ago has decay weight of 0.5.
+**Description:** Warning expired 24-48 hours ago has decay weight of 0.5.
 **Given:** Warning with `expires_at = 36 hours ago`.
 **When:** `decayWeight` called.
 **Then:** Returns `0.5` (WARNING_WEIGHT_48H).
@@ -1802,20 +1802,20 @@
 **Priority:** P2
 
 ### HLTH-007
-**Description:** `clampStatus` boundary: score exactly at 1.5 → `watch`; score exactly at 3.0 → `at_risk`.
+**Description:** `clampStatus` boundary: score exactly at 1.5 -> `watch`; score exactly at 3.0 -> `at_risk`.
 **When:** `clampStatus(1.5)` and `clampStatus(3.0)`.
 **Then:** `watch` and `at_risk` respectively.
 **Priority:** P1
 
 ### HLTH-008
-**Description:** `escalateStatus` increments status by one level: healthy→watch, watch→at_risk, at_risk→critical, critical→critical.
+**Description:** `escalateStatus` increments status by one level: healthy->watch, watch->at_risk, at_risk->critical, critical->critical.
 **When:** `escalateStatus('healthy')`, `escalateStatus('at_risk')`, `escalateStatus('critical')`.
 **Then:** `'watch'`, `'critical'`, `'critical'`.
 **Priority:** P1
 
 ---
 
-## 35. Business Logic — Reset Period Calculation
+## 35. Business Logic -- Reset Period Calculation
 
 ### RESET-001
 **Description:** `computeFixedResetPeriodStart` returns `null` when `reset_time_local` is missing.
@@ -1830,21 +1830,21 @@
 **Priority:** P1
 
 ### RESET-003
-**Description:** Current time before reset → returns today's reset time (not tomorrow's).
+**Description:** Current time before reset -> returns today's reset time (not tomorrow's).
 **Given:** `reset_time_local = '12:00'`, timezone = UTC; now = 11:00 UTC.
 **When:** `computeFixedResetPeriodStart`.
 **Then:** Returns today at 12:00 UTC (current period is yesterday at 12:00 UTC... wait, no: current period start should be yesterday 12:00 since now is before today's 12:00). Returns yesterday at 12:00 UTC as the period start.
 **Priority:** P0
 
 ### RESET-004
-**Description:** Current time after reset → period start is today's reset time.
+**Description:** Current time after reset -> period start is today's reset time.
 **Given:** `reset_time_local = '08:00'`, timezone = UTC; now = 09:00 UTC.
 **When:** `computeFixedResetPeriodStart`.
 **Then:** Returns today at 08:00 UTC.
 **Priority:** P0
 
 ### RESET-005
-**Description:** 12-hour interval: two resets per day → period start reflects the most recent interval start.
+**Description:** 12-hour interval: two resets per day -> period start reflects the most recent interval start.
 **Given:** `reset_time_local = '08:00'`, `reset_interval_hours = 12`; now = 21:00 UTC.
 **When:** `computeFixedResetPeriodStart`.
 **Then:** Returns today at 20:00 UTC (08:00 + 12h = 20:00 is the latest period start before 21:00).
@@ -1866,7 +1866,7 @@
 
 ---
 
-## 36. Business Logic — Redemption Stats
+## 36. Business Logic -- Redemption Stats
 
 ### RDSTATS-001
 **Description:** Fewer than 5 data points returns `{ medianDays: null, p80Days: null, sampleCount: n, trendWarning: false }`.
@@ -1892,12 +1892,12 @@
 ### RDSTATS-004
 **Description:** P80 (80th percentile) computed correctly.
 **Given:** Days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] (10 values).
-**When:** `percentile([1..10], 0.8)` → `Math.ceil(10 * 0.8) - 1 = 7` → index 7 → value `8`.
+**When:** `percentile([1..10], 0.8)` -> `Math.ceil(10 * 0.8) - 1 = 7` -> index 7 -> value `8`.
 **Then:** Returns `8`.
 **Priority:** P1
 
 ### RDSTATS-005
-**Description:** `trendWarning` is true when recent median > prior median × 1.2.
+**Description:** `trendWarning` is true when recent median > prior median x 1.2.
 **Given:** Prior 30-day window median = 5 days; recent 30-day median = 7 days (7 > 5*1.2 = 6).
 **When:** `computeStats`.
 **Then:** `trendWarning = true`.
@@ -1912,7 +1912,7 @@
 
 ---
 
-## 37. Business Logic — Signal Status Transitions
+## 37. Business Logic -- Signal Status Transitions
 
 ### SIGSTATUS-001
 **Description:** Signal status stays `active` when total votes < 4.
@@ -1951,7 +1951,7 @@
 
 ---
 
-## 38. Security — Cross-User Data Access
+## 38. Security -- Cross-User Data Access
 
 ### SEC-001
 **Description:** User A cannot read User B's ledger entries via `/api/ledger/entries`.
@@ -2020,7 +2020,7 @@
 
 ---
 
-## 39. Security — Admin Endpoint Protection
+## 39. Security -- Admin Endpoint Protection
 
 ### SEC-ADM-001
 **Description:** All admin endpoints reject requests from non-admin authenticated users with 403.
@@ -2057,7 +2057,7 @@
 
 ---
 
-## 40. Security — PII Exposure
+## 40. Security -- PII Exposure
 
 ### SEC-PII-001
 **Description:** Full email address is never returned in intel feed attribution.
@@ -2073,7 +2073,7 @@
 **Priority:** P0
 
 ### SEC-PII-003
-**Description:** Admin community digest exposes `user_id` (which may be an email) — this should be audited.
+**Description:** Admin community digest exposes `user_id` (which may be an email) -- this should be audited.
 **Given:** `admin/community-digest` returns `flagged_users` and `top_contributors` with `user_id`.
 **When:** GET `/api/admin/community-digest`.
 **Then:** `user_id` values are present (admin view); verify this endpoint is admin-only and the `user_id` exposure is intentional and documented.
@@ -2105,13 +2105,13 @@
 
 ### Framework
 
-**Unit/Integration Tests — Vitest** is strongly recommended over Jest given the ESM-first Astro environment. Vitest provides native TypeScript support, faster execution, and is the de-facto standard in the Vite/Astro ecosystem. Use `@vitest/coverage-v8` for coverage reporting.
+**Unit/Integration Tests -- Vitest** is strongly recommended over Jest given the ESM-first Astro environment. Vitest provides native TypeScript support, faster execution, and is the de-facto standard in the Vite/Astro ecosystem. Use `@vitest/coverage-v8` for coverage reporting.
 
-**End-to-End Tests — Playwright** for browser-level integration tests covering the React UI layer. Use Playwright's API request testing for API contract tests that need real HTTP.
+**End-to-End Tests -- Playwright** for browser-level integration tests covering the React UI layer. Use Playwright's API request testing for API contract tests that need real HTTP.
 
 ### Mocking Strategy
 
-**Database:** Mock the `query<T>()` and `transaction()` functions from `src/lib/db.ts` using `vi.mock('./db')`. Create typed mock helpers that return fixtures for each test. Do **not** mock at the SQL level — mock at the module boundary.
+**Database:** Mock the `query<T>()` and `transaction()` functions from `src/lib/db.ts` using `vi.mock('./db')`. Create typed mock helpers that return fixtures for each test. Do **not** mock at the SQL level -- mock at the module boundary.
 
 Example pattern:
 ```ts
@@ -2135,7 +2135,7 @@ vi.mock('../../lib/db', () => ({
 
 Use a layered approach:
 
-1. **Unit tests** (majority): No real DB — mock `query()` with `vi.fn()`. These should be the fastest tests (< 1s each).
+1. **Unit tests** (majority): No real DB -- mock `query()` with `vi.fn()`. These should be the fastest tests (< 1s each).
 
 2. **Integration tests**: Use a dedicated Neon test branch. Create a migration script (`test-setup.sql`) that seeds the schema and baseline fixtures. Run migrations via `pnpm db:test:reset` before the suite.
 
@@ -2144,7 +2144,7 @@ Use a layered approach:
 **Fixture strategy:** Create factories for all entity types using a builder pattern:
 
 ```ts
-// Example factory pattern (not runnable — for documentation)
+// Example factory pattern (not runnable -- for documentation)
 type Casino = { id: number; name: string; slug: string; reset_mode: string; ... }
 const makeCasino = (overrides: Partial<Casino>): Casino => ({
   id: 1, name: 'Test Casino', slug: 'test-casino',
@@ -2191,7 +2191,7 @@ src/
 Use the Astro test harness or test the route handlers directly by importing them and constructing `Request` objects:
 
 ```ts
-// Example pattern (not runnable — for documentation)
+// Example pattern (not runnable -- for documentation)
 import { POST } from '../../pages/api/tracker/claim';
 
 it('rejects duplicate claims', async () => {
@@ -2237,22 +2237,22 @@ Run tests in this order in CI:
 
 Start with these 15 tests to get foundational coverage in place immediately:
 
-1. AUTH-004 — Successful OTP verification
-2. AUTH-005 — Expired OTP rejected
-3. AUTH-011 — Session expiry enforced
-4. CLAIM-002 — Duplicate claim rejected
-5. CLAIM-003 — Race condition test
-6. REDEEM-009 — Cross-user redemption update blocked
-7. REDEEM-011 — Concurrent received calls
-8. SEC-001 — Cross-user ledger isolation
-9. SEC-ADM-001 — Admin endpoint protection
-10. SEC-ADM-002 — Unauthenticated admin rejection
-11. TRUST-009 — Full trust score numeric verification
-12. CRON-HEALTH-005 — Health computation idempotency
-13. CRON-PUB-006 — Auto-publish idempotency
-14. SEC-PII-001 — Email not leaked in intel feed
-15. RATELIMIT-001 — IP rate limiting enforced
+1. AUTH-004 -- Successful OTP verification
+2. AUTH-005 -- Expired OTP rejected
+3. AUTH-011 -- Session expiry enforced
+4. CLAIM-002 -- Duplicate claim rejected
+5. CLAIM-003 -- Race condition test
+6. REDEEM-009 -- Cross-user redemption update blocked
+7. REDEEM-011 -- Concurrent received calls
+8. SEC-001 -- Cross-user ledger isolation
+9. SEC-ADM-001 -- Admin endpoint protection
+10. SEC-ADM-002 -- Unauthenticated admin rejection
+11. TRUST-009 -- Full trust score numeric verification
+12. CRON-HEALTH-005 -- Health computation idempotency
+13. CRON-PUB-006 -- Auto-publish idempotency
+14. SEC-PII-001 -- Email not leaked in intel feed
+15. RATELIMIT-001 -- IP rate limiting enforced
 
 ---
 
-*End of Test Specification — 245 test cases across 40 feature areas.*
+*End of Test Specification -- 245 test cases across 40 feature areas.*

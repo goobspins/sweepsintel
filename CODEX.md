@@ -1,4 +1,4 @@
-# SweepsIntel — Codex Build Instructions
+# SweepsIntel -- Codex Build Instructions
 
 **Read this file first.** It tells you what to read and how we work.
 
@@ -6,13 +6,13 @@
 
 ## What to read
 
-**Every task**: Start with `docs/active/SWEEPSINTEL-3.0-SPEC-RECONCILED.md`. This is the authoritative reference — it maps every feature to file paths, implementation status, and actual behavior. Find the section relevant to your task and work from there.
+**Every task**: Start with `docs/active/SWEEPSINTEL-3.0-SPEC-RECONCILED.md`. This is the authoritative reference -- it maps every feature to file paths, implementation status, and actual behavior. Find the section relevant to your task and work from there.
 
-**For schema/database work**: `docs/active/schema-reference.md` — Every table, column, index, relationship, and query pattern.
+**For schema/database work**: `docs/active/schema-reference.md` -- Every table, column, index, relationship, and query pattern.
 
-**For intelligence layer work**: `docs/active/INTELLIGENCE-LAYER-DESIGN-v2.md` — Deep design for the intel system's future.
+**For intelligence layer work**: `docs/active/INTELLIGENCE-LAYER-DESIGN-v2.md` -- Deep design for the intel system's future.
 
-**For tests**: `docs/active/test-spec.md` — Comprehensive test specification (not yet implemented).
+**For tests**: `docs/active/test-spec.md` -- Comprehensive test specification (not yet implemented).
 
 That's it. These four files in `docs/active/` are your references. Everything else in the repo is either source code or historical.
 
@@ -22,12 +22,12 @@ That's it. These four files in `docs/active/` are your references. Everything el
 
 ```
 docs/
-├── active/          ← READ THESE. Current authoritative references.
-├── codex-prompts/   ← Historical prompts written for past Codex tasks.
-└── archive/         ← Old specs. Do NOT read unless a prompt explicitly tells you to.
+|-- active/          <- READ THESE. Current authoritative references.
+|-- codex-prompts/   <- Historical prompts written for past Codex tasks.
+|-- archive/         <- Old specs. Do NOT read unless a prompt explicitly tells you to.
 ```
 
-**Do not read `docs/archive/`** unless a specific prompt directs you to a specific file there. The archive contains superseded specs that may contradict what's actually built. If you find yourself wanting context that isn't in the active docs, flag it — don't go spelunking through archive.
+**Do not read `docs/archive/`** unless a specific prompt directs you to a specific file there. The archive contains superseded specs that may contradict what's actually built. If you find yourself wanting context that isn't in the active docs, flag it -- don't go spelunking through archive.
 
 ---
 

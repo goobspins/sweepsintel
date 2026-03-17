@@ -1,4 +1,4 @@
-# Intelligence Layer v2 — Gap Analysis & Implementation Plan
+# Intelligence Layer v2 -- Gap Analysis & Implementation Plan
 
 > **Status:** Working document. Gap analysis complete. Sequencing proposed.
 > **Date:** 2026-03-18
@@ -12,7 +12,7 @@
 
 | Design Feature | Current State | Gap |
 |---|---|---|
-| Trust-gated publishing (≥0.65 instant, 0.40-0.64 5-min hold, <0.40 30-min auto-publish) | Binary: trust ≥ 0.65 bypasses age/claim gate. No hold queue. Auto-publish cron uses flat 120-min delay + confidence='high' filter | **Major.** Need tiered hold logic, trust-gated publish times, and warning-type fast-track |
+| Trust-gated publishing (>=0.65 instant, 0.40-0.64 5-min hold, <0.40 30-min auto-publish) | Binary: trust >= 0.65 bypasses age/claim gate. No hold queue. Auto-publish cron uses flat 120-min delay + confidence='high' filter | **Major.** Need tiered hold logic, trust-gated publish times, and warning-type fast-track |
 | Signal priority tiers (critical/high/normal/low) | No priority concept. All signals have equal visual weight | **Major.** New column, sort logic, banner treatment for critical signals |
 | Type-dependent aging curves (promo codes decay fast, warnings don't decay by time) | No aging. Signals sort by created_at. Expired signals hidden by `expires_at` | **Major.** New decay weight system, display prominence calculation |
 | Dedup: casino_id + type + 4-hour window, with "also reported by" confirmations | Content hash only (`content_hash` column exists). No confirmation system | **Major.** Need confirmation_count, first_reporter_id, "also reported by" UI |
@@ -24,10 +24,10 @@
 
 | Design Feature | Current State | Gap |
 |---|---|---|
-| Reweighted formula: Activity 25%, Submissions 35%, Community 20%, Portfolio 20% | Activity 20%, Submissions 30%, Community 15%, Portfolio 35% | **Medium.** Weight change in trust.ts — simple but impacts all scores |
+| Reweighted formula: Activity 25%, Submissions 35%, Community 20%, Portfolio 20% | Activity 20%, Submissions 30%, Community 15%, Portfolio 35% | **Medium.** Weight change in trust.ts -- simple but impacts all scores |
 | Cold start at 0.45 (not 0.50), 3-day/3-claim gate (not 7-day/5-claim) | Start at 0.50, gate at 7 days or 5 claims | **Small.** Constants change |
 | Referral vouching (trusted user invites, -0.03 penalty if invitee's signals debunked) | No referral system | **Medium.** New referral table, vouching logic, trust penalty |
-| Vote weighting by voter trust score | Flat votes — all equal weight | **Major.** Changes signal status calculation, vote impact on trust |
+| Vote weighting by voter trust score | Flat votes -- all equal weight | **Major.** Changes signal status calculation, vote impact on trust |
 | Revenge downvote protection (cap negative votes from same user on same submitter) | No protection | **Medium.** New check in vote processing |
 | Trust decay: 0.01/month after 60 days inactivity (not 0.02 after 30) | Not implemented (no decay logic found in cron) | **Medium.** Add to trust cron |
 | Trust visibility: score + directional breakdown + 90-day sparkline | Trust score exists but not exposed to user in UI | **Medium.** New UI component, API endpoint for trust breakdown |
@@ -44,7 +44,7 @@
 | Negative signal handling (90-day personal suppression, mass removal admin flag) | No removal tracking for discovery suppression | **Medium.** Track removals, suppress in recommendations |
 | Recency suppression (rotate stale recommendations down) | No impression tracking | **Medium.** Need `discovery_impressions` table or counter |
 | Collaborative filtering ("users who track X also track Y") | Not implemented | **Deferred.** Design says weight stays low until 100+ users. Skip for now. |
-| Quiet expert influence (top-quartile portfolio → 1.5x collab weight) | Not implemented | **Deferred.** Depends on collab filtering. |
+| Quiet expert influence (top-quartile portfolio -> 1.5x collab weight) | Not implemented | **Deferred.** Depends on collab filtering. |
 
 ### Domain 4: Community Intelligence at Scale
 
@@ -89,12 +89,12 @@
 
 - Add columns to `discord_intel_items`: `signal_priority` (enum: critical/high/normal/low), `first_reporter_id`, `confirmation_count`, `debunked_at`, `state_tags` (text[]), `is_pinned`
 - Add `signal_confirmations` table (signal_id, user_id, created_at)
-- Add `signal_updates` table (signal_id, author_id, content, created_at) — max 3 per signal enforced in app
+- Add `signal_updates` table (signal_id, author_id, content, created_at) -- max 3 per signal enforced in app
 - Add `events` table for selective event sourcing
 - Add `anonymous_preference` to `user_settings` (default true per Dylan's resolution)
 - Add `trust_last_activity_at` to `user_settings` for decay tracking
 - Add `health_downgraded_at`, `health_recovery_eligible_at` to `casino_health` for sticky recovery
-- Add `moderation_actions` table (id, admin_id, action_type, entity_type, entity_id, reason, created_at) — audit trail skeleton
+- Add `moderation_actions` table (id, admin_id, action_type, entity_type, entity_id, reason, created_at) -- audit trail skeleton
 - Run migration. Backfill `signal_priority` from `item_type` mapping. Backfill `first_reporter_id` from `submitted_by` where `is_anonymous = false`.
 
 #### Phase 1: Trust System Reweight + Decay + Vote Weighting
@@ -111,9 +111,9 @@
 #### Phase 2: Signal Lifecycle Overhaul
 *The core behavior change. How signals are created, published, aged, and resolved.*
 
-- Trust-gated publishing: ≥0.65 instant, 0.40-0.64 5-min hold, <0.40 30-min auto-publish. Warnings always within 5 min.
+- Trust-gated publishing: >=0.65 instant, 0.40-0.64 5-min hold, <0.40 30-min auto-publish. Warnings always within 5 min.
 - Replace current auto-publish cron with the new tiered logic
-- Signal priority assignment on creation (map item_type → priority tier)
+- Signal priority assignment on creation (map item_type -> priority tier)
 - Dedup: casino_id + type + 4-hour window. First reporter keeps identity, subsequent become confirmations
 - Default anonymous with sticky preference
 - Auto state-tagging from submitter's home_state
@@ -121,10 +121,10 @@
 - Correction notes: append-only, max 3 per signal, visually distinct
 - Record events for signal state changes
 
-#### Phase 3: Health System — Sticky Downgrades
+#### Phase 3: Health System -- Sticky Downgrades
 *Changes how casino health works. Implements Dylan's "fast down, slow up" resolution.*
 
-- Fast downgrade: amber at 3 trusted (≥0.40) warning reports in 6 hours, full alert at 6+ or admin escalation
+- Fast downgrade: amber at 3 trusted (>=0.40) warning reports in 6 hours, full alert at 6+ or admin escalation
 - Sticky recovery: no auto-recovery on cron. Recovery requires:
   - Admin manual clear, OR
   - Cool-down with zero new negatives (14 days watch, 30 days at_risk, 60+ days critical), OR
@@ -133,23 +133,23 @@
 - Cross-casino parent company badge (informational only)
 - Admin health override still works, now with audit trail via events table
 
-#### Phase 4: Feed Overhaul — Two-Layer Architecture
+#### Phase 4: Feed Overhaul -- Two-Layer Architecture
 *The big UI change. Curated default + raw toggle.*
 
-- Curated view: consolidate signals by casino+type, composite scoring (recency × vote ratio × submitter trust × priority), smart summaries
+- Curated view: consolidate signals by casino+type, composite scoring (recency x vote ratio x submitter trust x priority), smart summaries
 - Raw view: chronological, all individual signals with full attribution
 - Mixed results indicator when >20% negative votes, with state breakdown
-- Signal priority visual treatment (critical → persistent banner, high → accent, normal → standard, low → muted)
+- Signal priority visual treatment (critical -> persistent banner, high -> accent, normal -> standard, low -> muted)
 - Type-dependent display: aging curves affect sort weight, not visibility
 - Admin-pinned signals override sort in both views
-- Trending detection: dynamic threshold min(5, ceil(users/100)) trusted users in 6hr window → banner (not auto-escalation)
+- Trending detection: dynamic threshold min(5, ceil(users/100)) trusted users in 6hr window -> banner (not auto-escalation)
 
 #### Phase 5: Discovery Algorithm
 *Personalized recommendations replacing flat list.*
 
 - Mode detection: onboarding (0-5 casinos), growth (6-15), expert (16+)
 - Onboarding: top 5 by estimated daily value in user's state, tier S/A only
-- Growth: blended score — 40% daily value, 30% portfolio gap, 20% intel boost, 10% collab (redistributed to value until 100+ users)
+- Growth: blended score -- 40% daily value, 30% portfolio gap, 20% intel boost, 10% collab (redistributed to value until 100+ users)
 - Expert: "opportunities you're missing" (active signals at untracked casinos) + "intel gaps" (high users, low signals)
 - Diversity factor gated by `has_affiliate_link`
 - Intel boost capped at +30%, decays with signal age
@@ -162,7 +162,7 @@
 - API versioning: /api/v1/ prefix for external-facing endpoints (feed, vote, submit)
 - Data export: JSON + CSV for submission history, vote history, claim history, ledger, trust history. Available via settings page
 - Behavioral telemetry: anonymous session-keyed events (feed_view, signal_expand, casino_track/untrack). Opt-in attribution for personalized recommendations
-- Moderation delegation infra: permissions model, audit trail complete, appeal flow schema (not activated — Dylan stays sole moderator)
+- Moderation delegation infra: permissions model, audit trail complete, appeal flow schema (not activated -- Dylan stays sole moderator)
 - First reporter rate tracking + Early Bird recognition in tier cron
 - Trust visibility UI: score + directional breakdown + 90-day sparkline on settings/profile page
 
@@ -177,7 +177,7 @@
 | 2 | Large | High | Most complex phase. Publishing flow, dedup, confirmations, terminal states all change simultaneously. Consider splitting into 2a (publishing) and 2b (dedup + terminal states). |
 | 3 | Medium | Medium | Health is safety-critical. False alarms on real casinos damage trust. Need careful threshold tuning. |
 | 4 | Large | Medium | Big UI change but isolated to intel components. Can ship incrementally (curated view first, raw toggle second). |
-| 5 | Medium | Low | Discovery is additive — doesn't break existing features. Can ship mode by mode. |
+| 5 | Medium | Low | Discovery is additive -- doesn't break existing features. Can ship mode by mode. |
 | 6 | Medium | Low | Infrastructure. Most items are additive endpoints. API versioning needs careful routing. |
 
 ---
@@ -185,18 +185,18 @@
 ## Dependencies
 
 ```
-Phase 0 (schema) → everything
-Phase 1 (trust) → Phase 2 (vote weighting needed for signal status), Phase 3 (trusted reports for health)
-Phase 2 (signals) → Phase 4 (feed needs new signal fields)
-Phase 3 (health) → can run parallel with Phase 2 after Phase 1
-Phase 4 (feed) → Phase 2 must be complete
-Phase 5 (discovery) → Phase 2 (needs intel boost data)
-Phase 6 (infra) → can run parallel after Phase 0
+Phase 0 (schema) -> everything
+Phase 1 (trust) -> Phase 2 (vote weighting needed for signal status), Phase 3 (trusted reports for health)
+Phase 2 (signals) -> Phase 4 (feed needs new signal fields)
+Phase 3 (health) -> can run parallel with Phase 2 after Phase 1
+Phase 4 (feed) -> Phase 2 must be complete
+Phase 5 (discovery) -> Phase 2 (needs intel boost data)
+Phase 6 (infra) -> can run parallel after Phase 0
 ```
 
-Critical path: 0 → 1 → 2 → 4
-Parallel track A: 0 → 1 → 3
-Parallel track B: 0 → 6
+Critical path: 0 -> 1 -> 2 -> 4
+Parallel track A: 0 -> 1 -> 3
+Parallel track B: 0 -> 6
 
 ---
 
@@ -206,8 +206,8 @@ Parallel track B: 0 → 6
 
 2. **Trust recomputation:** When we change the formula weights, every user's score shifts. Do we want a one-time recompute and accept the jump, or gradually transition (e.g., 50/50 blend of old/new weights for 2 weeks)?
 
-3. **Health thresholds:** The design says "3 trusted reports → amber." Current system uses weighted warning decay scores. Do we want to keep the decay math and layer the trusted-report-count trigger on top, or replace the decay system entirely?
+3. **Health thresholds:** The design says "3 trusted reports -> amber." Current system uses weighted warning decay scores. Do we want to keep the decay math and layer the trusted-report-count trigger on top, or replace the decay system entirely?
 
-4. **API versioning scope:** Should /api/v1/ cover ALL endpoints (including admin, cron) or just the user-facing ones (feed, vote, submit, ledger, settings)? Design says internal endpoints don't need versioning — confirming.
+4. **API versioning scope:** Should /api/v1/ cover ALL endpoints (including admin, cron) or just the user-facing ones (feed, vote, submit, ledger, settings)? Design says internal endpoints don't need versioning -- confirming.
 
-5. **Behavioral telemetry timing:** This is foundational data that gets more valuable the longer it collects. Should we ship the telemetry collection (Phase 6 item) earlier — even as part of Phase 0 — so we're gathering data while building the rest?
+5. **Behavioral telemetry timing:** This is foundational data that gets more valuable the longer it collects. Should we ship the telemetry collection (Phase 6 item) earlier -- even as part of Phase 0 -- so we're gathering data while building the rest?

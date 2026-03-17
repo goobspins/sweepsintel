@@ -7,7 +7,7 @@ How to write prompts that Codex executes well on the first pass.
 Every Codex prompt follows this skeleton:
 
 ```
-# Title — What This Prompt Does
+# Title -- What This Prompt Does
 
 ## Context
 - What Codex needs to know about the current state
@@ -34,7 +34,7 @@ Every Codex prompt follows this skeleton:
 Codex will redo work if you don't tell it what's done. Always include a "these are ALREADY done" section listing recent changes, existing utilities, and completed decompositions.
 
 ### Specify the negative space
-"Do NOT touch MyCasinosBoard" is more useful than only listing what to touch. Codex explores aggressively — fences matter.
+"Do NOT touch MyCasinosBoard" is more useful than only listing what to touch. Codex explores aggressively -- fences matter.
 
 ### One commit per phase
 Makes rollback safe. If Phase 5 breaks something, revert Phase 5 without losing Phases 1-4. Always specify the commit message in the prompt.
@@ -66,21 +66,21 @@ We rejected a shared `api.ts` helper because it adds a layer Codex must understa
 
 ### Audit/fix prompt
 - "Read [file]. Compare against [spec section]. Fix any divergence."
-- Be specific about what "fix" means — match the spec, or update the spec?
+- Be specific about what "fix" means -- match the spec, or update the spec?
 
 ## Anti-patterns
 
-- "Clean up the codebase" — Too vague. Codex will touch everything.
-- "Use best practices" — Codex's best practices may not match ours (no Tailwind, no ORM, scoped styles).
-- "Make it better" — Better how? Faster? More readable? More type-safe? Pick one.
-- Prompts longer than ~15K words — Codex's attention degrades. Split into multiple prompts if needed.
-- Mixing refactoring and features in one prompt — Different risk profiles. Keep them separate.
+- "Clean up the codebase" -- Too vague. Codex will touch everything.
+- "Use best practices" -- Codex's best practices may not match ours (no Tailwind, no ORM, scoped styles).
+- "Make it better" -- Better how? Faster? More readable? More type-safe? Pick one.
+- Prompts longer than ~15K words -- Codex's attention degrades. Split into multiple prompts if needed.
+- Mixing refactoring and features in one prompt -- Different risk profiles. Keep them separate.
 
 ## Stack Reminders (include in every prompt)
 
 ```
 **Stack**: Astro 4.0 (hybrid mode) + React 18 + Neon Postgres + raw SQL.
 No Tailwind. Scoped `<style>` blocks with CSS variables. No external state library.
-No ORM — raw SQL via query<T>() and transaction().
+No ORM -- raw SQL via query<T>() and transaction().
 Auth is OTP-based via Resend email.
 ```

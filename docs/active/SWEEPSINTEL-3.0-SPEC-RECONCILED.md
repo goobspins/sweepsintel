@@ -1,4 +1,4 @@
-# SweepsIntel 3.0 — Intelligence Layer Spec (RECONCILED)
+# SweepsIntel 3.0 -- Intelligence Layer Spec (RECONCILED)
 
 > **Status:** Reconciled. Implementation complete as of 2026-03-17.
 > **Last updated:** 2026-03-17
@@ -11,11 +11,11 @@
 ## Executive Summary
 
 SweepsIntel 3.0 implements the five core systems specified for the intelligence layer:
-- ✅ Dashboard redesign with three-zone layout (Momentum Strip, casino grid, discovery sidebar/underfold)
-- ✅ Intel Feed page for signal browsing and voting
-- ✅ Casino health system with real-time health dots and escalation logic
-- ✅ Community intelligence with user submissions and trust-weighted visibility
-- ✅ Contributor recognition with earned tiers (Newcomer → Scout → Insider → Operator)
+- [x] Dashboard redesign with three-zone layout (Momentum Strip, casino grid, discovery sidebar/underfold)
+- [x] Intel Feed page for signal browsing and voting
+- [x] Casino health system with real-time health dots and escalation logic
+- [x] Community intelligence with user submissions and trust-weighted visibility
+- [x] Contributor recognition with earned tiers (Newcomer -> Scout -> Insider -> Operator)
 
 All critical source sanitization rules are enforced: no Discord branding, no external attribution, anonymous mixing. The database migration is complete. API routes are in place. Components are decomposed and functional.
 
@@ -25,7 +25,7 @@ All critical source sanitization rules are enforced: no Discord branding, no ext
 
 ## Feature 1: Dashboard Redesign
 
-### Status: ✅ SHIPPED (matches spec)
+### Status: [x] SHIPPED (matches spec)
 
 The dashboard is now organized into three zones with swappable discovery. All requirements met.
 
@@ -33,7 +33,7 @@ The dashboard is now organized into three zones with swappable discovery. All re
 
 **Location:** `src/components/dashboard/MomentumStrip.tsx`
 
-**Status:** ✅ SHIPPED
+**Status:** [x] SHIPPED
 
 Current implementation. Thin collapsed strip with progress bar, percentage, goal amount, Daily/Weekly toggle. Expands on click. Persists collapsed state in localStorage (`si-momentum-collapsed`). Period preference stored in localStorage (`si-momentum-period`).
 
@@ -41,21 +41,21 @@ Current implementation. Thin collapsed strip with progress bar, percentage, goal
 
 **Location:** `src/components/dashboard/DashboardTracker.tsx` (orchestrator)
 
-**Status:** ✅ SHIPPED (with minor divergence)
+**Status:** [x] SHIPPED (with minor divergence)
 
 Two columns, equal visual weight, pinned to same height. Page scrolls, not individual columns. Layout swap persists via `layout_swap` field in `user_settings` table.
 
 **Left Column:**
-- `src/components/dashboard/CasinoRow.tsx` — Individual casino rows with claim status, modes, timers
-- `src/components/dashboard/CasinoSearch.tsx` — Search bar for adding casinos
+- `src/components/dashboard/CasinoRow.tsx` -- Individual casino rows with claim status, modes, timers
+- `src/components/dashboard/CasinoSearch.tsx` -- Search bar for adding casinos
 - Compact mode toggle (localStorage: `si-compact-mode`)
 
 **Right Column (conditional):**
-- `src/components/dashboard/DiscoverySidebar.tsx` — Discovery queue sidebar (only shows when tracked casinos >= 6 and not collapsed)
-- Collapse arrow to hide discovery (persists via sessionStorage: `si-discovery-collapsed` — resets on new session)
+- `src/components/dashboard/DiscoverySidebar.tsx` -- Discovery queue sidebar (only shows when tracked casinos >= 6 and not collapsed)
+- Collapse arrow to hide discovery (persists via sessionStorage: `si-discovery-collapsed` -- resets on new session)
 
-**Data quality threshold for discovery cards:** ✅ SHIPPED as specced
-A casino qualifies if it has ≥2 of:
+**Data quality threshold for discovery cards:** [x] SHIPPED as specced
+A casino qualifies if it has >=2 of:
 1. `daily_bonus_desc` is not null
 2. `redemption_speed_desc` is not null
 3. `promoban_risk` is not null and not 'unknown'
@@ -65,14 +65,14 @@ A casino qualifies if it has ≥2 of:
 Implementation in `src/components/dashboard/utils.ts`: `buildDiscoveryPitch()`, `buildSpotlightFacts()`, `buildCompactPitch()`.
 
 **User customization:**
-- ✅ **Swap sides:** Users can swap columns. Persists in `user_settings.layout_swap`.
-- ✅ **Collapse discovery:** Users can collapse discovery column (sessionStorage). Hidden sidebars show a fixed "< Discovery" expand tab on the right (fixed position).
+- [x] **Swap sides:** Users can swap columns. Persists in `user_settings.layout_swap`.
+- [x] **Collapse discovery:** Users can collapse discovery column (sessionStorage). Hidden sidebars show a fixed "< Discovery" expand tab on the right (fixed position).
 
 #### Zone 3: Under the Fold (full width)
 
 **Location:** `src/components/dashboard/UnderfoldSection.tsx`
 
-**Status:** ✅ SHIPPED
+**Status:** [x] SHIPPED
 
 **Section 1: Earnings Prompt**
 Personalized call to action showing estimated daily value from adding untracked casinos. Fallback for state not set: "Set your state in Settings to see personalized recommendations."
@@ -83,13 +83,13 @@ Implementation uses `dashboard_discovery` API response field `estimatedDailyUsd`
 All recommended casinos (untracked, available in state, not excluded) in compact card format. Filterable and sortable. Shows name, tier badge, pitch, Sign Up button (if affiliate link exists).
 
 **Section 3: Latest Signal Preview**
-A single card showing the most recent published intel signal (teaser format). "View all signals →" link to Intel Feed page (`/intel`). Shows signal title, casino name, time ago.
+A single card showing the most recent published intel signal (teaser format). "View all signals ->" link to Intel Feed page (`/intel`). Shows signal title, casino name, time ago.
 
 ---
 
 ## Feature 2: Intel Feed Page
 
-### Status: ✅ SHIPPED (matches spec)
+### Status: [x] SHIPPED (matches spec)
 
 Dedicated page for browsing all intelligence signals (Layer 2b).
 
@@ -108,31 +108,31 @@ Dedicated page for browsing all intelligence signals (Layer 2b).
     - `limit` (optional): 1-100, default 50
     - `show_collapsed` (optional): Include collapsed signals if true
 
-- `POST /api/intel/submit` — User signal submission (see Community Intelligence below)
-- `POST /api/intel/vote/{signalId}` — Vote on signal (see Voting below)
+- `POST /api/intel/submit` -- User signal submission (see Community Intelligence below)
+- `POST /api/intel/vote/{signalId}` -- Vote on signal (see Voting below)
 
 **Features:**
-- ✅ Signal cards with type badge, casino name, title, content, expiry countdown
-- ✅ Filtering by type (deals/promos/free_sc/warnings/strategy)
-- ✅ Filtering by time (24h/7d/30d/all)
-- ✅ Filtering by tracked casinos
-- ✅ "Worked" / "Didn't work" voting with live vote counts
-- ✅ Status badges (active, conditional, likely_outdated, collapsed)
-- ✅ Attribution showing contributor tier and display name (or "Community member" for anonymous)
+- [x] Signal cards with type badge, casino name, title, content, expiry countdown
+- [x] Filtering by type (deals/promos/free_sc/warnings/strategy)
+- [x] Filtering by time (24h/7d/30d/all)
+- [x] Filtering by tracked casinos
+- [x] "Worked" / "Didn't work" voting with live vote counts
+- [x] Status badges (active, conditional, likely_outdated, collapsed)
+- [x] Attribution showing contributor tier and display name (or "Community member" for anonymous)
 
 **Signal Type Labels** (`src/lib/intel-constants.ts`):
-- `free_sc` → "Free SC"
-- `promo_code` → "Promo Code"
-- `flash_sale` → "Flash Sale"
-- `playthrough_deal` → "Playthrough Deal"
-- `platform_warning` → "Warning"
-- `general_tip` → "General Tip"
+- `free_sc` -> "Free SC"
+- `promo_code` -> "Promo Code"
+- `flash_sale` -> "Flash Sale"
+- `playthrough_deal` -> "Playthrough Deal"
+- `platform_warning` -> "Warning"
+- `general_tip` -> "General Tip"
 
 ---
 
 ## Feature 3: Casino Health Cards (My Casinos Page Integration)
 
-### Status: ✅ SHIPPED (matches spec with note)
+### Status: [x] SHIPPED (matches spec with note)
 
 Real-time health indicators and risk-weighted exposure. Note: This is primarily on the dashboard via health dots, and on My Casinos (which extends 2.0 functionality). The health system itself is new in 3.0.
 
@@ -147,7 +147,7 @@ Real-time health indicators and risk-weighted exposure. Note: This is primarily 
 **Health Computation Algorithm** (from `src/lib/health.ts`):
 
 1. **Warning Signal Weighting:**
-   - Decays over time: active (1.0) → 24h (0.75) → 48h (0.5) → 72h (0.25) → expired (0)
+   - Decays over time: active (1.0) -> 24h (0.75) -> 48h (0.5) -> 72h (0.25) -> expired (0)
    - Dispute factor: if total votes >= 3, multiply by max(0.35, 1 - didntWork/total)
    - Accumulate weighted warnings
 
@@ -192,7 +192,7 @@ CREATE TABLE casino_health (
 
 ## Feature 4: Community Intelligence (User Submissions)
 
-### Status: ✅ SHIPPED
+### Status: [x] SHIPPED
 
 Users can submit signals. Signals are trust-weighted and visible based on confidence level.
 
@@ -238,11 +238,11 @@ ALTER TABLE discord_intel_items
 
 ## Feature 5: Contributor Recognition (Earned Tiers)
 
-### Status: ✅ SHIPPED
+### Status: [x] SHIPPED
 
 Users earn tiers based on signal quality and account maturity.
 
-**Tier Progression:** Newcomer → Scout → Insider → Operator
+**Tier Progression:** Newcomer -> Scout -> Insider -> Operator
 
 **Tier Evaluation Logic** (`src/lib/trust.ts: evaluateContributorTier()`):
 
@@ -261,8 +261,8 @@ Users earn tiers based on signal quality and account maturity.
   - Manual assignment only (via database). Not auto-promoted.
 
 **Demotion Rules:**
-- From Insider → Scout if last_15_ratio < 0.5
-- From Scout → Newcomer if last_10_ratio < 0.4
+- From Insider -> Scout if last_15_ratio < 0.5
+- From Scout -> Newcomer if last_10_ratio < 0.4
 
 **Database Field:**
 ```sql
@@ -289,27 +289,27 @@ Final score clamped to [0, 1].
 
 ## Source Sanitization Enforcement
 
-### Status: ✅ SHIPPED (all rules enforced)
+### Status: [x] SHIPPED (all rules enforced)
 
 **Rules Implemented:**
-1. ✅ No Discord usernames, channel names, or server names ever shown to users
-2. ✅ No external platform attribution (no "via Reddit", no "from X", no "User Y says")
-3. ✅ Source column in DB tracks provenance (discord, admin, user) but NEVER surfaces to UI
-4. ✅ Discord-sourced signals ALWAYS show as anonymous (is_anonymous forced during ingest)
-5. ✅ User-submitted signals show user's display name by default OR "Community member" if anonymous
-6. ✅ Admin signals show "SweepsIntel Team"
-7. ✅ If raw signal content contains Discord username/channel reference, ingest pipeline must strip before publishing
+1. [x] No Discord usernames, channel names, or server names ever shown to users
+2. [x] No external platform attribution (no "via Reddit", no "from X", no "User Y says")
+3. [x] Source column in DB tracks provenance (discord, admin, user) but NEVER surfaces to UI
+4. [x] Discord-sourced signals ALWAYS show as anonymous (is_anonymous forced during ingest)
+5. [x] User-submitted signals show user's display name by default OR "Community member" if anonymous
+6. [x] Admin signals show "SweepsIntel Team"
+7. [x] If raw signal content contains Discord username/channel reference, ingest pipeline must strip before publishing
    - Note: This is handled by Discord monitoring pipeline, which sanitizes at source. Signal content passed to API is already sanitized.
 
 **Implementation Details:**
 - `src/pages/api/intel/feed.ts` line 54-59: Attribution logic ensures source='discord' never shows submitted_by or contributor_tier
-- Database constraint: signal_status tracks 'active', 'conditional', 'likely_outdated', 'collapsed' — not source-related
+- Database constraint: signal_status tracks 'active', 'conditional', 'likely_outdated', 'collapsed' -- not source-related
 
 ---
 
 ## Signal Classification & Layering
 
-### Status: ✅ SHIPPED
+### Status: [x] SHIPPED
 
 All three layers implemented and routable.
 
@@ -319,10 +319,10 @@ Casino profiles, tier, PB risk, redemption methods. Admin-curated. Updated days/
 
 **Where it lives:**
 - Casino profile pages (deep reference)
-- Dashboard casino rows (small info icon → tooltip)
+- Dashboard casino rows (small info icon -> tooltip)
 - My Casinos expanded cards
 
-✅ SHIPPED: Casino names are links to profile pages. Info icons show quick-reference tooltips.
+[x] SHIPPED: Casino names are links to profile pages. Info icons show quick-reference tooltips.
 
 #### Layer 2a: Portfolio Health (Defensive Intelligence)
 
@@ -334,40 +334,40 @@ Redemption holds, ban waves, platform instability, closures.
 - Notification bell (push for critical alerts)
 
 **Source data:**
-- `discord_intel_items` where `item_type = 'platform_warning'` and `is_published = true` ✅
-- Aggregated redemption stats (trending 2x slower) ✅
-- Community voting ratios on warnings ✅
-- Admin escalation (flags casino as critical) ✅
+- `discord_intel_items` where `item_type = 'platform_warning'` and `is_published = true` [x]
+- Aggregated redemption stats (trending 2x slower) [x]
+- Community voting ratios on warnings [x]
+- Admin escalation (flags casino as critical) [x]
 
-✅ SHIPPED: All sources integrated. Health computation runs via cron.
+[x] SHIPPED: All sources integrated. Health computation runs via cron.
 
 #### Layer 2b: Money-Making Signals (Offensive Intelligence)
 
 Time-sensitive opportunities: deals, promos, free SC, bonuses.
 
 **Where it lives:**
-- Intel Feed page (primary home) ✅
+- Intel Feed page (primary home) [x]
 - Notification bell + push notifications (for high-value signals)
-- Dashboard under-the-fold (latest signal preview card) ✅
+- Dashboard under-the-fold (latest signal preview card) [x]
 
 **Source data:**
-- `discord_intel_items` where `item_type IN ('free_sc', 'promo_code', 'flash_sale', 'playthrough_deal')` ✅
-- Admin-created signals ✅
-- User-submitted signals ✅
+- `discord_intel_items` where `item_type IN ('free_sc', 'promo_code', 'flash_sale', 'playthrough_deal')` [x]
+- Admin-created signals [x]
+- User-submitted signals [x]
 
-✅ SHIPPED: All sources functional.
+[x] SHIPPED: All sources functional.
 
 #### Layer 3: Actionable Prompts (Synthesized Intelligence)
 
 Recommendations derived from Layers 1, 2a, 2b + user data.
 
 **Where it lives:**
-- Dashboard under-the-fold CTA area (growth prompt) ✅
+- Dashboard under-the-fold CTA area (growth prompt) [x]
 - My Casinos expanded cards (per-casino recommendations)
 - Push notifications (time-sensitive)
 - Intel Feed (synthesized summaries mixed with raw signals)
 
-✅ SHIPPED: Growth prompt calculation. Earnings estimate using `daily_bonus_sc_avg * sc_to_usd_ratio`.
+[x] SHIPPED: Growth prompt calculation. Earnings estimate using `daily_bonus_sc_avg * sc_to_usd_ratio`.
 
 ---
 
@@ -375,13 +375,13 @@ Recommendations derived from Layers 1, 2a, 2b + user data.
 
 **Migration File:** `src/db/2026-03-17-intelligence-layer.sql`
 
-**Status:** ✅ SHIPPED
+**Status:** [x] SHIPPED
 
 **New Tables:**
 
-1. `casino_health` — Health status and escalation logic
-2. `user_notification_preferences` — Push notification settings
-3. `signal_votes` — User votes on signals (worked/didnt_work)
+1. `casino_health` -- Health status and escalation logic
+2. `user_notification_preferences` -- Push notification settings
+3. `signal_votes` -- User votes on signals (worked/didnt_work)
 
 **Altered Columns:**
 
@@ -407,48 +407,48 @@ Recommendations derived from Layers 1, 2a, 2b + user data.
 
 ## API Routes (3.0 Feature)
 
-### Status: ✅ SHIPPED
+### Status: [x] SHIPPED
 
 **Intel Feed:**
-- `GET /api/intel/feed` — Fetch signals with filtering, pagination
+- `GET /api/intel/feed` -- Fetch signals with filtering, pagination
   - Parameters: casino_id, type, since, limit, show_collapsed
   - Returns: { items: SignalItem[] }
 
 **Signal Submission:**
-- `POST /api/intel/submit` — User submits a signal
+- `POST /api/intel/submit` -- User submits a signal
   - Body: { casino_id, signal_type, title, details, expires_at?, is_anonymous? }
   - Validates eligibility (trust score + account age + claim count)
   - Returns: { success, signal }
 
 **Signal Voting:**
-- `POST /api/intel/vote/{signalId}` — Vote on signal
+- `POST /api/intel/vote/{signalId}` -- Vote on signal
   - Body: { vote: 'worked' | 'didnt_work' }
   - Updates worked_count / didnt_work_count
   - Recomputes signal_status based on vote ratios
   - Returns: { success, worked_count, didnt_work_count, signal_status }
 
 **Casino Health:**
-- `GET /api/casinos/health` — Get health for all tracked casinos
+- `GET /api/casinos/health` -- Get health for all tracked casinos
   - Returns: { items: CasinoHealthForUser[] }
 
 **Admin: Signal Creation:**
-- `POST /api/admin/signal` — Admin creates team signal
+- `POST /api/admin/signal` -- Admin creates team signal
   - Body: { casino_id, signal_type, title, details, expires_at? }
   - Returns: { success, signal }
 
 **Admin: Health Override:**
-- `POST /api/admin/casino-health-override` — Admin manually sets casino health
+- `POST /api/admin/casino-health-override` -- Admin manually sets casino health
   - Body: { casino_id, status, reason? }
   - Accepts status = null to clear override
   - Returns: { success }
 
 **Cron: Compute Health:**
-- `GET /api/cron/compute-health` — Recompute all casino health
+- `GET /api/cron/compute-health` -- Recompute all casino health
   - Requires CRON_SECRET bearer token
   - Runs `computeAllCasinoHealth()`
 
 **Cron: Compute Trust:**
-- `GET /api/cron/compute-trust` — Recompute trust scores and tiers
+- `GET /api/cron/compute-trust` -- Recompute trust scores and tiers
   - Requires CRON_SECRET bearer token
   - Runs `computeAllTrustScores()` and `evaluateAllContributorTiers()`
 
@@ -456,7 +456,7 @@ Recommendations derived from Layers 1, 2a, 2b + user data.
 
 ## Voting Semantics
 
-### Status: ✅ SHIPPED
+### Status: [x] SHIPPED
 
 **Vote Types:** 'worked' (signal was accurate) | 'didnt_work' (signal was inaccurate/expired)
 
@@ -464,16 +464,16 @@ Recommendations derived from Layers 1, 2a, 2b + user data.
 
 ```
 worked + didnt_work >= 12 && (didnt_work / total) >= 0.9
-  → 'collapsed' (signal is mostly wrong)
+  -> 'collapsed' (signal is mostly wrong)
 
 worked + didnt_work >= 8 && (didnt_work / total) >= 0.8
-  → 'likely_outdated' (signal is mostly disputed)
+  -> 'likely_outdated' (signal is mostly disputed)
 
 worked > 0 && didnt_work > 0 && total >= 4
-  → 'conditional' (mixed results)
+  -> 'conditional' (mixed results)
 
 Otherwise
-  → 'active'
+  -> 'active'
 ```
 
 **UI Treatment:**
@@ -490,73 +490,73 @@ Otherwise
 
 | Feature | File | Status |
 |---------|------|--------|
-| Health Computation | `src/lib/health.ts` | ✅ |
-| Trust & Tiers | `src/lib/trust.ts` | ✅ |
-| Intel Feed & Voting | `src/lib/intel.ts` | ✅ |
-| Format Utilities | `src/lib/format.ts` | ✅ |
-| Signal Type Labels | `src/lib/intel-constants.ts` | ✅ |
+| Health Computation | `src/lib/health.ts` | [x] |
+| Trust & Tiers | `src/lib/trust.ts` | [x] |
+| Intel Feed & Voting | `src/lib/intel.ts` | [x] |
+| Format Utilities | `src/lib/format.ts` | [x] |
+| Signal Type Labels | `src/lib/intel-constants.ts` | [x] |
 
 ### Components (Dashboard)
 
 | Component | File | Status |
 |-----------|------|--------|
-| Main Orchestrator | `src/components/dashboard/DashboardTracker.tsx` | ✅ |
-| Momentum Strip | `src/components/dashboard/MomentumStrip.tsx` | ✅ |
-| Casino Row | `src/components/dashboard/CasinoRow.tsx` | ✅ |
-| Casino Search | `src/components/dashboard/CasinoSearch.tsx` | ✅ |
-| Discovery Sidebar | `src/components/dashboard/DiscoverySidebar.tsx` | ✅ |
-| Under-the-Fold | `src/components/dashboard/UnderfoldSection.tsx` | ✅ |
-| Dashboard Utils | `src/components/dashboard/utils.ts` | ✅ |
-| Dashboard Types | `src/components/dashboard/types.ts` | ✅ |
+| Main Orchestrator | `src/components/dashboard/DashboardTracker.tsx` | [x] |
+| Momentum Strip | `src/components/dashboard/MomentumStrip.tsx` | [x] |
+| Casino Row | `src/components/dashboard/CasinoRow.tsx` | [x] |
+| Casino Search | `src/components/dashboard/CasinoSearch.tsx` | [x] |
+| Discovery Sidebar | `src/components/dashboard/DiscoverySidebar.tsx` | [x] |
+| Under-the-Fold | `src/components/dashboard/UnderfoldSection.tsx` | [x] |
+| Dashboard Utils | `src/components/dashboard/utils.ts` | [x] |
+| Dashboard Types | `src/components/dashboard/types.ts` | [x] |
 
 ### Components (Health)
 
 | Component | File | Status |
 |-----------|------|--------|
-| Health Dot | `src/components/health/HealthDot.tsx` | ✅ |
-| Health Detail | `src/components/health/HealthDetail.tsx` | ✅ |
+| Health Dot | `src/components/health/HealthDot.tsx` | [x] |
+| Health Detail | `src/components/health/HealthDetail.tsx` | [x] |
 
 ### Components (Intel)
 
 | Component | File | Status |
 |-----------|------|--------|
-| Intel Feed | `src/components/intel/IntelFeed.tsx` | ✅ |
-| Signal Card | `src/components/intel/SignalCard.tsx` | ✅ |
-| Signal Submit Form | `src/components/intel/SignalSubmitForm.tsx` | ✅ |
-| Vote Buttons | `src/components/intel/VoteButtons.tsx` | ✅ |
-| Types | `src/components/intel/types.ts` | ✅ |
+| Intel Feed | `src/components/intel/IntelFeed.tsx` | [x] |
+| Signal Card | `src/components/intel/SignalCard.tsx` | [x] |
+| Signal Submit Form | `src/components/intel/SignalSubmitForm.tsx` | [x] |
+| Vote Buttons | `src/components/intel/VoteButtons.tsx` | [x] |
+| Types | `src/components/intel/types.ts` | [x] |
 
 ### Components (Admin)
 
 | Component | File | Status |
 |-----------|------|--------|
-| Signal Creator | `src/components/admin/SignalCreator.tsx` | ✅ |
-| Signal Tracker | `src/components/admin/SignalTracker.tsx` | ✅ |
-| Health Overrides | `src/components/admin/HealthOverrides.tsx` | ✅ |
+| Signal Creator | `src/components/admin/SignalCreator.tsx` | [x] |
+| Signal Tracker | `src/components/admin/SignalTracker.tsx` | [x] |
+| Health Overrides | `src/components/admin/HealthOverrides.tsx` | [x] |
 
 ### API Routes
 
 | Endpoint | File | Status |
 |----------|------|--------|
-| GET /api/intel/feed | `src/pages/api/intel/feed.ts` | ✅ |
-| POST /api/intel/submit | `src/pages/api/intel/submit.ts` | ✅ |
-| POST /api/intel/vote/[id] | `src/pages/api/intel/vote/[id].ts` | ✅ |
-| GET /api/casinos/health | `src/pages/api/casinos/health.ts` | ✅ |
-| POST /api/admin/signal | `src/pages/api/admin/signal.ts` | ✅ |
-| POST /api/admin/casino-health-override | `src/pages/api/admin/casino-health-override.ts` | ✅ |
-| GET /api/cron/compute-health | `src/pages/api/cron/compute-health.ts` | ✅ |
-| GET /api/cron/compute-trust | `src/pages/api/cron/compute-trust.ts` | ✅ |
+| GET /api/intel/feed | `src/pages/api/intel/feed.ts` | [x] |
+| POST /api/intel/submit | `src/pages/api/intel/submit.ts` | [x] |
+| POST /api/intel/vote/[id] | `src/pages/api/intel/vote/[id].ts` | [x] |
+| GET /api/casinos/health | `src/pages/api/casinos/health.ts` | [x] |
+| POST /api/admin/signal | `src/pages/api/admin/signal.ts` | [x] |
+| POST /api/admin/casino-health-override | `src/pages/api/admin/casino-health-override.ts` | [x] |
+| GET /api/cron/compute-health | `src/pages/api/cron/compute-health.ts` | [x] |
+| GET /api/cron/compute-trust | `src/pages/api/cron/compute-trust.ts` | [x] |
 
 ---
 
 ## Implementation Divergences from Spec
 
-### Status: ⚠️ Minor divergences noted
+### Status: [!] Minor divergences noted
 
 **1. Health Detail API Structure** (Minor)
 - **Spec expectation:** Health data accessible per-casino with expanded warnings and voting context
 - **What was built:** `getCasinoHealthForUser()` returns health + pending redemptions + exposed SC + warning signals. This is more comprehensive than spec suggested and includes all necessary context. No API divergence.
-- **Assessment:** Enhancement. ✅
+- **Assessment:** Enhancement. [x]
 
 **2. Signal Status Transitions** (Minor Naming)
 - **Spec:** Mentioned "conditional" and "likely_outdated" signals without hard thresholds
@@ -564,46 +564,46 @@ Otherwise
   - collapsed: total >= 12, negative ratio >= 0.9
   - likely_outdated: total >= 8, negative ratio >= 0.8
   - conditional: any mixed votes with total >= 4
-- **Assessment:** Reasonable implementation of fuzzy spec. ✅
+- **Assessment:** Reasonable implementation of fuzzy spec. [x]
 
 **3. Admin Signal Creation** (Enhancement)
 - **Spec:** Admin can create signals, mark as "SweepsIntel Team"
 - **Built:** `POST /api/admin/signal` allows admin to create signals with all fields (type, title, details, expires_at). Source='admin', submitted_by=null forces "SweepsIntel Team" attribution automatically. Also includes community digest tracking for admin dashboard.
-- **Assessment:** Exceeds spec. ✅
+- **Assessment:** Exceeds spec. [x]
 
 **4. Trust Score & Contributor Tier Cron** (Implementation Detail)
 - **Spec:** Mentioned tiers earned based on quality, not explicit about computation
 - **Built:** Combined `computeTrustScore()` and `evaluateContributorTier()` into single cron job with detailed weighting formulas and demotion rules
-- **Assessment:** Well-architected implementation. ✅
+- **Assessment:** Well-architected implementation. [x]
 
 ---
 
 ## What Matched Spec Exactly
 
-- ✅ Three-zone dashboard layout
-- ✅ Discovery sidebar shows only high-data-quality casinos
-- ✅ Data quality threshold: >= 2 of 5 data points
-- ✅ Layout swap and discovery collapse preferences
-- ✅ Intel Feed page with filtering by type, time, casino
-- ✅ Signal voting (worked/didn't work)
-- ✅ Contributor tier progression (Newcomer → Scout → Insider)
-- ✅ Health status levels (healthy, watch, at_risk, critical)
-- ✅ Health computation from warning signals + redemption trend
-- ✅ Personal escalation logic (pending redemptions, SC exposure)
-- ✅ Signal sources: discord, admin, user
-- ✅ Anonymous signal support
-- ✅ Attribution rules (no Discord branding, team label for admin)
-- ✅ Source sanitization (no usernames, no platform attribution)
-- ✅ Layer 1-3 definitions and routing
-- ✅ Under-the-fold earnings prompt
-- ✅ Latest signal preview card
-- ✅ Notification preferences table structure
+- [x] Three-zone dashboard layout
+- [x] Discovery sidebar shows only high-data-quality casinos
+- [x] Data quality threshold: >= 2 of 5 data points
+- [x] Layout swap and discovery collapse preferences
+- [x] Intel Feed page with filtering by type, time, casino
+- [x] Signal voting (worked/didn't work)
+- [x] Contributor tier progression (Newcomer -> Scout -> Insider)
+- [x] Health status levels (healthy, watch, at_risk, critical)
+- [x] Health computation from warning signals + redemption trend
+- [x] Personal escalation logic (pending redemptions, SC exposure)
+- [x] Signal sources: discord, admin, user
+- [x] Anonymous signal support
+- [x] Attribution rules (no Discord branding, team label for admin)
+- [x] Source sanitization (no usernames, no platform attribution)
+- [x] Layer 1-3 definitions and routing
+- [x] Under-the-fold earnings prompt
+- [x] Latest signal preview card
+- [x] Notification preferences table structure
 
 ---
 
 ## Features Not Yet Built (Deferred to 4.0)
 
-### Status: 🔄 Not yet implemented
+### Status: [partial] Not yet implemented
 
 **From Original Spec:**
 
@@ -632,7 +632,7 @@ Otherwise
    - Deferral: Can be added as housekeeping task. Deferred.
 
 5. **Complex Recommendation Engine (Layer 3 Full Implementation)**
-   - Earnings prompt (simple version): ✅ Shipped
+   - Earnings prompt (simple version): [x] Shipped
    - Per-casino recommendations: Spec mentioned but not fully implemented
    - Time-sensitive "you should act now" prompts: Partially built (via earnings prompt)
    - Full synthesis of layers: Deferred. Current implementation focuses on basic earnings opportunity, not complex multi-factor recommendations.
@@ -650,13 +650,13 @@ After initial 3.0 implementation, the following optimizations and clarifications
 **Original:** Large monolithic `DashboardTracker.tsx`
 
 **Refactored into:** Explicit sub-components
-- `MomentumStrip.tsx` — Separated momentum display
-- `CasinoRow.tsx` — Individual casino display (previously inline)
-- `CasinoSearch.tsx` — Search UI (previously inline)
-- `DiscoverySidebar.tsx` — Right-column discovery (previously inline)
-- `UnderfoldSection.tsx` — Under-the-fold area (previously inline)
+- `MomentumStrip.tsx` -- Separated momentum display
+- `CasinoRow.tsx` -- Individual casino display (previously inline)
+- `CasinoSearch.tsx` -- Search UI (previously inline)
+- `DiscoverySidebar.tsx` -- Right-column discovery (previously inline)
+- `UnderfoldSection.tsx` -- Under-the-fold area (previously inline)
 
-**Status:** ✅ Completed. DashboardTracker now acts as orchestrator and layout manager.
+**Status:** [x] Completed. DashboardTracker now acts as orchestrator and layout manager.
 
 **Files:**
 - `src/components/dashboard/DashboardTracker.tsx` (orchestrator)
@@ -688,15 +688,15 @@ After initial 3.0 implementation, the following optimizations and clarifications
 **Observation:** Format functions were referenced in multiple places. Centralized into `src/lib/format.ts`.
 
 **Exports from `format.ts`:**
-- `formatAgo()` — Time since (e.g., "3m ago")
-- `formatRelativeExpiry()` — Time until expiry (e.g., "Expires in 4h")
-- `emailToDisplayName()` — Convert email to display name
-- `formatCurrency()` — USD formatting
-- `formatSc()` — SC amount formatting
-- `formatDateTime()` — Full datetime
-- `formatEntryType()` — Ledger entry type labels
-- `riskRank()` — Sort key for health status
-- `getTierBadgeStyle()` — Tier badge styling
+- `formatAgo()` -- Time since (e.g., "3m ago")
+- `formatRelativeExpiry()` -- Time until expiry (e.g., "Expires in 4h")
+- `emailToDisplayName()` -- Convert email to display name
+- `formatCurrency()` -- USD formatting
+- `formatSc()` -- SC amount formatting
+- `formatDateTime()` -- Full datetime
+- `formatEntryType()` -- Ledger entry type labels
+- `riskRank()` -- Sort key for health status
+- `getTierBadgeStyle()` -- Tier badge styling
 - (and others)
 
 **Usage:** Imported by components and API routes throughout codebase.
@@ -733,34 +733,34 @@ This is now part of the authoritative implementation.
 ## Data Flow Diagram (3.0)
 
 ```
-User submits signal → POST /api/intel/submit
-  ↓
-submitUserSignal() → discord_intel_items (source='user', is_published=true)
-  ↓
-Cron: GET /api/cron/compute-trust → computeAllTrustScores() + evaluateAllContributorTiers()
-  ↓
-User votes on signal → POST /api/intel/vote/{id}
-  ↓
-voteOnSignal() → signal_votes table + updated worked_count/didnt_work_count + updateSignalStatus()
-  ↓
-User views Intel Feed → GET /api/intel/feed
-  ↓
-getIntelFeed() → Filters signals, applies status logic, returns with attribution
-  ↓
+User submits signal -> POST /api/intel/submit
+  v
+submitUserSignal() -> discord_intel_items (source='user', is_published=true)
+  v
+Cron: GET /api/cron/compute-trust -> computeAllTrustScores() + evaluateAllContributorTiers()
+  v
+User votes on signal -> POST /api/intel/vote/{id}
+  v
+voteOnSignal() -> signal_votes table + updated worked_count/didnt_work_count + updateSignalStatus()
+  v
+User views Intel Feed -> GET /api/intel/feed
+  v
+getIntelFeed() -> Filters signals, applies status logic, returns with attribution
+  v
 SignalCard component renders with vote buttons + health badges
 
 ---
 
-User has casinos tracked → GET /api/casinos/health
-  ↓
-getHealthForTrackedCasinos() → getCasinoHealthForUser() for each
-  ↓
+User has casinos tracked -> GET /api/casinos/health
+  v
+getHealthForTrackedCasinos() -> getCasinoHealthForUser() for each
+  v
 Dashboard renders HealthDot next to casino name
-  ↓
-Cron: GET /api/cron/compute-health → computeAllCasinoHealth()
-  ↓
+  v
+Cron: GET /api/cron/compute-health -> computeAllCasinoHealth()
+  v
 casino_health table updated with global_status + active_warning_count + redemption_trend
-  ↓
+  v
 Next health API call returns updated status
 ```
 
@@ -815,7 +815,7 @@ Key areas to validate:
 
 3. **Community Intelligence as User Revenue Opportunity:** Signals are Layer 2b (money-making). User submissions can earn contributor tier badges, which increases trust weight but not payment. Implemented.
 
-4. **Voting as Real Consequence:** Vote ratios change signal status (active → conditional → likely_outdated → collapsed), affecting visibility. Implemented with clear thresholds.
+4. **Voting as Real Consequence:** Vote ratios change signal status (active -> conditional -> likely_outdated -> collapsed), affecting visibility. Implemented with clear thresholds.
 
 ### Post-Implementation Decisions
 
@@ -827,7 +827,7 @@ Key areas to validate:
 
 4. **Hard Thresholds for Signal Status:** Rather than fuzzy logic, implemented clear vote count thresholds (8, 12) and ratios (0.8, 0.9) for signal status transitions. This is more debuggable and predictable.
 
-5. **Contributor Tier Demotion:** Implemented automatic demotion on poor recent performance (last 10-15 signals) to prevent gaming the system. Insider → Scout if last 15 ratio < 0.5; Scout → Newcomer if last 10 ratio < 0.4.
+5. **Contributor Tier Demotion:** Implemented automatic demotion on poor recent performance (last 10-15 signals) to prevent gaming the system. Insider -> Scout if last 15 ratio < 0.5; Scout -> Newcomer if last 10 ratio < 0.4.
 
 6. **Health Escalation Based on Personal Exposure:** Health status escalates if user has pending redemptions or >= 250 SC exposed at a casino. Thresholds chosen to avoid false alarms while protecting against real risk.
 
@@ -837,10 +837,10 @@ Key areas to validate:
 
 ### Questions Resolved in 3.0
 
-1. ✅ How should Discord sources be hidden? → `is_anonymous=true` + API response filtering
-2. ✅ What are the hard thresholds for signal status transitions? → Documented in updateSignalStatus()
-3. ✅ How should contributor tiers be earned? → Based on signal quality + account maturity, with demotion
-4. ✅ Should health be recomputed on every page load? → No, cached for 5 minutes via getCached()
+1. [x] How should Discord sources be hidden? -> `is_anonymous=true` + API response filtering
+2. [x] What are the hard thresholds for signal status transitions? -> Documented in updateSignalStatus()
+3. [x] How should contributor tiers be earned? -> Based on signal quality + account maturity, with demotion
+4. [x] Should health be recomputed on every page load? -> No, cached for 5 minutes via getCached()
 
 ### Open for 4.0
 
@@ -856,25 +856,25 @@ Key areas to validate:
 
 | Feature | Spec | Implementation | Status |
 |---------|------|----------------|--------|
-| Dashboard Redesign (3 zones) | ✅ Required | ✅ Complete | ✅ SHIPPED |
-| Momentum Strip | ✅ Required | ✅ Complete, expandable | ✅ SHIPPED |
-| Discovery Sidebar (conditional) | ✅ Required | ✅ Complete, >= 6 casinos | ✅ SHIPPED |
-| Layout Swap | ✅ Required | ✅ Complete, persisted | ✅ SHIPPED |
-| Discovery Collapse | ✅ Required | ✅ Complete, session-persisted | ✅ SHIPPED |
-| Data Quality Threshold | ✅ Required (≥2 of 5) | ✅ Implemented | ✅ SHIPPED |
-| Under-the-Fold Section | ✅ Required | ✅ Complete (3 parts) | ✅ SHIPPED |
-| Intel Feed Page | ✅ Required | ✅ Complete | ✅ SHIPPED |
-| Signal Filtering (type/time/casino) | ✅ Required | ✅ Complete | ✅ SHIPPED |
-| Signal Voting | ✅ Required | ✅ Complete with status logic | ✅ SHIPPED |
-| Health System | ✅ Required | ✅ Complete with algorithm | ✅ SHIPPED |
-| Contributor Tiers | ✅ Required | ✅ Complete with demotion | ✅ SHIPPED |
-| Trust Scores | ✅ Required | ✅ Complete with weighting | ✅ SHIPPED |
-| Source Sanitization | ✅ Required (critical) | ✅ Complete | ✅ SHIPPED |
-| Admin Signal Creation | ✅ Required | ✅ Complete with API | ✅ SHIPPED |
-| Community Signal Submission | ✅ Required | ✅ Complete with eligibility | ✅ SHIPPED |
-| Push Notifications | ✅ Mentioned | 🔄 Schema only | ❌ DEFERRED to 4.0 |
-| Email Digest | ✅ Mentioned | 🔄 Schema only | ❌ DEFERRED to 4.0 |
-| AI Q&A Interface | ✅ Marked "future" | ❌ Not started | ❌ DEFERRED to 4.0 |
+| Dashboard Redesign (3 zones) | [x] Required | [x] Complete | [x] SHIPPED |
+| Momentum Strip | [x] Required | [x] Complete, expandable | [x] SHIPPED |
+| Discovery Sidebar (conditional) | [x] Required | [x] Complete, >= 6 casinos | [x] SHIPPED |
+| Layout Swap | [x] Required | [x] Complete, persisted | [x] SHIPPED |
+| Discovery Collapse | [x] Required | [x] Complete, session-persisted | [x] SHIPPED |
+| Data Quality Threshold | [x] Required (>=2 of 5) | [x] Implemented | [x] SHIPPED |
+| Under-the-Fold Section | [x] Required | [x] Complete (3 parts) | [x] SHIPPED |
+| Intel Feed Page | [x] Required | [x] Complete | [x] SHIPPED |
+| Signal Filtering (type/time/casino) | [x] Required | [x] Complete | [x] SHIPPED |
+| Signal Voting | [x] Required | [x] Complete with status logic | [x] SHIPPED |
+| Health System | [x] Required | [x] Complete with algorithm | [x] SHIPPED |
+| Contributor Tiers | [x] Required | [x] Complete with demotion | [x] SHIPPED |
+| Trust Scores | [x] Required | [x] Complete with weighting | [x] SHIPPED |
+| Source Sanitization | [x] Required (critical) | [x] Complete | [x] SHIPPED |
+| Admin Signal Creation | [x] Required | [x] Complete with API | [x] SHIPPED |
+| Community Signal Submission | [x] Required | [x] Complete with eligibility | [x] SHIPPED |
+| Push Notifications | [x] Mentioned | [partial] Schema only | [ ] DEFERRED to 4.0 |
+| Email Digest | [x] Mentioned | [partial] Schema only | [ ] DEFERRED to 4.0 |
+| AI Q&A Interface | [x] Marked "future" | [ ] Not started | [ ] DEFERRED to 4.0 |
 
 ---
 

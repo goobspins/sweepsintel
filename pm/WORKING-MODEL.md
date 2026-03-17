@@ -2,34 +2,34 @@
 
 ## Roles
 
-**Dylan** — Founder, product owner, relay between Claude and Codex. Makes all scope and product calls. Tests in production. Sets the vision and decides when something is "right."
+**Dylan** -- Founder, product owner, relay between Claude and Codex. Makes all scope and product calls. Tests in production. Sets the vision and decides when something is "right."
 
-**Claude (PM)** — Reads the codebase, writes specs and Codex prompts, audits implementation results, tracks project state, and thinks through hard design problems. Does not write production code. Thinks in systems — asks "what breaks at scale?" and "what are we not seeing?"
+**Claude (PM)** -- Reads the codebase, writes specs and Codex prompts, audits implementation results, tracks project state, and thinks through hard design problems. Does not write production code. Thinks in systems -- asks "what breaks at scale?" and "what are we not seeing?"
 
-**Codex (Implementer)** — Receives prompts from Claude via Dylan, writes all production code. Strong at long autonomous tasks when given clear, complete prompts. Does not see prior Claude conversations or project context unless it's in the prompt.
+**Codex (Implementer)** -- Receives prompts from Claude via Dylan, writes all production code. Strong at long autonomous tasks when given clear, complete prompts. Does not see prior Claude conversations or project context unless it's in the prompt.
 
 ## How We Actually Work
 
-The core loop is: Claude reads the codebase and designs → Dylan relays a prompt to Codex → Codex implements → Dylan reports results → Claude audits and iterates.
+The core loop is: Claude reads the codebase and designs -> Dylan relays a prompt to Codex -> Codex implements -> Dylan reports results -> Claude audits and iterates.
 
-This works because each role stays in its lane. Claude doesn't try to write code. Codex doesn't try to make product decisions. Dylan doesn't get stuck translating between them — the prompts are written to be copy-pasted directly.
+This works because each role stays in its lane. Claude doesn't try to write code. Codex doesn't try to make product decisions. Dylan doesn't get stuck translating between them -- the prompts are written to be copy-pasted directly.
 
 ### What makes a good Codex prompt
 
 Codex performs best with prompts that are:
-- **Self-contained** — All context is in the prompt. Codex can't ask follow-up questions mid-task.
-- **Sequenced** — Clear phase ordering with checkpoints (run `check:full` after each phase).
-- **Guarded** — Explicit "do NOT touch" lists, constraints, and scope boundaries. If it's not mentioned, Codex may touch it.
-- **Concrete** — File paths, function names, exact patterns to search for. Not "clean up the codebase" but "search for `: any` in src/ and replace with typed interfaces."
-- **Commit-structured** — One commit per logical unit. Descriptive messages specified in the prompt.
+- **Self-contained** -- All context is in the prompt. Codex can't ask follow-up questions mid-task.
+- **Sequenced** -- Clear phase ordering with checkpoints (run `check:full` after each phase).
+- **Guarded** -- Explicit "do NOT touch" lists, constraints, and scope boundaries. If it's not mentioned, Codex may touch it.
+- **Concrete** -- File paths, function names, exact patterns to search for. Not "clean up the codebase" but "search for `: any` in src/ and replace with typed interfaces."
+- **Commit-structured** -- One commit per logical unit. Descriptive messages specified in the prompt.
 
 ### What makes a good design session
 
 When Claude and Dylan are thinking through a problem (not just executing), the best results come from:
-- **Starting with what exists** — Read the code first, then design. Never design in the abstract.
-- **The framework methodology** — For complex problems: naive draft → adversarial critique → perspective shift through user archetypes → reconciled rebuild. This is available as the `/framework` skill.
-- **Named decisions** — When a tradeoff is close, name both options explicitly, state why we chose one, and record what would make us revisit it. This goes in `_decisions.md`.
-- **Not over-planning** — Get to "good enough to implement" and let Codex's implementation reveal the next questions. Perfecting specs before implementation wastes time.
+- **Starting with what exists** -- Read the code first, then design. Never design in the abstract.
+- **The framework methodology** -- For complex problems: naive draft -> adversarial critique -> perspective shift through user archetypes -> reconciled rebuild. This is available as the `/framework` skill.
+- **Named decisions** -- When a tradeoff is close, name both options explicitly, state why we chose one, and record what would make us revisit it. This goes in `_decisions.md`.
+- **Not over-planning** -- Get to "good enough to implement" and let Codex's implementation reveal the next questions. Perfecting specs before implementation wastes time.
 
 ## Decision Authority
 
@@ -45,13 +45,13 @@ When Claude and Codex "disagree" (Codex's implementation diverges from the spec)
 
 Sessions typically follow one of these patterns:
 
-**Build session** — Claude reads recent changes, identifies the next highest-value work, writes a Codex prompt, and hands it off. May run 2-3 prompt cycles in one session.
+**Build session** -- Claude reads recent changes, identifies the next highest-value work, writes a Codex prompt, and hands it off. May run 2-3 prompt cycles in one session.
 
-**Audit session** — Codex has finished work. Claude reads the implementation, cross-references against the spec, identifies gaps or improvements, and either writes a fix prompt or updates the spec to match reality.
+**Audit session** -- Codex has finished work. Claude reads the implementation, cross-references against the spec, identifies gaps or improvements, and either writes a fix prompt or updates the spec to match reality.
 
-**Design session** — No code needed yet. Claude and Dylan think through a system (like the intelligence layer). Uses the framework methodology. Output is a design doc, not a Codex prompt.
+**Design session** -- No code needed yet. Claude and Dylan think through a system (like the intelligence layer). Uses the framework methodology. Output is a design doc, not a Codex prompt.
 
-**Housekeeping session** — Directory cleanup, state file updates, organizing artifacts. Like this one.
+**Housekeeping session** -- Directory cleanup, state file updates, organizing artifacts. Like this one.
 
 ## Overnight / Parallel Work
 
@@ -67,8 +67,8 @@ Multiple Claude sessions can run in parallel on different document-only tasks. C
 
 Project state persists across sessions through two mechanisms:
 
-**`_state.md`** — What's true right now. Current objective, active approach, key decisions, open questions, constraints, artifact statuses. Updated silently during work. Read on session start. The `/realign` skill handles this automatically.
+**`_state.md`** -- What's true right now. Current objective, active approach, key decisions, open questions, constraints, artifact statuses. Updated silently during work. Read on session start. The `/realign` skill handles this automatically.
 
-**`_decisions.md`** — Why we chose what we chose. Only for non-obvious decisions where the reasoning was long or the tradeoffs were close. Each entry is self-contained. Checked before re-making a decision in the same domain.
+**`_decisions.md`** -- Why we chose what we chose. Only for non-obvious decisions where the reasoning was long or the tradeoffs were close. Each entry is self-contained. Checked before re-making a decision in the same domain.
 
 Both files live at the project root. They belong to the project, not to any single session.
