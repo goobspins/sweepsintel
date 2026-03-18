@@ -24,6 +24,7 @@ export type HealthStatus = 'healthy' | 'watch' | 'at_risk' | 'critical';
 export type CasinoHealthRow = {
   casino_id: number;
   global_status: HealthStatus;
+  effective_status: HealthStatus | null;
   status_reason: string | null;
   active_warning_count: number;
   redemption_trend: number | null;
@@ -31,6 +32,8 @@ export type CasinoHealthRow = {
   admin_override_status: HealthStatus | null;
   admin_override_reason: string | null;
   admin_override_at: string | null;
+  health_downgraded_at: string | null;
+  health_recovery_eligible_at: string | null;
 };
 
 export type CasinoHealthForUser = CasinoHealthRow & {
@@ -378,13 +381,16 @@ export async function getCasinoHealth(casinoId: number) {
     `SELECT
       casino_id,
       global_status,
+      effective_status,
       status_reason,
       active_warning_count,
       redemption_trend,
       last_computed_at,
       admin_override_status,
       admin_override_reason,
-      admin_override_at
+      admin_override_at,
+      health_downgraded_at,
+      health_recovery_eligible_at
     FROM casino_health
     WHERE casino_id = $1
     LIMIT 1`,
@@ -458,7 +464,11 @@ export async function getCasinoHealthForUser(casinoId: number, userId: string): 
   const pendingUsd = Number(exposure.pending_redemptions_usd ?? 0);
   const scExposure = Number(exposure.sc_exposure ?? 0);
 
-  const baseStatus = (baseHealth.admin_override_status ?? baseHealth.global_status) as HealthStatus;
+  const baseStatus = (
+    baseHealth.admin_override_status
+    ?? baseHealth.effective_status
+    ?? baseHealth.global_status
+  ) as HealthStatus;
   let personalStatus = baseStatus;
   let exposureReason: string | null = null;
 
