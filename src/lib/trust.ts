@@ -31,6 +31,91 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+export function normalizeActivityScore(accountAgeDays: number, claimCount: number) {
+  return (
+    clamp(accountAgeDays / ACCOUNT_AGE_MATURITY_DAYS, 0, 1) * ACCOUNT_AGE_WEIGHT +
+    clamp(claimCount / CLAIM_COUNT_MATURITY, 0, 1) * CLAIM_ACTIVITY_WEIGHT
+  );
+}
+
+export function normalizeSubmissionScore(
+  workedVotes: number,
+  totalVotes: number,
+) {
+  return totalVotes > 0 ? workedVotes / totalVotes : 0.5;
+}
+
+export function normalizeCommunityScore(netPositiveVotes: number) {
+  return clamp(
+    (netPositiveVotes + COMMUNITY_STANDING_OFFSET) / COMMUNITY_STANDING_DIVISOR,
+    0,
+    1,
+  );
+}
+
+export function normalizePortfolioScore(options: {
+  netPlUsd: number;
+  trackedCasinoCount: number;
+  claimDays: number;
+  successfulRedemptions: number;
+  totalRedemptions: number;
+}) {
+  const {
+    netPlUsd,
+    trackedCasinoCount,
+    claimDays,
+    successfulRedemptions,
+    totalRedemptions,
+  } = options;
+
+  const portfolioPl =
+    netPlUsd >= 0
+      ? clamp(
+          netPlUsd / PORTFOLIO_POSITIVE_PL_MATURITY_USD,
+          PORTFOLIO_DEPOSIT_RATIO_THRESHOLD,
+          1,
+        )
+      : clamp(
+          PORTFOLIO_DEPOSIT_RATIO_THRESHOLD +
+            netPlUsd / PORTFOLIO_NEGATIVE_PL_DIVISOR_USD,
+          NEGATIVE_PL_SUPPRESSION_FLOOR,
+          PORTFOLIO_DEPOSIT_RATIO_THRESHOLD,
+        );
+  const portfolioDiversity = clamp(
+    trackedCasinoCount / PORTFOLIO_DIVERSITY_MATURITY,
+    0,
+    1,
+  );
+  const portfolioConsistency = clamp(claimDays / CLAIM_DAYS_MATURITY, 0, 1);
+  const redemptionSuccess =
+    totalRedemptions >= PORTFOLIO_REDEMPTION_MATURITY
+      ? successfulRedemptions / totalRedemptions
+      : REDEMPTION_SUCCESS_FALLBACK;
+
+  return (
+    portfolioPl * PORTFOLIO_PL_WEIGHT +
+    portfolioDiversity * PORTFOLIO_DIVERSITY_WEIGHT +
+    portfolioConsistency * PORTFOLIO_CONSISTENCY_WEIGHT +
+    redemptionSuccess * PORTFOLIO_REDEMPTION_WEIGHT
+  );
+}
+
+export function combineTrustComponents(
+  activity: number,
+  submission: number,
+  community: number,
+  portfolio: number,
+) {
+  return clamp(
+    activity * WEIGHT_ACCOUNT_ACTIVITY +
+      submission * WEIGHT_SUBMISSION_HISTORY +
+      community * WEIGHT_COMMUNITY_STANDING +
+      portfolio * WEIGHT_PORTFOLIO,
+    0,
+    1,
+  );
+}
+
 export async function computeTrustScore(userId: string) {
   const [
     accountRows,
@@ -98,9 +183,7 @@ export async function computeTrustScore(userId: string) {
     ? Math.max(0, (Date.now() - new Date(account.created_at).getTime()) / 86_400_000)
     : 0;
   const claimCount = Number(account.claim_count ?? 0);
-  const accountActivity =
-    clamp(accountAgeDays / ACCOUNT_AGE_MATURITY_DAYS, 0, 1) * ACCOUNT_AGE_WEIGHT +
-    clamp(claimCount / CLAIM_COUNT_MATURITY, 0, 1) * CLAIM_ACTIVITY_WEIGHT;
+  const accountActivity = normalizeActivityScore(accountAgeDays, claimCount);
 
   const submission = submissionRows[0] ?? {
     total_signals: 0,
@@ -109,12 +192,10 @@ export async function computeTrustScore(userId: string) {
   };
   const workedVotes = Number(submission.worked_votes ?? 0);
   const totalVotes = Number(submission.total_votes ?? 0);
-  const submissionHistory = totalVotes > 0 ? workedVotes / totalVotes : 0.5;
+  const submissionHistory = normalizeSubmissionScore(workedVotes, totalVotes);
 
-  const communityStanding = clamp(
-    (Number(voteRows[0]?.net_positive_votes ?? 0) + COMMUNITY_STANDING_OFFSET) / COMMUNITY_STANDING_DIVISOR,
-    0,
-    1,
+  const communityStanding = normalizeCommunityScore(
+    Number(voteRows[0]?.net_positive_votes ?? 0),
   );
 
   const portfolio = portfolioRows[0] ?? {
@@ -130,33 +211,20 @@ export async function computeTrustScore(userId: string) {
   const successfulRedemptions = Number(portfolio.successful_redemptions ?? 0);
   const totalRedemptions = Number(portfolio.total_redemptions ?? 0);
 
-  const portfolioPl =
-    netPlUsd >= 0
-      ? clamp(netPlUsd / PORTFOLIO_POSITIVE_PL_MATURITY_USD, PORTFOLIO_DEPOSIT_RATIO_THRESHOLD, 1)
-      : clamp(
-          PORTFOLIO_DEPOSIT_RATIO_THRESHOLD + netPlUsd / PORTFOLIO_NEGATIVE_PL_DIVISOR_USD,
-          NEGATIVE_PL_SUPPRESSION_FLOOR,
-          PORTFOLIO_DEPOSIT_RATIO_THRESHOLD,
-        );
-  const portfolioDiversity = clamp(trackedCasinoCount / PORTFOLIO_DIVERSITY_MATURITY, 0, 1);
-  const portfolioConsistency = clamp(claimDays / CLAIM_DAYS_MATURITY, 0, 1);
-  const redemptionSuccess =
-    totalRedemptions >= PORTFOLIO_REDEMPTION_MATURITY
-      ? successfulRedemptions / totalRedemptions
-      : REDEMPTION_SUCCESS_FALLBACK;
-  const portfolioScore =
-    portfolioPl * PORTFOLIO_PL_WEIGHT +
-    portfolioDiversity * PORTFOLIO_DIVERSITY_WEIGHT +
-    portfolioConsistency * PORTFOLIO_CONSISTENCY_WEIGHT +
-    redemptionSuccess * PORTFOLIO_REDEMPTION_WEIGHT;
+  const portfolioScore = normalizePortfolioScore({
+    netPlUsd,
+    trackedCasinoCount,
+    claimDays,
+    successfulRedemptions,
+    totalRedemptions,
+  });
 
-  const score =
-    accountActivity * WEIGHT_ACCOUNT_ACTIVITY +
-    submissionHistory * WEIGHT_SUBMISSION_HISTORY +
-    communityStanding * WEIGHT_COMMUNITY_STANDING +
-    portfolioScore * WEIGHT_PORTFOLIO;
-
-  const finalScore = clamp(score, 0, 1);
+  const finalScore = combineTrustComponents(
+    accountActivity,
+    submissionHistory,
+    communityStanding,
+    portfolioScore,
+  );
 
   await query(
     `UPDATE user_settings
