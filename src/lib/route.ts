@@ -43,6 +43,36 @@ function hasCronAccess(request: Request) {
   return token === expected;
 }
 
+/**
+ * Thin wrapper for API route handlers. Handles auth, body parsing,
+ * JSON serialization, and error responses.
+ *
+ * @example
+ * // Auth-required POST endpoint
+ * export const POST: APIRoute = withRoute(async (ctx) => {
+ *   const { name } = ctx.body!;
+ *   await query('UPDATE ... WHERE user_id = $1', [ctx.user!.userId]);
+ *   return { success: true };
+ * });
+ *
+ * @example
+ * // Admin endpoint with custom status
+ * export const POST: APIRoute = withRoute(async () => {
+ *   return { _status: 201, created: true };
+ * }, { auth: 'admin' });
+ *
+ * @example
+ * // Cron job
+ * export const GET: APIRoute = withRoute(async () => {
+ *   return { success: true };
+ * }, { auth: 'cron' });
+ *
+ * @example
+ * // Public endpoint
+ * export const POST: APIRoute = withRoute(async () => {
+ *   return { success: true };
+ * }, { auth: 'public' });
+ */
 export function withRoute(
   handler: (ctx: RouteContext) => RouteResult | Promise<RouteResult>,
   options: RouteOptions = {},
@@ -91,4 +121,3 @@ export function withRoute(
     }
   };
 }
-
