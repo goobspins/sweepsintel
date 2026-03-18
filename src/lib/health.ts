@@ -186,10 +186,6 @@ function clampStatus(score: number): HealthStatus {
   return mapScoreToHealthStatus(score);
 }
 
-function escalateStatus(current: HealthStatus): HealthStatus {
-  return computePersonalEscalation(current, PERSONAL_ESCALATE_PENDING_COUNT, PERSONAL_ESCALATE_EXPOSURE_SC);
-}
-
 export async function computeAllCasinoHealth() {
   const warnings = await query<{
     casino_id: number | null;
@@ -243,6 +239,38 @@ export async function computeAllCasinoHealth() {
   );
 
   const allCasinoRows = await query<{ id: number }>('SELECT id FROM casinos');
+  const currentHealthRows = await query<{
+    casino_id: number;
+    global_status: HealthStatus | null;
+    effective_status: HealthStatus | null;
+    health_downgraded_at: string | null;
+    health_recovery_eligible_at: string | null;
+  }>(
+    `SELECT
+      casino_id,
+      global_status,
+      effective_status,
+      health_downgraded_at,
+      health_recovery_eligible_at
+    FROM casino_health`,
+  );
+  const newNegativeRows = await query<{ casino_id: number }>(
+    `SELECT DISTINCT casino_id
+    FROM discord_intel_items
+    WHERE item_type = 'platform_warning'
+      AND is_published = true
+      AND casino_id IS NOT NULL
+      AND created_at >= (
+        SELECT health_downgraded_at
+        FROM casino_health
+        WHERE casino_health.casino_id = discord_intel_items.casino_id
+      )
+      AND (
+        SELECT health_downgraded_at
+        FROM casino_health
+        WHERE casino_health.casino_id = discord_intel_items.casino_id
+      ) IS NOT NULL`,
+  );
   const warningMap = new Map<number, typeof warnings>();
   for (const warning of warnings) {
     if (warning.casino_id === null) continue;
@@ -254,6 +282,11 @@ export async function computeAllCasinoHealth() {
   for (const row of redemptionTrendRows) {
     trendMap.set(row.casino_id, row.trend_ratio === null ? null : Number(row.trend_ratio));
   }
+  const currentHealthMap = new Map<number, typeof currentHealthRows[number]>();
+  for (const row of currentHealthRows) {
+    currentHealthMap.set(row.casino_id, row);
+  }
+  const newNegativeCasinoIds = new Set(newNegativeRows.map((row) => row.casino_id));
 
   await transaction(async (tx) => {
     for (const casino of allCasinoRows) {
@@ -276,6 +309,25 @@ export async function computeAllCasinoHealth() {
       score += trendScoreFromRatio(redemptionTrend);
 
       const computedStatus = clampStatus(score);
+      const currentHealth = currentHealthMap.get(casino.id);
+      const currentEffective =
+        currentHealth?.effective_status
+        ?? currentHealth?.global_status
+        ?? 'healthy';
+      const currentDowngradedAt = currentHealth?.health_downgraded_at
+        ? new Date(currentHealth.health_downgraded_at)
+        : null;
+      const currentRecoveryEligibleAt = currentHealth?.health_recovery_eligible_at
+        ? new Date(currentHealth.health_recovery_eligible_at)
+        : null;
+      const transition = resolveHealthTransition({
+        currentEffective,
+        recommended: computedStatus,
+        currentDowngradedAt,
+        currentRecoveryEligibleAt,
+        hasNewNegativesSinceDowngrade: newNegativeCasinoIds.has(casino.id),
+        now: new Date(),
+      });
       const reasonParts: string[] = [];
       if (activeWarningCount > 0) {
         reasonParts.push(`${activeWarningCount} warning signal${activeWarningCount === 1 ? '' : 's'}`);
@@ -291,14 +343,20 @@ export async function computeAllCasinoHealth() {
           status_reason,
           active_warning_count,
           redemption_trend,
+          effective_status,
+          health_downgraded_at,
+          health_recovery_eligible_at,
           last_computed_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
         ON CONFLICT (casino_id)
         DO UPDATE SET
           global_status = EXCLUDED.global_status,
           status_reason = EXCLUDED.status_reason,
           active_warning_count = EXCLUDED.active_warning_count,
           redemption_trend = EXCLUDED.redemption_trend,
+          effective_status = EXCLUDED.effective_status,
+          health_downgraded_at = EXCLUDED.health_downgraded_at,
+          health_recovery_eligible_at = EXCLUDED.health_recovery_eligible_at,
           last_computed_at = NOW()`,
         [
           casino.id,
@@ -306,6 +364,9 @@ export async function computeAllCasinoHealth() {
           reasonParts.length > 0 ? reasonParts.join(' · ') : 'No active warnings detected.',
           activeWarningCount,
           redemptionTrend,
+          transition.newEffective,
+          transition.downgradeAt,
+          transition.recoveryEligibleAt,
         ],
       );
     }
