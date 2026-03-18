@@ -11,7 +11,7 @@ interface LedgerModeToggleProps {
 export default function LedgerModeToggle({
   initialMode,
   mode: controlledMode,
-  saveUrl = '/api/settings/ledger-mode',
+  saveUrl = '/api/v1/settings/ledger-mode',
   onModeChange,
   onSaved,
 }: LedgerModeToggleProps) {

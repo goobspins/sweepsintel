@@ -85,7 +85,7 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
   }, [toast]);
 
   async function refreshSummary() {
-    const response = await fetch('/api/ledger/summary');
+    const response = await fetch('/api/v1/ledger/summary');
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error ?? 'Unable to load ledger summary.');
@@ -101,7 +101,7 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
     if (filters.date_from) params.set('date_from', filters.date_from);
     if (filters.date_to) params.set('date_to', filters.date_to);
 
-    const response = await fetch(`/api/ledger/entries?${params.toString()}`);
+    const response = await fetch(`/api/v1/ledger/entries?${params.toString()}`);
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error ?? 'Unable to load ledger entries.');
@@ -139,7 +139,7 @@ export default function LedgerTable({ initialData, ledgerMode }: LedgerTableProp
   }
 
   function handleExportCsv() {
-    window.location.assign('/api/ledger/export-csv');
+    window.location.assign('/api/v1/ledger/export-csv');
   }
 
   const casinoOptions = summary.breakdown;

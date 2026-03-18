@@ -65,7 +65,7 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
   ), [filter, redemptions]);
 
   async function refreshList() {
-    const response = await fetch('/api/redemptions/list');
+    const response = await fetch('/api/v1/redemptions/list');
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.error ?? 'Unable to refresh redemptions.');
@@ -89,7 +89,7 @@ export default function RedemptionList({ initialData }: RedemptionListProps) {
 
     setLoadingActionId(redemption.id);
     try {
-      const response = await fetch('/api/redemptions/update-status', {
+      const response = await fetch('/api/v1/redemptions/update-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

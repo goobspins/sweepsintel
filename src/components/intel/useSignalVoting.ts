@@ -14,7 +14,7 @@ export function useSignalVoting({ setItems, onError }: UseSignalVotingOptions) {
   async function vote(signalId: number, voteValue: 'worked' | 'didnt_work') {
     setPendingVoteId(signalId);
     try {
-      const response = await fetch(`/api/intel/vote/${signalId}`, {
+      const response = await fetch(`/api/v1/intel/vote/${signalId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vote: voteValue }),

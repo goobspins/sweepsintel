@@ -18,7 +18,7 @@ export default function NotificationBadge({ user }: NotificationBadgeProps) {
 
     async function loadCount() {
       try {
-        const response = await fetch('/api/notifications/unread-count');
+        const response = await fetch('/api/v1/notifications/unread-count');
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error ?? 'Unable to load notification count.');

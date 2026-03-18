@@ -27,9 +27,9 @@ export const MOMENTUM_GRADIENTS: Record<string, string> = {
 };
 
 export const MODE_META: Record<ActionMode, { label: string; saveLabel: string; accent: string; endpoint: string }> = {
-  daily: { label: 'Daily', saveLabel: 'Save', accent: 'var(--accent-green)', endpoint: '/api/tracker/claim' },
-  adjust: { label: 'Adjust', saveLabel: 'Save Adj', accent: 'var(--accent-yellow)', endpoint: '/api/ledger/entry' },
-  spins: { label: 'Free Spins', saveLabel: 'Save Free Spins', accent: 'var(--accent-blue)', endpoint: '/api/tracker/free-sc' },
+  daily: { label: 'Daily', saveLabel: 'Save', accent: 'var(--accent-green)', endpoint: '/api/v1/tracker/claim' },
+  adjust: { label: 'Adjust', saveLabel: 'Save Adj', accent: 'var(--accent-yellow)', endpoint: '/api/v1/ledger/entry' },
+  spins: { label: 'Free Spins', saveLabel: 'Save Free Spins', accent: 'var(--accent-blue)', endpoint: '/api/v1/tracker/free-sc' },
 };
 
 export function normalizeCasinoName(name: string) {

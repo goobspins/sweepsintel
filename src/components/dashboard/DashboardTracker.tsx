@@ -177,7 +177,7 @@ export default function DashboardTracker({
   }
 
   async function refreshTracker() {
-    const response = await fetch('/api/tracker/status');
+    const response = await fetch('/api/v1/tracker/status');
     const data = await readApiResponse(response);
     if (!response.ok) throw new Error(data.error ?? 'Unable to refresh dashboard.');
     setCasinos(data.casinos ?? []);
@@ -187,7 +187,7 @@ export default function DashboardTracker({
   async function saveDailyGoal(nextGoal: number) {
     setGoalSaving(true);
     try {
-      const response = await fetch('/api/settings', {
+      const response = await fetch('/api/v1/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ daily_goal_usd: nextGoal }),
@@ -211,7 +211,7 @@ export default function DashboardTracker({
     const nextValue = !layoutSwap;
     setLayoutSwap(nextValue);
     try {
-      const response = await fetch('/api/settings', {
+      const response = await fetch('/api/v1/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ layout_swap: nextValue }),
@@ -246,7 +246,7 @@ export default function DashboardTracker({
   async function handleAddCasino(casinoId: number, casinoName: string) {
     setPendingKey(`add:${casinoId}`);
     try {
-      const response = await fetch('/api/tracker/add-casino', {
+      const response = await fetch('/api/v1/tracker/add-casino', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ casino_id: casinoId }),
@@ -274,7 +274,7 @@ export default function DashboardTracker({
 
     setPendingKey(`create:${trimmedName}`);
     try {
-      const response = await fetch('/api/tracker/add-casino', {
+      const response = await fetch('/api/v1/tracker/add-casino', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ casino_name: trimmedName }),
@@ -405,7 +405,7 @@ export default function DashboardTracker({
 
     setPendingKey(saveKey);
     try {
-      const response = await fetch('/api/tracker/purchase', {
+      const response = await fetch('/api/v1/tracker/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

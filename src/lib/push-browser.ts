@@ -67,7 +67,7 @@ export async function enablePushNotifications(vapidPublicKey: string) {
       applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
     }));
 
-  const response = await fetch('/api/push/subscribe', {
+  const response = await fetch('/api/v1/push/subscribe', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ subscription: subscription.toJSON() }),
@@ -87,7 +87,7 @@ export async function disablePushNotifications() {
     await existing.unsubscribe().catch(() => {});
   }
 
-  const response = await fetch('/api/push/unsubscribe', {
+  const response = await fetch('/api/v1/push/unsubscribe', {
     method: 'POST',
   });
   const data = await response.json().catch(() => ({}));

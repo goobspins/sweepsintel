@@ -33,7 +33,7 @@ export default function ResetTimeSuggestionForm({
     setError(null);
 
     try {
-      const response = await fetch('/api/reports/reset-suggestion', {
+      const response = await fetch('/api/v1/reports/reset-suggestion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

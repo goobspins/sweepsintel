@@ -25,7 +25,7 @@ export default function SignalSubmitForm({ casinos, onCreated }: SignalSubmitFor
     setPending(true);
     setError(null);
     try {
-      const response = await fetch('/api/intel/submit', {
+      const response = await fetch('/api/v1/intel/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

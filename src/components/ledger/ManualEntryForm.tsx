@@ -45,7 +45,7 @@ export default function ManualEntryForm({
 
     async function loadCasinos() {
       try {
-        const response = await fetch('/api/tracker/status');
+        const response = await fetch('/api/v1/tracker/status');
         const data = (await response.json()) as TrackerStatusResponse;
         if (!response.ok) {
           throw new Error(data.error ?? 'Unable to load tracked casinos.');
@@ -83,7 +83,7 @@ export default function ManualEntryForm({
     setError(null);
 
     try {
-      const response = await fetch('/api/ledger/entry', {
+      const response = await fetch('/api/v1/ledger/entry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

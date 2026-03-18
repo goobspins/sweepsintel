@@ -49,7 +49,7 @@ export default function CasinoSearch({
     const timeout = window.setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const response = await fetch(`/api/tracker/search?q=${encodeURIComponent(trimmed)}`);
+        const response = await fetch(`/api/v1/tracker/search?q=${encodeURIComponent(trimmed)}`);
         const data = await readApiResponse(response);
         if (!response.ok) {
           throw new Error(data.error ?? 'Unable to search casinos.');
@@ -199,4 +199,3 @@ export default function CasinoSearch({
     </div>
   );
 }
-

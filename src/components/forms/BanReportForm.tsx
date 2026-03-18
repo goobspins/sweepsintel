@@ -24,7 +24,7 @@ export default function BanReportForm({
     setError(null);
 
     try {
-      const response = await fetch('/api/reports/ban-submit', {
+      const response = await fetch('/api/v1/reports/ban-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

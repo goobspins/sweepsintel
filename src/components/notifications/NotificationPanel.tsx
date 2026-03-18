@@ -43,7 +43,7 @@ export default function NotificationPanel({
   async function markAllRead() {
     setBusyId('all');
     try {
-      const response = await fetch('/api/notifications/mark-read', {
+      const response = await fetch('/api/v1/notifications/mark-read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_all' }),
@@ -68,7 +68,7 @@ export default function NotificationPanel({
   async function handleClick(notification: NotificationItem) {
     setBusyId(notification.id);
     try {
-      const response = await fetch('/api/notifications/mark-read', {
+      const response = await fetch('/api/v1/notifications/mark-read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

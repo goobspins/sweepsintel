@@ -66,8 +66,8 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
     async function loadSettings() {
       try {
         const [settingsResponse, prefsResponse] = await Promise.all([
-          fetch('/api/settings'),
-          fetch('/api/notifications/preferences'),
+          fetch('/api/v1/settings'),
+          fetch('/api/v1/notifications/preferences'),
         ]);
         const data = await settingsResponse.json();
         const prefsData = await prefsResponse.json();
@@ -103,7 +103,7 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
     setSaving(true);
     setToast(null);
     try {
-      const response = await fetch('/api/settings', {
+      const response = await fetch('/api/v1/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -119,7 +119,7 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'Unable to save settings.');
-      const prefsResponse = await fetch('/api/notifications/preferences', {
+      const prefsResponse = await fetch('/api/v1/notifications/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(notificationPreferences),
@@ -173,7 +173,7 @@ export default function SettingsPanel({ initialSettings }: SettingsPanelProps) {
   async function updateCasinoTracking(casinoId: number, noDailyReward: boolean) {
     setSavingCasinoId(casinoId);
     try {
-      const response = await fetch('/api/tracker/casino-settings', {
+      const response = await fetch('/api/v1/tracker/casino-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ casino_id: casinoId, no_daily_reward: noDailyReward }),

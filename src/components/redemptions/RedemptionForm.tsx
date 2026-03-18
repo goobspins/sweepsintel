@@ -45,7 +45,7 @@ export default function RedemptionForm({ onClose, onSuccess }: RedemptionFormPro
 
     async function loadCasinos() {
       try {
-        const response = await fetch('/api/tracker/status');
+        const response = await fetch('/api/v1/tracker/status');
         const data = (await response.json()) as TrackerStatusResponse;
         if (!response.ok) {
           throw new Error(data.error ?? 'Unable to load casinos.');
@@ -109,7 +109,7 @@ export default function RedemptionForm({ onClose, onSuccess }: RedemptionFormPro
     setError(null);
 
     try {
-      const response = await fetch('/api/redemptions/submit', {
+      const response = await fetch('/api/v1/redemptions/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

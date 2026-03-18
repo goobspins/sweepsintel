@@ -91,7 +91,7 @@ export default function MyCasinosBoard({ initialData }: MyCasinosBoardProps) {
 
     setSavingNotesId(casinoId);
     try {
-      const response = await fetch('/api/my-casinos/notes', {
+      const response = await fetch('/api/v1/my-casinos/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ casino_id: casinoId, notes: nextValue || null }),
@@ -117,7 +117,7 @@ export default function MyCasinosBoard({ initialData }: MyCasinosBoardProps) {
     if (nextExpanded && !healthByCasino[casinoId]) {
       setLoadingHealthId(casinoId);
       try {
-        const response = await fetch(`/api/casinos/health-detail/${casinoId}`);
+        const response = await fetch(`/api/v1/casinos/health-detail/${casinoId}`);
         const data = await response.json();
         if (!response.ok) throw new Error(data.error ?? 'Unable to load health detail.');
         setHealthByCasino((current) => ({ ...current, [casinoId]: data.detail }));

@@ -31,7 +31,7 @@ export default function StateReportForm({
     setError(null);
 
     try {
-      const response = await fetch('/api/reports/state-submit', {
+      const response = await fetch('/api/v1/reports/state-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
