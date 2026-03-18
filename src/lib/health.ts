@@ -15,6 +15,10 @@ const HEALTH_THRESHOLD_CRITICAL = 5;
 const PERSONAL_ESCALATE_PENDING_COUNT = 1;
 const PERSONAL_ESCALATE_EXPOSURE_SC = 250;
 
+export const COOLDOWN_DAYS_WATCH = 14;
+export const COOLDOWN_DAYS_AT_RISK = 30;
+export const COOLDOWN_DAYS_CRITICAL = 60;
+
 export type HealthStatus = 'healthy' | 'watch' | 'at_risk' | 'critical';
 
 export type CasinoHealthRow = {
@@ -90,6 +94,79 @@ export function computePersonalEscalation(
   if (baseStatus === 'healthy') return 'watch';
   if (baseStatus === 'watch') return 'at_risk';
   return 'critical';
+}
+
+export function healthSeverity(status: HealthStatus): number {
+  const order: Record<HealthStatus, number> = {
+    healthy: 0,
+    watch: 1,
+    at_risk: 2,
+    critical: 3,
+  };
+  return order[status];
+}
+
+export function computeCoolDownDays(status: HealthStatus): number {
+  if (status === 'watch') return COOLDOWN_DAYS_WATCH;
+  if (status === 'at_risk') return COOLDOWN_DAYS_AT_RISK;
+  if (status === 'critical') return COOLDOWN_DAYS_CRITICAL;
+  return 0;
+}
+
+export function isRecoveryEligible(
+  effectiveStatus: HealthStatus,
+  recommendedStatus: HealthStatus,
+  recoveryEligibleAt: Date | null,
+  now: Date,
+) {
+  if (healthSeverity(recommendedStatus) >= healthSeverity(effectiveStatus)) return false;
+  if (!recoveryEligibleAt) return false;
+  return now.getTime() >= recoveryEligibleAt.getTime();
+}
+
+export function resolveHealthTransition(params: {
+  currentEffective: HealthStatus;
+  recommended: HealthStatus;
+  currentDowngradedAt: Date | null;
+  currentRecoveryEligibleAt: Date | null;
+  hasNewNegativesSinceDowngrade: boolean;
+  now: Date;
+}) {
+  const {
+    currentEffective,
+    recommended,
+    currentDowngradedAt,
+    currentRecoveryEligibleAt,
+    hasNewNegativesSinceDowngrade,
+    now,
+  } = params;
+
+  if (healthSeverity(recommended) > healthSeverity(currentEffective)) {
+    const coolDownDays = computeCoolDownDays(recommended);
+    return {
+      newEffective: recommended,
+      downgradeAt: now,
+      recoveryEligibleAt:
+        coolDownDays > 0 ? new Date(now.getTime() + coolDownDays * 86_400_000) : null,
+    };
+  }
+
+  if (
+    isRecoveryEligible(currentEffective, recommended, currentRecoveryEligibleAt, now)
+    && !hasNewNegativesSinceDowngrade
+  ) {
+    return {
+      newEffective: recommended,
+      downgradeAt: null,
+      recoveryEligibleAt: null,
+    };
+  }
+
+  return {
+    newEffective: currentEffective,
+    downgradeAt: currentDowngradedAt,
+    recoveryEligibleAt: currentRecoveryEligibleAt,
+  };
 }
 
 function decayWeight(expiresAt: string | null) {
