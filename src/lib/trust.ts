@@ -244,17 +244,206 @@ export async function computeTrustScore(userId: string) {
 }
 
 export async function computeAllTrustScores() {
-  const users = await query<{ user_id: string }>(
-    `SELECT user_id
-    FROM user_settings`,
-  );
-  const results = [];
-  for (const user of users) {
+  const [
+    activityRows,
+    submissionRows,
+    portfolioRows,
+  ] = await Promise.all([
+    query<{
+      user_id: string;
+      created_at: string | null;
+      current_trust_score: number | string | null;
+      claim_count: number | string | null;
+    }>(
+      `SELECT
+        us.user_id,
+        us.created_at,
+        us.trust_score AS current_trust_score,
+        COALESCE(dbc.claim_count, 0) AS claim_count
+      FROM user_settings us
+      LEFT JOIN (
+        SELECT user_id, COUNT(*)::int AS claim_count
+        FROM daily_bonus_claims
+        GROUP BY user_id
+      ) dbc ON dbc.user_id = us.user_id`,
+    ),
+    query<{
+      user_id: string | null;
+      worked_votes: number | string | null;
+      total_votes: number | string | null;
+      net_positive_votes: number | string | null;
+    }>(
+      `SELECT
+        di.submitted_by AS user_id,
+        COALESCE(SUM(di.worked_count), 0) AS worked_votes,
+        COALESCE(SUM(di.worked_count + di.didnt_work_count), 0) AS total_votes,
+        COALESCE(SUM(di.worked_count - di.didnt_work_count), 0) AS net_positive_votes
+      FROM discord_intel_items di
+      WHERE di.source = 'user'
+      GROUP BY di.submitted_by`,
+    ),
+    query<{
+      user_id: string;
+      net_pl_usd: number | string | null;
+      tracked_casino_count: number | string | null;
+      claim_days: number | string | null;
+      successful_redemptions: number | string | null;
+      total_redemptions: number | string | null;
+    }>(
+      `SELECT
+        us.user_id,
+        COALESCE(le.net_pl, 0) AS net_pl_usd,
+        COALESCE(ucs.tracked, 0) AS tracked_casino_count,
+        COALESCE(dbc.claim_days, 0) AS claim_days,
+        COALESCE(r_success.cnt, 0) AS successful_redemptions,
+        COALESCE(r_total.cnt, 0) AS total_redemptions
+      FROM user_settings us
+      LEFT JOIN (
+        SELECT user_id, SUM(COALESCE(usd_amount, 0)) AS net_pl
+        FROM ledger_entries
+        GROUP BY user_id
+      ) le ON le.user_id = us.user_id
+      LEFT JOIN (
+        SELECT user_id, COUNT(*)::int AS tracked
+        FROM user_casino_settings
+        WHERE removed_at IS NULL
+        GROUP BY user_id
+      ) ucs ON ucs.user_id = us.user_id
+      LEFT JOIN (
+        SELECT user_id, COUNT(DISTINCT (COALESCE(reset_period_start, claimed_at))::date)::int AS claim_days
+        FROM daily_bonus_claims
+        GROUP BY user_id
+      ) dbc ON dbc.user_id = us.user_id
+      LEFT JOIN (
+        SELECT user_id, COUNT(*)::int AS cnt
+        FROM redemptions
+        WHERE status = 'received'
+        GROUP BY user_id
+      ) r_success ON r_success.user_id = us.user_id
+      LEFT JOIN (
+        SELECT user_id, COUNT(*)::int AS cnt
+        FROM redemptions
+        GROUP BY user_id
+      ) r_total ON r_total.user_id = us.user_id`,
+    ),
+  ]);
+
+  const submissionMap = new Map<string, typeof submissionRows[number]>();
+  for (const row of submissionRows) {
+    if (!row.user_id) continue;
+    submissionMap.set(row.user_id, row);
+  }
+
+  const portfolioMap = new Map<string, typeof portfolioRows[number]>();
+  for (const row of portfolioRows) {
+    portfolioMap.set(row.user_id, row);
+  }
+
+  const now = Date.now();
+  const results: Array<{ user_id: string; trust_score: number }> = [];
+  const snapshotsToWrite: Array<{
+    user_id: string;
+    trust_score: number;
+    activity_score: number;
+    submission_score: number;
+    community_score: number;
+    portfolio_score: number;
+  }> = [];
+
+  for (const user of activityRows) {
+    const accountAgeDays = user.created_at
+      ? Math.max(0, (now - new Date(user.created_at).getTime()) / 86_400_000)
+      : 0;
+    const claimCount = Number(user.claim_count ?? 0);
+    const activityScore = normalizeActivityScore(accountAgeDays, claimCount);
+
+    const submission = submissionMap.get(user.user_id);
+    const workedVotes = Number(submission?.worked_votes ?? 0);
+    const totalVotes = Number(submission?.total_votes ?? 0);
+    const submissionScore = normalizeSubmissionScore(workedVotes, totalVotes);
+    const communityScore = normalizeCommunityScore(
+      Number(submission?.net_positive_votes ?? 0),
+    );
+
+    const portfolio = portfolioMap.get(user.user_id);
+    const portfolioScore = normalizePortfolioScore({
+      netPlUsd: Number(portfolio?.net_pl_usd ?? 0),
+      trackedCasinoCount: Number(portfolio?.tracked_casino_count ?? 0),
+      claimDays: Number(portfolio?.claim_days ?? 0),
+      successfulRedemptions: Number(portfolio?.successful_redemptions ?? 0),
+      totalRedemptions: Number(portfolio?.total_redemptions ?? 0),
+    });
+
+    const finalScore = combineTrustComponents(
+      activityScore,
+      submissionScore,
+      communityScore,
+      portfolioScore,
+    );
+    const currentTrustScore =
+      user.current_trust_score === null ? null : Number(user.current_trust_score);
+
     results.push({
       user_id: user.user_id,
-      trust_score: await computeTrustScore(user.user_id),
+      trust_score: finalScore,
     });
+
+    if (shouldWriteSnapshot(currentTrustScore, finalScore)) {
+      snapshotsToWrite.push({
+        user_id: user.user_id,
+        trust_score: finalScore,
+        activity_score: activityScore,
+        submission_score: submissionScore,
+        community_score: communityScore,
+        portfolio_score: portfolioScore,
+      });
+    }
   }
+
+  await transaction(async (tx) => {
+    for (const result of results) {
+      await tx.query(
+        `UPDATE user_settings
+        SET trust_score = $2,
+            trust_score_updated_at = NOW()
+        WHERE user_id = $1`,
+        [result.user_id, result.trust_score],
+      );
+    }
+
+    if (snapshotsToWrite.length > 0) {
+      const values: string[] = [];
+      const params: Array<string | number> = [];
+
+      for (const snapshot of snapshotsToWrite) {
+        const offset = params.length;
+        values.push(
+          `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`,
+        );
+        params.push(
+          snapshot.user_id,
+          snapshot.trust_score,
+          snapshot.activity_score,
+          snapshot.submission_score,
+          snapshot.community_score,
+          snapshot.portfolio_score,
+        );
+      }
+
+      await tx.query(
+        `INSERT INTO trust_snapshots (
+          user_id,
+          trust_score,
+          activity_score,
+          submission_score,
+          community_score,
+          portfolio_score
+        ) VALUES ${values.join(', ')}`,
+        params,
+      );
+    }
+  });
+
   return results;
 }
 
