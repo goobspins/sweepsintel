@@ -4,5 +4,17 @@
     { "path": "/api/cron/push-resets", "schedule": "*/15 * * * *" },
     { "path": "/api/cron/compute-health", "schedule": "*/30 * * * *" },
     { "path": "/api/cron/compute-trust", "schedule": "0 */2 * * *" }
+  ],
+  "rewrites": [
+    { "source": "/api/intel/:path*", "destination": "/api/v1/intel/:path*" },
+    { "source": "/api/casinos/:path*", "destination": "/api/v1/casinos/:path*" },
+    { "source": "/api/settings", "destination": "/api/v1/settings" },
+    { "source": "/api/ledger/:path*", "destination": "/api/v1/ledger/:path*" },
+    { "source": "/api/tracker/:path*", "destination": "/api/v1/tracker/:path*" },
+    { "source": "/api/notifications/:path*", "destination": "/api/v1/notifications/:path*" },
+    { "source": "/api/push/:path*", "destination": "/api/v1/push/:path*" },
+    { "source": "/api/redemptions/:path*", "destination": "/api/v1/redemptions/:path*" },
+    { "source": "/api/reports/:path*", "destination": "/api/v1/reports/:path*" },
+    { "source": "/api/my-casinos/:path*", "destination": "/api/v1/my-casinos/:path*" }
   ]
 }
