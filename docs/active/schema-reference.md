@@ -3,7 +3,7 @@
 > **Generated:** 2026-03-17
 > **Database:** Neon Postgres (serverless)
 > **Application stack:** Astro + React + TypeScript
-> **Source of truth:** `src/db/schema.sql` + all migration files in `src/db/`
+> **Source of truth:** `src/db/migrations/schema.sql` + all migration files in `src/db/migrations/`
 
 ---
 
@@ -330,7 +330,7 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 
 #### Data Volume Estimate
 
-**Static.** 51 rows (50 states + DC). Seeded once via `seed-states.sql`. Changes only if US territories are added.
+**Static.** 51 rows (50 states + DC). Seeded once via `migrations/seed-states.sql`. Changes only if US territories are added.
 
 ---
 
@@ -1511,11 +1511,11 @@ No active query patterns yet -- table created as v2 schema foundation.
 |---|---|---|---|---|---|
 | `id` | BIGSERIAL | NO | auto | PRIMARY KEY | |
 | `user_id` | VARCHAR(255) | NO | -- | NOT NULL | User identifier (no FK constraint) |
-| `trust_score` | DECIMAL(3,2) | NO | -- | NOT NULL | Overall trust score at snapshot time |
-| `activity_score` | DECIMAL(3,2) | YES | NULL | -- | Activity component snapshot |
-| `submission_score` | DECIMAL(3,2) | YES | NULL | -- | Submission-history component snapshot |
-| `community_score` | DECIMAL(3,2) | YES | NULL | -- | Community component snapshot |
-| `portfolio_score` | DECIMAL(3,2) | YES | NULL | -- | Portfolio component snapshot |
+| `trust_score` | NUMERIC(5,4) | NO | -- | NOT NULL | Overall trust score at snapshot time |
+| `activity_score` | NUMERIC(5,4) | YES | NULL | -- | Activity component snapshot |
+| `submission_score` | NUMERIC(5,4) | YES | NULL | -- | Submission-history component snapshot |
+| `community_score` | NUMERIC(5,4) | YES | NULL | -- | Community component snapshot |
+| `portfolio_score` | NUMERIC(5,4) | YES | NULL | -- | Portfolio component snapshot |
 | `computed_at` | TIMESTAMPTZ | YES | `NOW()` | -- | |
 
 #### Indexes
@@ -1718,20 +1718,21 @@ Migrations are listed in approximate execution order. The `push-notification-log
 
 | File | Date | Summary |
 |---|---|---|
-| `schema.sql` | Baseline | Full initial schema: all core tables, enums, base indexes, and `admin_settings` seed data |
-| `seed-states.sql` | Baseline | Seeds `state_legal_status` with all 50 US states + DC |
-| `push-notification-log.sql` | Unknown | Creates `push_notification_log` table with user rate-limiting index |
-| `2026-03-15-dashboard-foundation.sql` | 2026-03-15 | Adds goal/momentum/KPI columns to `user_settings`; adds `purchase` and `free_sc` enum values; converts `ledger_entries.entry_at` to TIMESTAMPTZ; adds `margin_pct` and `promo_code` to `ledger_entries`; adds `reset_period_start` to `daily_bonus_claims`; creates `daily_aggregates` table with aggregate indexes |
-| `2026-03-16-casinos-website-url.sql` | 2026-03-16 | Adds `website_url TEXT` column to `casinos` |
-| `2026-03-16-linked-entries.sql` | 2026-03-16 | Adds `purchase_credit` to `ledger_entry_type` enum; adds `linked_entry_id` self-referential FK to `ledger_entries`; creates `idx_ledger_linked_entry_id` |
-| `2026-03-16-phase1-reset-columns.sql` | 2026-03-16 | Adds `no_daily_reward` to `user_casino_settings` and `reset_mode`/`reset_interval_hours` to `casinos` (idempotent via `IF NOT EXISTS`); adds CHECK constraint on `reset_mode`; references `streak_mode` in UPDATE (see schema debt) |
-| `2026-03-16-suggested-normalized.sql` | 2026-03-16 | Adds `normalized_name` to `casinos`; backfills normalized values; creates `idx_casinos_normalized_name` |
-| `2026-03-16-tier-label.sql` | 2026-03-16 | Adds `tier_label VARCHAR(2)` to `casinos` |
-| `2026-03-16-user-casino-settings-notes.sql` | 2026-03-16 | Adds `notes TEXT` to `user_casino_settings` |
-| `2026-03-17-add-indexes.sql` | 2026-03-17 | Adds 5 performance indexes: `idx_user_casino_settings_user_active` (duplicate), `idx_daily_bonus_claims_user_casino_date`, `idx_ledger_entries_user_casino` (duplicate), `idx_intel_items_casino_created`, `idx_signal_votes_item` (duplicate) |
-| `2026-03-17-intelligence-layer.sql` | 2026-03-17 | Creates `casino_health`, `user_notification_preferences`, and `signal_votes` tables; adds `layout_swap` and `contributor_tier` to `user_settings`; changes `trust_score` default to `0.50`; adds `source`, `submitted_by`, `is_anonymous`, `worked_count`, `didnt_work_count`, `signal_status` to `discord_intel_items`; adds CHECK constraints on new columns; creates indexes |
+| `migrations/schema.sql` | Baseline | Full initial schema: all core tables, enums, base indexes, and `admin_settings` seed data |
+| `migrations/seed-states.sql` | Baseline | Seeds `state_legal_status` with all 50 US states + DC |
+| `migrations/push-notification-log.sql` | Unknown | Creates `push_notification_log` table with user rate-limiting index |
+| `migrations/2026-03-15-dashboard-foundation.sql` | 2026-03-15 | Adds goal/momentum/KPI columns to `user_settings`; adds `purchase` and `free_sc` enum values; converts `ledger_entries.entry_at` to TIMESTAMPTZ; adds `margin_pct` and `promo_code` to `ledger_entries`; adds `reset_period_start` to `daily_bonus_claims`; creates `daily_aggregates` table with aggregate indexes |
+| `migrations/2026-03-16-casinos-website-url.sql` | 2026-03-16 | Adds `website_url TEXT` column to `casinos` |
+| `migrations/2026-03-16-linked-entries.sql` | 2026-03-16 | Adds `purchase_credit` to `ledger_entry_type` enum; adds `linked_entry_id` self-referential FK to `ledger_entries`; creates `idx_ledger_linked_entry_id` |
+| `migrations/2026-03-16-phase1-reset-columns.sql` | 2026-03-16 | Adds `no_daily_reward` to `user_casino_settings` and `reset_mode`/`reset_interval_hours` to `casinos` (idempotent via `IF NOT EXISTS`); adds CHECK constraint on `reset_mode`; references `streak_mode` in UPDATE (see schema debt) |
+| `migrations/2026-03-16-suggested-normalized.sql` | 2026-03-16 | Adds `normalized_name` to `casinos`; backfills normalized values; creates `idx_casinos_normalized_name` |
+| `migrations/2026-03-16-tier-label.sql` | 2026-03-16 | Adds `tier_label VARCHAR(2)` to `casinos` |
+| `migrations/2026-03-16-user-casino-settings-notes.sql` | 2026-03-16 | Adds `notes TEXT` to `user_casino_settings` |
+| `migrations/2026-03-17-add-indexes.sql` | 2026-03-17 | Adds 5 performance indexes: `idx_user_casino_settings_user_active` (duplicate), `idx_daily_bonus_claims_user_casino_date`, `idx_ledger_entries_user_casino` (duplicate), `idx_intel_items_casino_created`, `idx_signal_votes_item` (duplicate) |
+| `migrations/2026-03-17-intelligence-layer.sql` | 2026-03-17 | Creates `casino_health`, `user_notification_preferences`, and `signal_votes` tables; adds `layout_swap` and `contributor_tier` to `user_settings`; changes `trust_score` default to `0.50`; adds `source`, `submitted_by`, `is_anonymous`, `worked_count`, `didnt_work_count`, `signal_status` to `discord_intel_items`; adds CHECK constraints on new columns; creates indexes |
 | `migrations/v2-schema-foundation.sql` | 2026-03-17 | Adds v2 schema foundation: `health_status` enum, new signal lifecycle columns on `discord_intel_items`, new `signal_confirmations`, `signal_updates`, `events`, `telemetry_events`, `moderation_actions`, and `trust_snapshots` tables, plus sticky-health and anonymous-preference columns and supporting indexes |
 | `migrations/v2-schema-backfill.sql` | 2026-03-17 | Backfills `discord_intel_items.signal_priority`, `discord_intel_items.first_reporter_id`, and `casino_health.effective_status` from existing data |
+| `migrations/fix-trust-snapshot-precision.sql` | 2026-03-17 | Widens trust_snapshots score columns from DECIMAL(3,2) to NUMERIC(5,4) for sparkline fidelity |
 
 ---
 
