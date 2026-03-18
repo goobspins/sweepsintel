@@ -1,4 +1,4 @@
-import { query } from './db';
+import { query, transaction } from './db';
 
 const ACCOUNT_AGE_MATURITY_DAYS = 90;
 const CLAIM_COUNT_MATURITY = 100;
@@ -26,6 +26,7 @@ const PORTFOLIO_CONSISTENCY_WEIGHT = 0.25;
 const PORTFOLIO_REDEMPTION_WEIGHT = 0.15;
 
 const DEFAULT_TRUST_SCORE = 0.5;
+export const TRUST_DELTA_THRESHOLD = 0.05;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -114,6 +115,11 @@ export function combineTrustComponents(
     0,
     1,
   );
+}
+
+export function shouldWriteSnapshot(oldScore: number | null, newScore: number) {
+  if (oldScore === null) return true;
+  return Math.abs(newScore - oldScore) >= TRUST_DELTA_THRESHOLD;
 }
 
 export async function computeTrustScore(userId: string) {
