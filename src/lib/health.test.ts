@@ -6,13 +6,17 @@ vi.mock('./cache');
 import { getCached } from './cache';
 import { query, transaction } from './db';
 import {
+  computeCoolDownDays,
   computeDisputeFactor,
   computeAllCasinoHealth,
+  healthSeverity,
+  isRecoveryEligible,
   computePersonalEscalation,
   computeRedemptionTrendScore,
   computeWarningDecayWeight,
   getCasinoHealthForUser,
   mapScoreToHealthStatus,
+  resolveHealthTransition,
 } from './health';
 
 const mockQuery = vi.mocked(query);
@@ -23,16 +27,22 @@ function setupHealthCompute({
   warnings,
   trends,
   casinos,
+  currentHealth = [],
+  newNegatives = [],
 }: {
   warnings: Array<Record<string, unknown>>;
   trends: Array<Record<string, unknown>>;
   casinos: Array<Record<string, unknown>>;
+  currentHealth?: Array<Record<string, unknown>>;
+  newNegatives?: Array<Record<string, unknown>>;
 }) {
   const txQuery = vi.fn().mockResolvedValue([]);
   mockQuery
     .mockResolvedValueOnce(warnings)
     .mockResolvedValueOnce(trends)
-    .mockResolvedValueOnce(casinos);
+    .mockResolvedValueOnce(casinos)
+    .mockResolvedValueOnce(currentHealth)
+    .mockResolvedValueOnce(newNegatives);
   mockTransaction.mockImplementationOnce(async (handler) =>
     handler({ query: txQuery }),
   );
@@ -83,6 +93,9 @@ describe('computeAllCasinoHealth', () => {
       '2 warning signals',
       2,
       null,
+      'watch',
+      expect.any(Date),
+      expect.any(Date),
     ]);
   });
 
@@ -204,6 +217,9 @@ describe('computeAllCasinoHealth', () => {
       'No active warnings detected.',
       0,
       null,
+      'healthy',
+      null,
+      null,
     ]);
   });
 
@@ -253,6 +269,9 @@ describe('computeAllCasinoHealth', () => {
       'redemptions trending 1.50x slower',
       0,
       1.5,
+      'healthy',
+      null,
+      null,
     ]);
   });
 
@@ -271,6 +290,9 @@ describe('computeAllCasinoHealth', () => {
       'redemptions trending 2.00x slower',
       0,
       2,
+      'watch',
+      expect.any(Date),
+      expect.any(Date),
     ]);
   });
 
@@ -378,6 +400,83 @@ describe('computeAllCasinoHealth', () => {
     expect(txQuery.mock.calls[1]?.[1]?.[1]).toBe('at_risk');
     expect(txQuery.mock.calls[2]?.[1]?.[1]).toBe('critical');
   });
+
+  it('keeps a downgraded effective status sticky when the recommended status improves before cooldown expiry', async () => {
+    const txQuery = setupHealthCompute({
+      warnings: [
+        {
+          casino_id: 1,
+          title: 'Decayed warning',
+          expires_at: '2026-03-14T12:00:00.000Z',
+          worked_count: 0,
+          didnt_work_count: 0,
+          signal_status: 'active',
+          created_at: '2026-03-13T12:00:00.000Z',
+        },
+        {
+          casino_id: 1,
+          title: 'Active warning',
+          expires_at: null,
+          worked_count: 0,
+          didnt_work_count: 0,
+          signal_status: 'active',
+          created_at: '2026-03-16T23:00:00.000Z',
+        },
+      ],
+      trends: [],
+      casinos: [{ id: 1 }],
+      currentHealth: [{
+        casino_id: 1,
+        global_status: 'at_risk',
+        effective_status: 'at_risk',
+        health_downgraded_at: '2026-03-10T00:00:00.000Z',
+        health_recovery_eligible_at: '2026-04-09T00:00:00.000Z',
+      }],
+      newNegatives: [],
+    });
+
+    await computeAllCasinoHealth();
+
+    expect(txQuery.mock.calls[0]?.[1]).toEqual([
+      1,
+      'healthy',
+      '2 warning signals',
+      2,
+      null,
+      'at_risk',
+      new Date('2026-03-10T00:00:00.000Z'),
+      new Date('2026-04-09T00:00:00.000Z'),
+    ]);
+  });
+
+  it('upgrades effective status after cooldown expires when there are no new negatives', async () => {
+    const txQuery = setupHealthCompute({
+      warnings: [],
+      trends: [],
+      casinos: [{ id: 1 }],
+      currentHealth: [{
+        casino_id: 1,
+        global_status: 'watch',
+        effective_status: 'watch',
+        health_downgraded_at: '2026-03-01T00:00:00.000Z',
+        health_recovery_eligible_at: '2026-03-02T00:00:00.000Z',
+      }],
+      newNegatives: [],
+    });
+
+    await computeAllCasinoHealth();
+
+    expect(txQuery.mock.calls[0]?.[1]).toEqual([
+      1,
+      'healthy',
+      'No active warnings detected.',
+      0,
+      null,
+      'healthy',
+      null,
+      null,
+    ]);
+  });
 });
 
 describe('getCasinoHealthForUser', () => {
@@ -394,6 +493,7 @@ describe('getCasinoHealthForUser', () => {
       .mockResolvedValueOnce([{
         casino_id: 1,
         global_status: 'healthy',
+        effective_status: 'healthy',
         status_reason: 'No active warnings detected.',
         active_warning_count: 0,
         redemption_trend: null,
@@ -401,6 +501,8 @@ describe('getCasinoHealthForUser', () => {
         admin_override_status: null,
         admin_override_reason: null,
         admin_override_at: null,
+        health_downgraded_at: null,
+        health_recovery_eligible_at: null,
       }])
       .mockResolvedValueOnce([{
         pending_redemptions_count: 0,
@@ -413,6 +515,7 @@ describe('getCasinoHealthForUser', () => {
 
     expect(result?.personal_status).toBe('healthy');
     expect(result?.exposure_reason).toBeNull();
+    expect(result?.effective_status).toBe('healthy');
   });
 
   it('escalates by one level when the user has a pending redemption', async () => {
@@ -420,6 +523,7 @@ describe('getCasinoHealthForUser', () => {
       .mockResolvedValueOnce([{
         casino_id: 1,
         global_status: 'healthy',
+        effective_status: 'healthy',
         status_reason: '1 warning signal',
         active_warning_count: 1,
         redemption_trend: null,
@@ -427,6 +531,8 @@ describe('getCasinoHealthForUser', () => {
         admin_override_status: null,
         admin_override_reason: null,
         admin_override_at: null,
+        health_downgraded_at: null,
+        health_recovery_eligible_at: null,
       }])
       .mockResolvedValueOnce([{
         pending_redemptions_count: 1,
@@ -446,6 +552,7 @@ describe('getCasinoHealthForUser', () => {
       .mockResolvedValueOnce([{
         casino_id: 1,
         global_status: 'watch',
+        effective_status: 'watch',
         status_reason: '2 warning signals',
         active_warning_count: 2,
         redemption_trend: null,
@@ -453,6 +560,8 @@ describe('getCasinoHealthForUser', () => {
         admin_override_status: null,
         admin_override_reason: null,
         admin_override_at: null,
+        health_downgraded_at: null,
+        health_recovery_eligible_at: null,
       }])
       .mockResolvedValueOnce([{
         pending_redemptions_count: 0,
@@ -472,6 +581,7 @@ describe('getCasinoHealthForUser', () => {
       .mockResolvedValueOnce([{
         casino_id: 1,
         global_status: 'healthy',
+        effective_status: 'watch',
         status_reason: 'No active warnings detected.',
         active_warning_count: 0,
         redemption_trend: null,
@@ -479,6 +589,8 @@ describe('getCasinoHealthForUser', () => {
         admin_override_status: 'critical',
         admin_override_reason: 'Admin pinned',
         admin_override_at: '2026-03-16T00:00:00.000Z',
+        health_downgraded_at: '2026-03-15T00:00:00.000Z',
+        health_recovery_eligible_at: '2026-04-14T00:00:00.000Z',
       }])
       .mockResolvedValueOnce([{
         pending_redemptions_count: 0,
@@ -566,5 +678,99 @@ describe('health - pure computation', () => {
     expect(computePersonalEscalation('watch', 0, 250)).toBe('at_risk');
     expect(computePersonalEscalation('at_risk', 1, 0)).toBe('critical');
     expect(computePersonalEscalation('critical', 0, 300)).toBe('critical');
+  });
+
+  it('maps health severity ordering from healthy to critical', () => {
+    expect(healthSeverity('healthy')).toBe(0);
+    expect(healthSeverity('watch')).toBe(1);
+    expect(healthSeverity('at_risk')).toBe(2);
+    expect(healthSeverity('critical')).toBe(3);
+  });
+
+  it('computes cooldown days by health status', () => {
+    expect(computeCoolDownDays('healthy')).toBe(0);
+    expect(computeCoolDownDays('watch')).toBe(14);
+    expect(computeCoolDownDays('at_risk')).toBe(30);
+    expect(computeCoolDownDays('critical')).toBe(60);
+  });
+
+  it('checks recovery eligibility from severity and cooldown timing', () => {
+    const now = new Date('2026-03-17T00:00:00.000Z');
+    expect(isRecoveryEligible('watch', 'watch', new Date('2026-03-01T00:00:00.000Z'), now)).toBe(false);
+    expect(isRecoveryEligible('watch', 'at_risk', new Date('2026-03-01T00:00:00.000Z'), now)).toBe(false);
+    expect(isRecoveryEligible('watch', 'healthy', null, now)).toBe(false);
+    expect(isRecoveryEligible('watch', 'healthy', new Date('2026-03-18T00:00:00.000Z'), now)).toBe(false);
+    expect(isRecoveryEligible('watch', 'healthy', new Date('2026-03-16T00:00:00.000Z'), now)).toBe(true);
+  });
+
+  it('resolves immediate downgrades, sticky holds, and eligible recoveries', () => {
+    const now = new Date('2026-03-17T00:00:00.000Z');
+
+    expect(resolveHealthTransition({
+      currentEffective: 'healthy',
+      recommended: 'watch',
+      currentDowngradedAt: null,
+      currentRecoveryEligibleAt: null,
+      hasNewNegativesSinceDowngrade: false,
+      now,
+    })).toEqual({
+      newEffective: 'watch',
+      downgradeAt: now,
+      recoveryEligibleAt: new Date('2026-03-31T00:00:00.000Z'),
+    });
+
+    const stickyResult = resolveHealthTransition({
+      currentEffective: 'at_risk',
+      recommended: 'watch',
+      currentDowngradedAt: new Date('2026-03-10T00:00:00.000Z'),
+      currentRecoveryEligibleAt: new Date('2026-03-30T00:00:00.000Z'),
+      hasNewNegativesSinceDowngrade: false,
+      now,
+    });
+    expect(stickyResult).toEqual({
+      newEffective: 'at_risk',
+      downgradeAt: new Date('2026-03-10T00:00:00.000Z'),
+      recoveryEligibleAt: new Date('2026-03-30T00:00:00.000Z'),
+    });
+
+    const blockedByNegatives = resolveHealthTransition({
+      currentEffective: 'watch',
+      recommended: 'healthy',
+      currentDowngradedAt: new Date('2026-03-01T00:00:00.000Z'),
+      currentRecoveryEligibleAt: new Date('2026-03-02T00:00:00.000Z'),
+      hasNewNegativesSinceDowngrade: true,
+      now,
+    });
+    expect(blockedByNegatives).toEqual({
+      newEffective: 'watch',
+      downgradeAt: new Date('2026-03-01T00:00:00.000Z'),
+      recoveryEligibleAt: new Date('2026-03-02T00:00:00.000Z'),
+    });
+
+    expect(resolveHealthTransition({
+      currentEffective: 'watch',
+      recommended: 'healthy',
+      currentDowngradedAt: new Date('2026-03-01T00:00:00.000Z'),
+      currentRecoveryEligibleAt: new Date('2026-03-02T00:00:00.000Z'),
+      hasNewNegativesSinceDowngrade: false,
+      now,
+    })).toEqual({
+      newEffective: 'healthy',
+      downgradeAt: null,
+      recoveryEligibleAt: null,
+    });
+
+    expect(resolveHealthTransition({
+      currentEffective: 'watch',
+      recommended: 'critical',
+      currentDowngradedAt: new Date('2026-03-01T00:00:00.000Z'),
+      currentRecoveryEligibleAt: new Date('2026-03-15T00:00:00.000Z'),
+      hasNewNegativesSinceDowngrade: true,
+      now,
+    })).toEqual({
+      newEffective: 'critical',
+      downgradeAt: now,
+      recoveryEligibleAt: new Date('2026-05-16T00:00:00.000Z'),
+    });
   });
 });
