@@ -40,7 +40,13 @@
    - [discord_intel_items](#discord_intel_items)
    - [discord_intel_reactions](#discord_intel_reactions)
    - [signal_votes](#signal_votes)
+   - [signal_confirmations](#signal_confirmations)
+   - [signal_updates](#signal_updates)
    - [casino_health](#casino_health)
+   - [events](#events)
+   - [telemetry_events](#telemetry_events)
+   - [moderation_actions](#moderation_actions)
+   - [trust_snapshots](#trust_snapshots)
    - [admin_settings](#admin_settings)
    - [push_subscriptions](#push_subscriptions)
    - [push_notification_log](#push_notification_log)
@@ -105,6 +111,16 @@ All transaction types tracked in the ledger.
 | `state_pullout` | A casino/provider has exited a state |
 | `ban_uptick` | Elevated ban reports for a casino |
 | `system` | Generic platform notification |
+
+### `health_status`
+Used by `casino_health.effective_status` for sticky health state tracking introduced in the v2 schema foundation.
+
+| Value | Meaning |
+|---|---|
+| `healthy` | No active health concern |
+| `watch` | Early warning / caution state |
+| `at_risk` | Elevated concern requiring attention |
+| `critical` | Highest-risk state |
 
 ---
 
@@ -451,6 +467,8 @@ Primarily used as a lookup/join target. The `settings.ts` API returns all state 
 | `trust_score_updated_at` | TIMESTAMP | YES | NULL | -- | Last time the trust score was recomputed |
 | `contributor_tier` | VARCHAR(30) | YES | `'newcomer'` | CHECK (`newcomer`, `scout`, `insider`, `operator`) | Signal-submission contributor tier |
 | `layout_swap` | BOOLEAN | YES | `FALSE` | -- | UI layout preference toggle. Added in intelligence-layer migration. |
+| `anonymous_preference` | BOOLEAN | YES | `TRUE` | -- | Sticky default for anonymous user-signal submission. Added in `v2-schema-foundation` migration. |
+| `trust_last_activity_at` | TIMESTAMPTZ | YES | NULL | -- | Last trust-relevant activity timestamp, reserved for future inactivity decay logic. Added in `v2-schema-foundation` migration. |
 | `daily_goal_usd` | DECIMAL(10,2) | YES | `5.00` | -- | User's daily earnings goal in USD. Added in dashboard-foundation migration. |
 | `weekly_goal_usd` | DECIMAL(10,2) | YES | NULL | -- | User's weekly earnings goal. Added in dashboard-foundation migration. |
 | `momentum_period` | TEXT | YES | `'daily'` | CHECK (`daily`, `weekly`) | Dashboard momentum display period. Added in dashboard-foundation migration. |
@@ -1148,6 +1166,13 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 | `worked_count` | INT | YES | `0` | -- | Count of `worked` votes from `signal_votes`. Added in intelligence-layer migration. |
 | `didnt_work_count` | INT | YES | `0` | -- | Count of `didnt_work` votes. Added in intelligence-layer migration. |
 | `signal_status` | TEXT | YES | `'active'` | CHECK (`active`, `conditional`, `likely_outdated`, `collapsed`) | Derived status based on vote ratios. Added in intelligence-layer migration. |
+| `signal_priority` | VARCHAR(20) | YES | `'normal'` | -- | Priority bucket for feed ordering (`critical`, `high`, `normal`, `low`). Added in `v2-schema-foundation` migration. |
+| `first_reporter_id` | VARCHAR(255) | YES | NULL | -- | Original reporter user ID for deduplication and confirmation tracking. Added in `v2-schema-foundation` migration. |
+| `confirmation_count` | INT | YES | `0` | -- | Denormalized count of rows in `signal_confirmations`. Added in `v2-schema-foundation` migration. |
+| `debunked_at` | TIMESTAMPTZ | YES | NULL | -- | Terminal-state timestamp for signals proven false. Added in `v2-schema-foundation` migration. |
+| `state_tags` | TEXT[] | YES | NULL | -- | Optional array of state codes where the signal has been confirmed. Added in `v2-schema-foundation` migration. |
+| `is_pinned` | BOOLEAN | YES | `FALSE` | -- | Admin sort override for curated feeds. Added in `v2-schema-foundation` migration. |
+| `hold_until` | TIMESTAMPTZ | YES | NULL | -- | Delayed-publish timestamp used for trust-gated hold queues. Added in `v2-schema-foundation` migration. |
 | `created_at` | TIMESTAMP | YES | `NOW()` | -- | |
 | `published_at` | TIMESTAMP | YES | NULL | -- | When the signal was published |
 
@@ -1160,11 +1185,15 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 | `idx_discord_intel_casino_published` | `(casino_id, is_published, created_at DESC)` | WHERE `is_published = true` | Tracker alert queries |
 | `idx_discord_intel_source` | `source` | | Added in intelligence-layer migration |
 | `idx_intel_items_casino_created` | `(casino_id, created_at DESC)` | WHERE `casino_id IS NOT NULL` | Added in `2026-03-17-add-indexes.sql` |
+| `idx_intel_pinned` | `is_pinned` | WHERE `is_pinned = true` | Added in `v2-schema-foundation` migration |
+| `idx_intel_hold` | `hold_until` | WHERE `hold_until IS NOT NULL` | Added in `v2-schema-foundation` migration |
 
 #### Relationships
 
 - `discord_intel_reactions.item_id` -> `discord_intel_items.id` CASCADE
 - `signal_votes.signal_id` -> `discord_intel_items.id` NO ACTION
+- `signal_confirmations.signal_id` -> `discord_intel_items.id` CASCADE
+- `signal_updates.signal_id` -> `discord_intel_items.id` CASCADE
 
 #### Query Patterns
 
@@ -1244,6 +1273,77 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 
 ---
 
+### `signal_confirmations`
+
+**Purpose:** Tracks which users confirmed an existing signal instead of creating a duplicate report, enabling future consolidated signal cards and deduplication windows.
+
+#### Columns
+
+| Column | Type | Nullable | Default | Constraints | Description |
+|---|---|---|---|---|---|
+| `id` | SERIAL | NO | auto | PRIMARY KEY | |
+| `signal_id` | INT | NO | -- | NOT NULL, FK -> `discord_intel_items.id` ON DELETE CASCADE | Parent signal being confirmed |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | Confirming user ID (no FK constraint) |
+| `created_at` | TIMESTAMPTZ | YES | `NOW()` | -- | Confirmation timestamp |
+| -- | -- | -- | -- | UNIQUE `(signal_id, user_id)` | One confirmation per user per signal |
+
+#### Indexes
+
+| Index | Columns | Notes |
+|---|---|---|
+| `signal_confirmations_pkey` | `id` | |
+| `signal_confirmations_signal_id_user_id_key` | `(signal_id, user_id)` | Unique |
+| `idx_signal_confirmations_signal` | `signal_id` | Added in `v2-schema-foundation` migration |
+
+#### Relationships
+
+- `signal_id` -> `discord_intel_items.id` ON DELETE CASCADE
+
+#### Query Patterns
+
+No active query patterns yet -- table created as v2 schema foundation.
+
+#### Data Volume Estimate
+
+**Append-only, moderate growth.** One row per user confirmation event.
+
+---
+
+### `signal_updates`
+
+**Purpose:** Append-only correction notes for signals, preserving a small audit trail of follow-up clarifications or fixes.
+
+#### Columns
+
+| Column | Type | Nullable | Default | Constraints | Description |
+|---|---|---|---|---|---|
+| `id` | SERIAL | NO | auto | PRIMARY KEY | |
+| `signal_id` | INT | NO | -- | NOT NULL, FK -> `discord_intel_items.id` ON DELETE CASCADE | Parent signal |
+| `author_id` | VARCHAR(255) | NO | -- | NOT NULL | Authoring user/admin ID |
+| `content` | TEXT | NO | -- | NOT NULL | Correction/update body |
+| `created_at` | TIMESTAMPTZ | YES | `NOW()` | -- | |
+
+#### Indexes
+
+| Index | Columns | Notes |
+|---|---|---|
+| `signal_updates_pkey` | `id` | |
+| `idx_signal_updates_signal` | `(signal_id, created_at)` | Added in `v2-schema-foundation` migration |
+
+#### Relationships
+
+- `signal_id` -> `discord_intel_items.id` ON DELETE CASCADE
+
+#### Query Patterns
+
+No active query patterns yet -- table created as v2 schema foundation.
+
+#### Data Volume Estimate
+
+**Append-only, low growth.** Max 3 rows per signal once the app-level limit is enforced.
+
+---
+
 ### `casino_health`
 
 **Purpose:** Caches the computed health status for each casino, updated by a cron job, incorporating warning signal weights and redemption timing trends.
@@ -1261,6 +1361,9 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 | `admin_override_status` | VARCHAR(20) | YES | NULL | -- | Admin-set manual override status (takes precedence over computed) |
 | `admin_override_reason` | TEXT | YES | NULL | -- | Explanation for the override |
 | `admin_override_at` | TIMESTAMPTZ | YES | NULL | -- | When the override was applied |
+| `health_downgraded_at` | TIMESTAMPTZ | YES | NULL | -- | Timestamp of the most recent downgrade. Added in `v2-schema-foundation` migration. |
+| `health_recovery_eligible_at` | TIMESTAMPTZ | YES | NULL | -- | Timestamp when recovery becomes eligible under sticky-health rules. Added in `v2-schema-foundation` migration. |
+| `effective_status` | `health_status` | YES | `'healthy'` | -- | Sticky effective health state that can diverge from `global_status` once v2 transition logic is active. Added in `v2-schema-foundation` migration. |
 
 #### Indexes
 
@@ -1278,6 +1381,161 @@ No TypeScript queries for this table were found in the reviewed codebase. The ge
 #### Data Volume Estimate
 
 **Static size.** One row per casino, updated in place.
+
+---
+
+### `events`
+
+**Purpose:** Append-only event log for selective event sourcing of user actions, admin actions, and material state transitions.
+
+#### Columns
+
+| Column | Type | Nullable | Default | Constraints | Description |
+|---|---|---|---|---|---|
+| `id` | BIGSERIAL | NO | auto | PRIMARY KEY | |
+| `event_type` | VARCHAR(50) | NO | -- | NOT NULL | Event category (`signal_submitted`, `trust_changed`, etc.) |
+| `entity_type` | VARCHAR(50) | NO | -- | NOT NULL | Target entity namespace |
+| `entity_id` | VARCHAR(255) | NO | -- | NOT NULL | Target entity identifier |
+| `actor_type` | VARCHAR(20) | NO | -- | NOT NULL | Actor class (`user`, `admin`, `system`) |
+| `actor_id` | VARCHAR(255) | YES | NULL | -- | Actor identifier when known |
+| `old_value` | JSONB | YES | NULL | -- | Prior state snapshot |
+| `new_value` | JSONB | YES | NULL | -- | New state snapshot |
+| `metadata_json` | JSONB | YES | NULL | -- | Additional event metadata |
+| `created_at` | TIMESTAMPTZ | YES | `NOW()` | -- | |
+
+#### Indexes
+
+| Index | Columns | Notes |
+|---|---|---|
+| `events_pkey` | `id` | |
+| `idx_events_entity` | `(entity_type, entity_id, created_at DESC)` | Added in `v2-schema-foundation` migration |
+| `idx_events_type` | `(event_type, created_at DESC)` | Added in `v2-schema-foundation` migration |
+
+#### Relationships
+
+No foreign keys. IDs are stored as strings to match the existing loose user/entity conventions.
+
+#### Query Patterns
+
+No active query patterns yet -- table created as v2 schema foundation.
+
+#### Data Volume Estimate
+
+**Append-only, continuous growth.** Expected to grow steadily with material user/admin activity.
+
+---
+
+### `telemetry_events`
+
+**Purpose:** Anonymous session-keyed telemetry for behavioral product signals such as feed views and signal expansions.
+
+#### Columns
+
+| Column | Type | Nullable | Default | Constraints | Description |
+|---|---|---|---|---|---|
+| `id` | BIGSERIAL | NO | auto | PRIMARY KEY | |
+| `session_id` | VARCHAR(64) | NO | -- | NOT NULL | Anonymous client session key |
+| `event_type` | VARCHAR(50) | NO | -- | NOT NULL | Telemetry event type |
+| `entity_type` | VARCHAR(50) | YES | NULL | -- | Optional entity namespace |
+| `entity_id` | VARCHAR(255) | YES | NULL | -- | Optional entity identifier |
+| `metadata_json` | JSONB | YES | NULL | -- | Extra event payload |
+| `created_at` | TIMESTAMPTZ | YES | `NOW()` | -- | |
+
+#### Indexes
+
+| Index | Columns | Notes |
+|---|---|---|
+| `telemetry_events_pkey` | `id` | |
+| `idx_telemetry_session` | `(session_id, created_at DESC)` | Added in `v2-schema-foundation` migration |
+| `idx_telemetry_type` | `(event_type, created_at DESC)` | Added in `v2-schema-foundation` migration |
+
+#### Relationships
+
+No foreign keys. Telemetry is intentionally decoupled from user tables by default.
+
+#### Query Patterns
+
+No active query patterns yet -- table created as v2 schema foundation.
+
+#### Data Volume Estimate
+
+**Append-only, fast growth.** Expected to outpace user-generated event logs once batching is active.
+
+---
+
+### `moderation_actions`
+
+**Purpose:** Audit trail for admin moderation actions and the future moderation delegation model.
+
+#### Columns
+
+| Column | Type | Nullable | Default | Constraints | Description |
+|---|---|---|---|---|---|
+| `id` | SERIAL | NO | auto | PRIMARY KEY | |
+| `admin_id` | VARCHAR(255) | NO | -- | NOT NULL | Admin actor ID |
+| `action_type` | VARCHAR(50) | NO | -- | NOT NULL | Moderation action performed |
+| `entity_type` | VARCHAR(50) | NO | -- | NOT NULL | Target entity namespace |
+| `entity_id` | VARCHAR(255) | NO | -- | NOT NULL | Target entity identifier |
+| `reason` | TEXT | YES | NULL | -- | Optional audit reason |
+| `created_at` | TIMESTAMPTZ | YES | `NOW()` | -- | |
+
+#### Indexes
+
+| Index | Columns | Notes |
+|---|---|---|
+| `moderation_actions_pkey` | `id` | |
+| `idx_moderation_entity` | `(entity_type, entity_id, created_at DESC)` | Added in `v2-schema-foundation` migration |
+| `idx_moderation_admin` | `(admin_id, created_at DESC)` | Added in `v2-schema-foundation` migration |
+
+#### Relationships
+
+No foreign keys. Uses loose string IDs like the rest of the admin/audit layer.
+
+#### Query Patterns
+
+No active query patterns yet -- table created as v2 schema foundation.
+
+#### Data Volume Estimate
+
+**Append-only, low-to-moderate growth.** Expected to remain relatively small until moderation workflows expand.
+
+---
+
+### `trust_snapshots`
+
+**Purpose:** Historical trust-score snapshots with per-component breakdowns for future trend charts and auditability.
+
+#### Columns
+
+| Column | Type | Nullable | Default | Constraints | Description |
+|---|---|---|---|---|---|
+| `id` | BIGSERIAL | NO | auto | PRIMARY KEY | |
+| `user_id` | VARCHAR(255) | NO | -- | NOT NULL | User identifier (no FK constraint) |
+| `trust_score` | DECIMAL(3,2) | NO | -- | NOT NULL | Overall trust score at snapshot time |
+| `activity_score` | DECIMAL(3,2) | YES | NULL | -- | Activity component snapshot |
+| `submission_score` | DECIMAL(3,2) | YES | NULL | -- | Submission-history component snapshot |
+| `community_score` | DECIMAL(3,2) | YES | NULL | -- | Community component snapshot |
+| `portfolio_score` | DECIMAL(3,2) | YES | NULL | -- | Portfolio component snapshot |
+| `computed_at` | TIMESTAMPTZ | YES | `NOW()` | -- | |
+
+#### Indexes
+
+| Index | Columns | Notes |
+|---|---|---|
+| `trust_snapshots_pkey` | `id` | |
+| `idx_trust_snapshots_user` | `(user_id, computed_at DESC)` | Added in `v2-schema-foundation` migration |
+
+#### Relationships
+
+No foreign keys. Follows the existing loose `user_id` storage convention for audit/history tables.
+
+#### Query Patterns
+
+No active query patterns yet -- table created as v2 schema foundation.
+
+#### Data Volume Estimate
+
+**Append-only, moderate growth.** One or more rows per user per trust recompute policy.
 
 ---
 
@@ -1472,6 +1730,8 @@ Migrations are listed in approximate execution order. The `push-notification-log
 | `2026-03-16-user-casino-settings-notes.sql` | 2026-03-16 | Adds `notes TEXT` to `user_casino_settings` |
 | `2026-03-17-add-indexes.sql` | 2026-03-17 | Adds 5 performance indexes: `idx_user_casino_settings_user_active` (duplicate), `idx_daily_bonus_claims_user_casino_date`, `idx_ledger_entries_user_casino` (duplicate), `idx_intel_items_casino_created`, `idx_signal_votes_item` (duplicate) |
 | `2026-03-17-intelligence-layer.sql` | 2026-03-17 | Creates `casino_health`, `user_notification_preferences`, and `signal_votes` tables; adds `layout_swap` and `contributor_tier` to `user_settings`; changes `trust_score` default to `0.50`; adds `source`, `submitted_by`, `is_anonymous`, `worked_count`, `didnt_work_count`, `signal_status` to `discord_intel_items`; adds CHECK constraints on new columns; creates indexes |
+| `migrations/v2-schema-foundation.sql` | 2026-03-17 | Adds v2 schema foundation: `health_status` enum, new signal lifecycle columns on `discord_intel_items`, new `signal_confirmations`, `signal_updates`, `events`, `telemetry_events`, `moderation_actions`, and `trust_snapshots` tables, plus sticky-health and anonymous-preference columns and supporting indexes |
+| `migrations/v2-schema-backfill.sql` | 2026-03-17 | Backfills `discord_intel_items.signal_priority`, `discord_intel_items.first_reporter_id`, and `casino_health.effective_status` from existing data |
 
 ---
 
