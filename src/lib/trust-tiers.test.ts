@@ -2,14 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./db');
 
-import { query } from './db';
-import { evaluateContributorTier } from './trust';
+import { query, transaction } from './db';
+import { evaluateAllContributorTiers, evaluateContributorTier } from './trust';
 
 const mockQuery = vi.mocked(query);
+const mockTransaction = vi.mocked(transaction);
 
 describe('evaluateContributorTier', () => {
   beforeEach(() => {
     mockQuery.mockReset();
+    mockTransaction.mockReset();
   });
 
   it('returns newcomer for a new user with no submissions', async () => {
@@ -143,5 +145,71 @@ describe('evaluateContributorTier', () => {
     const tier = await evaluateContributorTier('missing-user');
 
     expect(tier).toBeNull();
+  });
+});
+
+describe('evaluateAllContributorTiers', () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+    mockTransaction.mockReset();
+  });
+
+  it('promotes and demotes users in one batch while leaving operators unchanged', async () => {
+    const txQuery = vi.fn().mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([
+      {
+        user_id: 'user-a',
+        current_tier: 'newcomer',
+        total_submissions: 5,
+        worked_ratio: 0.61,
+        account_age_days: 14,
+        submission_span_days: 14,
+        last_10_ratio: 0.61,
+        last_15_ratio: 0.61,
+      },
+      {
+        user_id: 'user-b',
+        current_tier: 'insider',
+        total_submissions: 40,
+        worked_ratio: 0.8,
+        account_age_days: 100,
+        submission_span_days: 60,
+        last_10_ratio: 0.7,
+        last_15_ratio: 0.49,
+      },
+      {
+        user_id: 'user-c',
+        current_tier: 'operator',
+        total_submissions: 100,
+        worked_ratio: 1,
+        account_age_days: 365,
+        submission_span_days: 300,
+        last_10_ratio: 1,
+        last_15_ratio: 1,
+      },
+    ]);
+    mockTransaction.mockImplementationOnce(async (handler) => handler({ query: txQuery } as never));
+
+    const results = await evaluateAllContributorTiers();
+
+    expect(results).toEqual([
+      { user_id: 'user-a', contributor_tier: 'scout' },
+      { user_id: 'user-b', contributor_tier: 'scout' },
+      { user_id: 'user-c', contributor_tier: 'operator' },
+    ]);
+    expect(txQuery).toHaveBeenCalledTimes(2);
+    expect(txQuery.mock.calls[0]?.[1]).toEqual(['user-a', 'scout']);
+    expect(txQuery.mock.calls[1]?.[1]).toEqual(['user-b', 'scout']);
+  });
+
+  it('returns an empty array when there are no users', async () => {
+    const txQuery = vi.fn().mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([]);
+    mockTransaction.mockImplementationOnce(async (handler) => handler({ query: txQuery } as never));
+
+    const results = await evaluateAllContributorTiers();
+
+    expect(results).toEqual([]);
+    expect(txQuery).not.toHaveBeenCalled();
   });
 });

@@ -2,17 +2,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./db');
 
-import { query } from './db';
+import { query, transaction } from './db';
 import {
   combineTrustComponents,
+  computeAllTrustScores,
   computeTrustScore,
   normalizeActivityScore,
   normalizeCommunityScore,
   normalizePortfolioScore,
   normalizeSubmissionScore,
+  shouldWriteSnapshot,
+  TRUST_DELTA_THRESHOLD,
 } from './trust';
 
 const mockQuery = vi.mocked(query);
+const mockTransaction = vi.mocked(transaction);
 
 const ACCOUNT_AGE_MATURITY_DAYS = 90;
 const CLAIM_COUNT_MATURITY = 100;
@@ -130,9 +134,25 @@ function buildTrustQuerySequence({
     .mockResolvedValueOnce(updateResult);
 }
 
+function setupBatchTrustCompute(params: {
+  activityRows: Array<Record<string, unknown>>;
+  submissionRows: Array<Record<string, unknown>>;
+  portfolioRows: Array<Record<string, unknown>>;
+}) {
+  const { activityRows, submissionRows, portfolioRows } = params;
+  const txQuery = vi.fn().mockResolvedValue([]);
+  mockQuery
+    .mockResolvedValueOnce(activityRows)
+    .mockResolvedValueOnce(submissionRows)
+    .mockResolvedValueOnce(portfolioRows);
+  mockTransaction.mockImplementationOnce(async (handler) => handler({ query: txQuery } as never));
+  return txQuery;
+}
+
 describe('computeTrustScore', () => {
   beforeEach(() => {
     mockQuery.mockReset();
+    mockTransaction.mockReset();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-17T00:00:00.000Z'));
   });
@@ -441,5 +461,203 @@ describe('trust score - pure computation', () => {
     expect(combineTrustComponents(0, 0, 0, 0)).toBe(0);
     expect(combineTrustComponents(0.5, 0.8, 0.25, 1)).toBeCloseTo(0.7275, 4);
     expect(combineTrustComponents(2, 2, 2, 2)).toBe(1);
+  });
+
+  it('writes a snapshot on first computation when no prior score exists', () => {
+    expect(shouldWriteSnapshot(null, 0.55)).toBe(true);
+  });
+
+  it('writes a snapshot when trust delta meets or exceeds the threshold', () => {
+    expect(shouldWriteSnapshot(0.5, 0.5 + TRUST_DELTA_THRESHOLD)).toBe(true);
+    expect(shouldWriteSnapshot(0.5, 0.44)).toBe(true);
+  });
+
+  it('does not write a snapshot when trust delta is below the threshold', () => {
+    expect(shouldWriteSnapshot(0.5, 0.54)).toBe(false);
+  });
+
+  it('does not write a snapshot when the score is unchanged', () => {
+    expect(shouldWriteSnapshot(0.5, 0.5)).toBe(false);
+  });
+});
+
+describe('computeAllTrustScores', () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+    mockTransaction.mockReset();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-17T00:00:00.000Z'));
+  });
+
+  it('computes a first-time trust snapshot and writes component breakdowns', async () => {
+    const txQuery = setupBatchTrustCompute({
+      activityRows: [{
+        user_id: 'user-a',
+        created_at: '2025-12-17T00:00:00.000Z',
+        current_trust_score: null,
+        claim_count: 50,
+      }],
+      submissionRows: [{
+        user_id: 'user-a',
+        worked_votes: 8,
+        total_votes: 10,
+        net_positive_votes: 6,
+      }],
+      portfolioRows: [{
+        user_id: 'user-a',
+        net_pl_usd: 500,
+        tracked_casino_count: 3,
+        claim_days: 20,
+        successful_redemptions: 2,
+        total_redemptions: 2,
+      }],
+    });
+
+    const results = await computeAllTrustScores();
+
+    const activity = normalizeActivityScore(90, 50);
+    const submission = normalizeSubmissionScore(8, 10);
+    const community = normalizeCommunityScore(6);
+    const portfolio = normalizePortfolioScore({
+      netPlUsd: 500,
+      trackedCasinoCount: 3,
+      claimDays: 20,
+      successfulRedemptions: 2,
+      totalRedemptions: 2,
+    });
+    const expectedScore = combineTrustComponents(activity, submission, community, portfolio);
+
+    expect(results).toEqual([{ user_id: 'user-a', trust_score: expectedScore }]);
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(txQuery).toHaveBeenCalledTimes(2);
+    expect(txQuery.mock.calls[0]?.[0]).toContain('UPDATE user_settings');
+    expect(txQuery.mock.calls[0]?.[1]).toEqual(['user-a', expectedScore]);
+    expect(txQuery.mock.calls[1]?.[0]).toContain('INSERT INTO trust_snapshots');
+    expect(txQuery.mock.calls[1]?.[1]).toEqual([
+      'user-a',
+      expectedScore,
+      activity,
+      submission,
+      community,
+      portfolio,
+    ]);
+  });
+
+  it('updates all users but only snapshots meaningful trust deltas', async () => {
+    const userBExpectedScore = combineTrustComponents(
+      normalizeActivityScore(0, 0),
+      normalizeSubmissionScore(1, 2),
+      normalizeCommunityScore(0),
+      normalizePortfolioScore({
+        netPlUsd: 0,
+        trackedCasinoCount: 0,
+        claimDays: 0,
+        successfulRedemptions: 0,
+        totalRedemptions: 0,
+      }),
+    );
+
+    const txQuery = setupBatchTrustCompute({
+      activityRows: [
+        {
+          user_id: 'user-a',
+          created_at: '2025-12-17T00:00:00.000Z',
+          current_trust_score: 0.5,
+          claim_count: 100,
+        },
+        {
+          user_id: 'user-b',
+          created_at: '2026-03-17T00:00:00.000Z',
+          current_trust_score: userBExpectedScore + 0.01,
+          claim_count: 0,
+        },
+      ],
+      submissionRows: [
+        {
+          user_id: 'user-a',
+          worked_votes: 10,
+          total_votes: 10,
+          net_positive_votes: 10,
+        },
+        {
+          user_id: 'user-b',
+          worked_votes: 1,
+          total_votes: 2,
+          net_positive_votes: 0,
+        },
+      ],
+      portfolioRows: [
+        {
+          user_id: 'user-a',
+          net_pl_usd: 1000,
+          tracked_casino_count: 5,
+          claim_days: 45,
+          successful_redemptions: 3,
+          total_redemptions: 3,
+        },
+        {
+          user_id: 'user-b',
+          net_pl_usd: 0,
+          tracked_casino_count: 0,
+          claim_days: 0,
+          successful_redemptions: 0,
+          total_redemptions: 0,
+        },
+      ],
+    });
+
+    const results = await computeAllTrustScores();
+
+    expect(results).toHaveLength(2);
+    expect(txQuery).toHaveBeenCalledTimes(3);
+    expect(txQuery.mock.calls[0]?.[1]?.[0]).toBe('user-a');
+    expect(txQuery.mock.calls[1]?.[1]?.[0]).toBe('user-b');
+    expect(txQuery.mock.calls[2]?.[0]).toContain('INSERT INTO trust_snapshots');
+    expect(txQuery.mock.calls[2]?.[1]?.[0]).toBe('user-a');
+    expect(txQuery.mock.calls[2]?.[1]).not.toContain('user-b');
+  });
+
+  it('uses default submission and portfolio values when bulk rows are missing', async () => {
+    const txQuery = setupBatchTrustCompute({
+      activityRows: [{
+        user_id: 'user-a',
+        created_at: '2026-03-17T00:00:00.000Z',
+        current_trust_score: 0.5,
+        claim_count: 0,
+      }],
+      submissionRows: [],
+      portfolioRows: [],
+    });
+
+    const results = await computeAllTrustScores();
+    const expectedScore = combineTrustComponents(
+      normalizeActivityScore(0, 0),
+      normalizeSubmissionScore(0, 0),
+      normalizeCommunityScore(0),
+      normalizePortfolioScore({
+        netPlUsd: 0,
+        trackedCasinoCount: 0,
+        claimDays: 0,
+        successfulRedemptions: 0,
+        totalRedemptions: 0,
+      }),
+    );
+
+    expect(results).toEqual([{ user_id: 'user-a', trust_score: expectedScore }]);
+    expect(txQuery.mock.calls[0]?.[1]).toEqual(['user-a', expectedScore]);
+  });
+
+  it('returns an empty array when there are no users', async () => {
+    const txQuery = setupBatchTrustCompute({
+      activityRows: [],
+      submissionRows: [],
+      portfolioRows: [],
+    });
+
+    const results = await computeAllTrustScores();
+
+    expect(results).toEqual([]);
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(txQuery).toHaveBeenCalledTimes(0);
   });
 });
