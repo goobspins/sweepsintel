@@ -1,0 +1,2 @@
+ALTER TABLE casinos
+ADD COLUMN IF NOT EXISTS website_url TEXT;

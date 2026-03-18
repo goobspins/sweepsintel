@@ -18,7 +18,7 @@
 
 5. **Styling:** CSS-in-JS inline styles + scoped CSS via `<style>` blocks. CSS variables from the existing theme (`--accent-blue`, `--accent-green`, `--accent-red`, `--accent-yellow`, `--text-primary`, `--text-secondary`, `--bg-card`, etc.). **No Tailwind.** Follow existing component style patterns.
 
-6. **Migrations are additive.** Create new migration files as `src/db/YYYY-MM-DD-description.sql`. Never modify `schema.sql` directly. The live DB schema is `schema.sql` + all migration files applied in date order.
+6. **Migrations are additive.** Create new migration files as `src/db/migrations/YYYY-MM-DD-description.sql`. Never modify `schema.sql` directly. The live DB schema is `src/db/migrations/schema.sql` + all migration files in `src/db/migrations/` applied in date order.
 
 7. **Component organization:** New components go in feature directories under `src/components/`. E.g., `src/components/intel/`, `src/components/health/`. Follow existing directory convention.
 
@@ -32,7 +32,7 @@
 
 ## Phase 1: Database Migration
 
-Create `src/db/2026-03-17-intelligence-layer.sql` with ALL schema changes for 3.0. This is the foundation — everything else depends on it.
+Create `src/db/migrations/2026-03-17-intelligence-layer.sql` with ALL schema changes for 3.0. This is the foundation — everything else depends on it.
 
 ### New Tables
 
@@ -470,7 +470,7 @@ This is optimized for minimal blocked dependencies:
 ## Files You Will Create (New)
 
 ```
-src/db/2026-03-17-intelligence-layer.sql
+src/db/migrations/2026-03-17-intelligence-layer.sql
 src/lib/health.ts
 src/lib/intel.ts  (or extend discord-intel.ts)
 src/lib/trust.ts

@@ -373,7 +373,7 @@ Recommendations derived from Layers 1, 2a, 2b + user data.
 
 ## Database Schema Changes (3.0 Migration)
 
-**Migration File:** `src/db/2026-03-17-intelligence-layer.sql`
+**Migration File:** `src/db/migrations/2026-03-17-intelligence-layer.sql`
 
 **Status:** [x] SHIPPED
 
@@ -884,7 +884,7 @@ SweepsIntel 3.0 successfully implements all core intelligence layer features. Th
 - **Library functions** (`src/lib/`) handle business logic (health, trust, intel)
 - **Components** (`src/components/`) handle UI rendering with composition
 - **API routes** (`src/pages/api/`) expose functionality over HTTP
-- **Database** (`src/db/`) tracks state with proper constraints
+- **Database** (`src/db/migrations/`) tracks state with proper constraints
 
 The implementation matches the original spec in all critical areas, with minor enhancements that exceed spec requirements. Source sanitization is fully enforced, preventing any Discord branding from reaching users. The three-layer intelligence system is functional and routable.
 

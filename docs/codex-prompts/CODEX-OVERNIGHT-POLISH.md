@@ -378,7 +378,7 @@ Replace all inline magic numbers with these constants. This makes the scoring sy
 
 ### 3F. Add Missing Database Indexes
 
-Create a new migration file `src/db/2026-03-17-add-indexes.sql`:
+Create a new migration file `src/db/migrations/2026-03-17-add-indexes.sql`:
 
 ```sql
 -- Performance indexes for hot query paths
@@ -579,7 +579,7 @@ After all phases, verify:
 - [ ] `SIGNAL_TYPE_LABELS` is shared from a single source
 - [ ] Intel component types use proper interfaces, not `any`
 - [ ] Trust score magic numbers are named constants
-- [ ] Index migration file exists at `src/db/2026-03-17-add-indexes.sql`
+- [ ] Index migration file exists at `src/db/migrations/2026-03-17-add-indexes.sql`
 - [ ] All pages have consistent typography, spacing, empty states
 - [ ] IntelFeed has toast notifications for vote errors
 - [ ] Responsive layout works at 1024px, 768px, and 375px widths

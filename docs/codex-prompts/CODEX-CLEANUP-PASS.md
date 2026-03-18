@@ -279,7 +279,7 @@ Remove `any` types across the codebase.
 
 ## Constraints
 
-1. **DO NOT modify**: `src/components/dashboard/*` (recently decomposed — leave alone), `src/lib/db.ts`, `src/lib/auth.ts`, `src/lib/reset.ts`, `vercel.json`, `astro.config.*`, `src/db/*.sql`
+1. **DO NOT modify**: `src/components/dashboard/*` (recently decomposed — leave alone), `src/lib/db.ts`, `src/lib/auth.ts`, `src/lib/reset.ts`, `vercel.json`, `astro.config.*`, `src/db/migrations/*.sql`
 
 2. **DO NOT install new dependencies**
 

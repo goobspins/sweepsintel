@@ -123,8 +123,8 @@ You are a database architect producing a canonical schema reference for a produc
 
 SweepsIntel is a sweepstakes casino tracking platform (Astro + React + Neon Postgres). The database schema is defined across multiple files:
 
-- `src/db/schema.sql` — Original base schema
-- `src/db/` — Contains multiple migration files (read all .sql files in this directory)
+- `src/db/migrations/schema.sql` — Original base schema
+- `src/db/migrations/` — Contains multiple migration files (read all .sql files in this directory)
 
 ## Your Task
 
@@ -147,7 +147,7 @@ Produce a single comprehensive schema reference document. For EVERY table in the
 - **Known Schema Debt** — Any inconsistencies, missing constraints, or design smells found during the audit
 - **Recommended Indexes** — Based on actual query patterns found in the codebase
 
-Read every .sql file in src/db/, every .ts file in src/lib/, and sample API routes to build this. Be thorough — this document will be referenced every time we write a database query or plan a feature.
+Read every .sql file in `src/db/migrations/`, every .ts file in src/lib/, and sample API routes to build this. Be thorough — this document will be referenced every time we write a database query or plan a feature.
 
 Save the output as a markdown file.
 ```

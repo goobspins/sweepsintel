@@ -1,0 +1,1 @@
+ALTER TABLE casinos ADD COLUMN IF NOT EXISTS tier_label VARCHAR(2);
