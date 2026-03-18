@@ -2,43 +2,33 @@ import type { APIRoute } from 'astro';
 import { DateTime } from 'luxon';
 
 import { invalidateCached } from '../../../lib/cache';
-import { isHttpError, requireAuth } from '../../../lib/auth';
 import { transaction } from '../../../lib/db';
 import { computeFixedResetPeriodStart } from '../../../lib/reset';
+import { withRoute } from '../../../lib/route';
 
 export const prerender = false;
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+export const POST: APIRoute = withRoute(async (ctx) => {
+  const body = ctx.body;
+  const casinoId = Number(body?.casino_id);
+  const claimType =
+    typeof body?.claim_type === 'string' && body.claim_type.trim().length > 0
+      ? body.claim_type.trim()
+      : 'daily';
+  const scAmount =
+    body?.sc_amount === null || body?.sc_amount === undefined || body?.sc_amount === ''
+      ? null
+      : Number(body.sc_amount);
 
-export const POST: APIRoute = async ({ request }) => {
-  try {
-    const user = await requireAuth(request);
-    const body = await request.json();
+  if (!Number.isFinite(casinoId)) {
+    return { _status: 400, error: 'Casino is required.' };
+  }
 
-    const casinoId = Number(body?.casino_id);
-    const claimType =
-      typeof body?.claim_type === 'string' && body.claim_type.trim().length > 0
-        ? body.claim_type.trim()
-        : 'daily';
-    const scAmount =
-      body?.sc_amount === null || body?.sc_amount === undefined || body?.sc_amount === ''
-        ? null
-        : Number(body.sc_amount);
+  if (scAmount !== null && !Number.isFinite(scAmount)) {
+    return { _status: 400, error: 'SC amount must be numeric.' };
+  }
 
-    if (!Number.isFinite(casinoId)) {
-      return json({ error: 'Casino is required.' }, 400);
-    }
-
-    if (scAmount !== null && !Number.isFinite(scAmount)) {
-      return json({ error: 'SC amount must be numeric.' }, 400);
-    }
-
-    const result = await transaction(async (tx) => {
+  const result = await transaction(async (tx) => {
       const casinoRows = await tx.query<{
         id: number;
         reset_mode: string | null;
@@ -75,7 +65,7 @@ export const POST: APIRoute = async ({ request }) => {
           AND claim_type = $3
         ORDER BY claimed_at DESC
         LIMIT 1`,
-        [user.userId, casinoId, claimType],
+        [ctx.user!.userId, casinoId, claimType],
       );
 
       const intervalHours =
@@ -124,7 +114,7 @@ export const POST: APIRoute = async ({ request }) => {
           AND reset_period_start = $3
           AND claim_type = $4
         LIMIT 1`,
-        [user.userId, casinoId, resetPeriodStart, claimType],
+        [ctx.user!.userId, casinoId, resetPeriodStart, claimType],
       );
 
       if (existing.length > 0) {
@@ -141,7 +131,7 @@ export const POST: APIRoute = async ({ request }) => {
           claimed_date
         ) VALUES ($1, $2, $3, $4, $5, CURRENT_DATE)
         RETURNING id, claimed_at`,
-        [user.userId, casinoId, claimType, scAmount, resetPeriodStart],
+        [ctx.user!.userId, casinoId, claimType, scAmount, resetPeriodStart],
       );
 
       const claim = claimRows[0];
@@ -155,7 +145,7 @@ export const POST: APIRoute = async ({ request }) => {
           usd_amount,
           source_claim_id
         ) VALUES ($1, $2, 'daily', $3, 0, $4)`,
-        [user.userId, casinoId, scAmount, claim.id],
+        [ctx.user!.userId, casinoId, scAmount, claim.id],
       );
 
       return {
@@ -163,34 +153,27 @@ export const POST: APIRoute = async ({ request }) => {
         claimId: claim.id,
         claimedAt: claim.claimed_at,
       };
-    });
+  });
 
-    if ('missingCasino' in result) {
-      return json({ error: 'Casino not found.' }, 404);
-    }
-
-    if ('invalidResetConfig' in result) {
-      return json({ error: 'Casino reset configuration is invalid.' }, 400);
-    }
-
-    if (result.duplicate) {
-      return json({ error: 'You already claimed this reset period.' }, 409);
-    }
-
-    invalidateCached(`ledger-summary:${user.userId}`);
-
-    return json({
-      success: true,
-      claim_id: result.claimId,
-      claimed_at: result.claimedAt,
-    });
-  } catch (error) {
-    if (isHttpError(error)) {
-      return json({ error: error.message }, error.status === 302 ? 401 : error.status);
-    }
-    console.error('tracker/claim failed', error);
-    return json({ error: 'Unable to save claim.' }, 500);
+  if ('missingCasino' in result) {
+    return { _status: 404, error: 'Casino not found.' };
   }
-};
+
+  if ('invalidResetConfig' in result) {
+    return { _status: 400, error: 'Casino reset configuration is invalid.' };
+  }
+
+  if (result.duplicate) {
+    return { _status: 409, error: 'You already claimed this reset period.' };
+  }
+
+  invalidateCached(`ledger-summary:${ctx.user!.userId}`);
+
+  return {
+    success: true,
+    claim_id: result.claimId,
+    claimed_at: result.claimedAt,
+  };
+});
 
 
