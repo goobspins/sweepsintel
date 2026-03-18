@@ -15,7 +15,7 @@ const HEALTH_THRESHOLD_CRITICAL = 5;
 const PERSONAL_ESCALATE_PENDING_COUNT = 1;
 const PERSONAL_ESCALATE_EXPOSURE_SC = 250;
 
-type HealthStatus = 'healthy' | 'watch' | 'at_risk' | 'critical';
+export type HealthStatus = 'healthy' | 'watch' | 'at_risk' | 'critical';
 
 export type CasinoHealthRow = {
   casino_id: number;
@@ -47,29 +47,70 @@ export type CasinoHealthForUser = CasinoHealthRow & {
   }>;
 };
 
+export function computeWarningDecayWeight(warningAgeHours: number) {
+  if (!Number.isFinite(warningAgeHours) || warningAgeHours <= 0) return WARNING_WEIGHT_ACTIVE;
+  if (warningAgeHours <= 24) return WARNING_WEIGHT_24H;
+  if (warningAgeHours <= 48) return WARNING_WEIGHT_48H;
+  if (warningAgeHours <= 72) return WARNING_WEIGHT_72H;
+  return 0;
+}
+
+export function computeDisputeFactor(workedCount: number, didntWorkCount: number) {
+  const totalVotes = workedCount + didntWorkCount;
+  if (totalVotes < 3) return 1;
+  return Math.max(0.35, 1 - didntWorkCount / Math.max(1, totalVotes));
+}
+
+export function computeRedemptionTrendScore(avg7d: number, avg30d: number) {
+  if (!Number.isFinite(avg7d) || !Number.isFinite(avg30d) || avg7d <= 0 || avg30d <= 0) return 0;
+  const trendRatio = avg7d / avg30d;
+  if (trendRatio >= 2) return 2;
+  if (trendRatio >= 1.5) return 1;
+  return 0;
+}
+
+export function mapScoreToHealthStatus(compositeScore: number): HealthStatus {
+  if (compositeScore >= HEALTH_THRESHOLD_CRITICAL) return 'critical';
+  if (compositeScore >= HEALTH_THRESHOLD_AT_RISK) return 'at_risk';
+  if (compositeScore >= HEALTH_THRESHOLD_WATCH) return 'watch';
+  return 'healthy';
+}
+
+export function computePersonalEscalation(
+  baseStatus: HealthStatus,
+  pendingRedemptions: number,
+  scExposure: number,
+): HealthStatus {
+  if (
+    pendingRedemptions < PERSONAL_ESCALATE_PENDING_COUNT
+    && scExposure < PERSONAL_ESCALATE_EXPOSURE_SC
+  ) {
+    return baseStatus;
+  }
+  if (baseStatus === 'healthy') return 'watch';
+  if (baseStatus === 'watch') return 'at_risk';
+  return 'critical';
+}
+
 function decayWeight(expiresAt: string | null) {
   if (!expiresAt) return WARNING_WEIGHT_ACTIVE;
   const expiry = DateTime.fromISO(expiresAt);
   if (!expiry.isValid) return WARNING_WEIGHT_ACTIVE;
   const hoursAgo = DateTime.now().diff(expiry, 'hours').hours;
-  if (hoursAgo <= 0) return WARNING_WEIGHT_ACTIVE;
-  if (hoursAgo <= 24) return WARNING_WEIGHT_24H;
-  if (hoursAgo <= 48) return WARNING_WEIGHT_48H;
-  if (hoursAgo <= 72) return WARNING_WEIGHT_72H;
-  return 0;
+  return computeWarningDecayWeight(hoursAgo);
+}
+
+function trendScoreFromRatio(trendRatio: number | null) {
+  if (trendRatio === null || !Number.isFinite(trendRatio) || trendRatio <= 0) return 0;
+  return computeRedemptionTrendScore(trendRatio, 1);
 }
 
 function clampStatus(score: number): HealthStatus {
-  if (score >= HEALTH_THRESHOLD_CRITICAL) return 'critical';
-  if (score >= HEALTH_THRESHOLD_AT_RISK) return 'at_risk';
-  if (score >= HEALTH_THRESHOLD_WATCH) return 'watch';
-  return 'healthy';
+  return mapScoreToHealthStatus(score);
 }
 
 function escalateStatus(current: HealthStatus): HealthStatus {
-  if (current === 'healthy') return 'watch';
-  if (current === 'watch') return 'at_risk';
-  return 'critical';
+  return computePersonalEscalation(current, PERSONAL_ESCALATE_PENDING_COUNT, PERSONAL_ESCALATE_EXPOSURE_SC);
 }
 
 export async function computeAllCasinoHealth() {
@@ -148,19 +189,14 @@ export async function computeAllCasinoHealth() {
         if (weight <= 0) continue;
         const worked = Number(warning.worked_count ?? 0);
         const didntWork = Number(warning.didnt_work_count ?? 0);
-        const totalVotes = worked + didntWork;
-        const disputeFactor =
-          totalVotes >= 3 ? Math.max(0.35, 1 - didntWork / Math.max(1, totalVotes)) : 1;
+        const disputeFactor = computeDisputeFactor(worked, didntWork);
         weightedWarnings += weight * disputeFactor;
         activeWarningCount += 1;
       }
 
       const redemptionTrend = trendMap.get(casino.id) ?? null;
       let score = weightedWarnings;
-      if (redemptionTrend !== null) {
-        if (redemptionTrend >= 2) score += 2;
-        else if (redemptionTrend >= 1.5) score += 1;
-      }
+      score += trendScoreFromRatio(redemptionTrend);
 
       const computedStatus = clampStatus(score);
       const reasonParts: string[] = [];
@@ -289,7 +325,7 @@ export async function getCasinoHealthForUser(casinoId: number, userId: string): 
   let exposureReason: string | null = null;
 
   if (pendingCount >= PERSONAL_ESCALATE_PENDING_COUNT || scExposure >= PERSONAL_ESCALATE_EXPOSURE_SC) {
-    personalStatus = escalateStatus(baseStatus);
+    personalStatus = computePersonalEscalation(baseStatus, pendingCount, scExposure);
     exposureReason =
       pendingCount >= PERSONAL_ESCALATE_PENDING_COUNT
         ? `You have ${pendingCount} pending redemption${pendingCount === 1 ? '' : 's'} here.`
