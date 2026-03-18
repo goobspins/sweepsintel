@@ -539,16 +539,130 @@ export async function evaluateContributorTier(userId: string) {
 }
 
 export async function evaluateAllContributorTiers() {
-  const users = await query<{ user_id: string }>(
-    `SELECT DISTINCT user_id
-    FROM user_settings`,
+  const users = await query<{
+    user_id: string;
+    current_tier: string | null;
+    total_submissions: number | string | null;
+    worked_ratio: number | string | null;
+    account_age_days: number | string | null;
+    submission_span_days: number | string | null;
+    last_10_ratio: number | string | null;
+    last_15_ratio: number | string | null;
+  }>(
+    `WITH user_signals AS (
+      SELECT
+        submitted_by,
+        created_at,
+        COALESCE(worked_count, 0) AS worked_count,
+        COALESCE(didnt_work_count, 0) AS didnt_work_count,
+        ROW_NUMBER() OVER (PARTITION BY submitted_by ORDER BY created_at DESC) AS rn
+      FROM discord_intel_items
+      WHERE source = 'user'
+    ),
+    submission_stats AS (
+      SELECT
+        submitted_by,
+        COUNT(*) AS total_submissions,
+        CASE WHEN SUM(COALESCE(worked_count,0) + COALESCE(didnt_work_count,0)) = 0 THEN 0.0
+             ELSE SUM(COALESCE(worked_count,0))::decimal / SUM(COALESCE(worked_count,0) + COALESCE(didnt_work_count,0))
+        END AS worked_ratio,
+        MAX(created_at) - MIN(created_at) AS submission_span
+      FROM discord_intel_items
+      WHERE source = 'user'
+      GROUP BY submitted_by
+    ),
+    last_ten AS (
+      SELECT
+        submitted_by,
+        CASE WHEN SUM(COALESCE(worked_count,0) + COALESCE(didnt_work_count,0)) = 0 THEN NULL
+             ELSE SUM(COALESCE(worked_count,0))::decimal / SUM(COALESCE(worked_count,0) + COALESCE(didnt_work_count,0))
+        END AS ratio
+      FROM user_signals
+      WHERE rn <= 10
+      GROUP BY submitted_by
+    ),
+    last_fifteen AS (
+      SELECT
+        submitted_by,
+        CASE WHEN SUM(COALESCE(worked_count,0) + COALESCE(didnt_work_count,0)) = 0 THEN NULL
+             ELSE SUM(COALESCE(worked_count,0))::decimal / SUM(COALESCE(worked_count,0) + COALESCE(didnt_work_count,0))
+        END AS ratio
+      FROM user_signals
+      WHERE rn <= 15
+      GROUP BY submitted_by
+    )
+    SELECT
+      us.user_id,
+      us.contributor_tier AS current_tier,
+      COALESCE(ss.total_submissions, 0) AS total_submissions,
+      COALESCE(ss.worked_ratio, 0) AS worked_ratio,
+      COALESCE(EXTRACT(DAY FROM NOW() - us.created_at), 0) AS account_age_days,
+      COALESCE(EXTRACT(DAY FROM ss.submission_span), 0) AS submission_span_days,
+      lt.ratio AS last_10_ratio,
+      lf.ratio AS last_15_ratio
+    FROM user_settings us
+    LEFT JOIN submission_stats ss ON ss.submitted_by = us.user_id
+    LEFT JOIN last_ten lt ON lt.submitted_by = us.user_id
+    LEFT JOIN last_fifteen lf ON lf.submitted_by = us.user_id`,
   );
-  const results = [];
+
+  const results: Array<{ user_id: string; contributor_tier: string | null }> = [];
+  const updates: Array<{ user_id: string; contributor_tier: string }> = [];
+
   for (const user of users) {
+    if (user.current_tier === 'operator') {
+      results.push({
+        user_id: user.user_id,
+        contributor_tier: 'operator',
+      });
+      continue;
+    }
+
+    const totalSubmissions = Number(user.total_submissions ?? 0);
+    const workedRatio = Number(user.worked_ratio ?? 0);
+    const accountAgeDays = Number(user.account_age_days ?? 0);
+    const submissionSpanDays = Number(user.submission_span_days ?? 0);
+    const last10Ratio = user.last_10_ratio === null ? null : Number(user.last_10_ratio);
+    const last15Ratio = user.last_15_ratio === null ? null : Number(user.last_15_ratio);
+
+    // NOTE: tier logic duplicated from evaluateContributorTier() -- unify in v2.
+    let nextTier = 'newcomer';
+    if (totalSubmissions >= 20 && workedRatio > 0.7 && submissionSpanDays >= 30) {
+      nextTier = 'insider';
+    } else if (totalSubmissions >= 5 && workedRatio > 0.6 && accountAgeDays >= 14) {
+      nextTier = 'scout';
+    }
+
+    if (user.current_tier === 'insider' && last15Ratio !== null && last15Ratio < 0.5) {
+      nextTier = 'scout';
+    }
+    if (user.current_tier === 'scout' && last10Ratio !== null && last10Ratio < 0.4) {
+      nextTier = 'newcomer';
+    }
+
     results.push({
       user_id: user.user_id,
-      contributor_tier: await evaluateContributorTier(user.user_id),
+      contributor_tier: nextTier,
     });
+
+    if (nextTier !== user.current_tier) {
+      updates.push({
+        user_id: user.user_id,
+        contributor_tier: nextTier,
+      });
+    }
   }
+
+  await transaction(async (tx) => {
+    for (const update of updates) {
+      await tx.query(
+        `UPDATE user_settings
+        SET contributor_tier = $2
+        WHERE user_id = $1`,
+        [update.user_id, update.contributor_tier],
+      );
+    }
+  });
+
   return results;
 }
