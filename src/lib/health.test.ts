@@ -6,8 +6,13 @@ vi.mock('./cache');
 import { getCached } from './cache';
 import { query, transaction } from './db';
 import {
+  computeDisputeFactor,
   computeAllCasinoHealth,
+  computePersonalEscalation,
+  computeRedemptionTrendScore,
+  computeWarningDecayWeight,
   getCasinoHealthForUser,
+  mapScoreToHealthStatus,
 } from './health';
 
 const mockQuery = vi.mocked(query);
@@ -515,5 +520,51 @@ describe('getCasinoHealthForUser', () => {
     const result = await getCasinoHealthForUser(1, 'user-1');
 
     expect(result).toBeNull();
+  });
+});
+
+describe('health - pure computation', () => {
+  it('computes warning decay weights across the current age brackets', () => {
+    expect(computeWarningDecayWeight(-1)).toBe(1);
+    expect(computeWarningDecayWeight(0)).toBe(1);
+    expect(computeWarningDecayWeight(12)).toBe(0.75);
+    expect(computeWarningDecayWeight(24)).toBe(0.75);
+    expect(computeWarningDecayWeight(24.1)).toBe(0.5);
+    expect(computeWarningDecayWeight(48)).toBe(0.5);
+    expect(computeWarningDecayWeight(48.1)).toBe(0.25);
+    expect(computeWarningDecayWeight(72)).toBe(0.25);
+    expect(computeWarningDecayWeight(72.1)).toBe(0);
+  });
+
+  it('computes dispute factor using the current floor and vote threshold', () => {
+    expect(computeDisputeFactor(0, 0)).toBe(1);
+    expect(computeDisputeFactor(1, 1)).toBe(1);
+    expect(computeDisputeFactor(2, 2)).toBe(0.5);
+    expect(computeDisputeFactor(0, 4)).toBe(0.35);
+  });
+
+  it('computes redemption trend score from the current ratio thresholds', () => {
+    expect(computeRedemptionTrendScore(0, 0)).toBe(0);
+    expect(computeRedemptionTrendScore(7, 7)).toBe(0);
+    expect(computeRedemptionTrendScore(10.5, 7)).toBe(1);
+    expect(computeRedemptionTrendScore(14, 7)).toBe(2);
+  });
+
+  it('maps composite scores to health statuses at the current boundaries', () => {
+    expect(mapScoreToHealthStatus(0)).toBe('healthy');
+    expect(mapScoreToHealthStatus(1.49)).toBe('healthy');
+    expect(mapScoreToHealthStatus(1.5)).toBe('watch');
+    expect(mapScoreToHealthStatus(2.99)).toBe('watch');
+    expect(mapScoreToHealthStatus(3)).toBe('at_risk');
+    expect(mapScoreToHealthStatus(4.99)).toBe('at_risk');
+    expect(mapScoreToHealthStatus(5)).toBe('critical');
+  });
+
+  it('computes personal escalation with the current pending and exposure thresholds', () => {
+    expect(computePersonalEscalation('healthy', 0, 0)).toBe('healthy');
+    expect(computePersonalEscalation('healthy', 1, 0)).toBe('watch');
+    expect(computePersonalEscalation('watch', 0, 250)).toBe('at_risk');
+    expect(computePersonalEscalation('at_risk', 1, 0)).toBe('critical');
+    expect(computePersonalEscalation('critical', 0, 300)).toBe('critical');
   });
 });

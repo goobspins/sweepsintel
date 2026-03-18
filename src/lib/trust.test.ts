@@ -4,7 +4,12 @@ vi.mock('./db');
 
 import { query } from './db';
 import {
+  combineTrustComponents,
   computeTrustScore,
+  normalizeActivityScore,
+  normalizeCommunityScore,
+  normalizePortfolioScore,
+  normalizeSubmissionScore,
 } from './trust';
 
 const mockQuery = vi.mocked(query);
@@ -376,5 +381,65 @@ describe('computeTrustScore', () => {
     const score = await computeTrustScore('max-user');
 
     expect(score).toBe(1);
+  });
+});
+
+describe('trust score - pure computation', () => {
+  it('normalizes activity from fresh to mature accounts', () => {
+    expect(normalizeActivityScore(0, 0)).toBe(0);
+    expect(normalizeActivityScore(90, 100)).toBe(1);
+    expect(normalizeActivityScore(45, 50)).toBeCloseTo(0.5, 4);
+  });
+
+  it('normalizes submission score with a neutral fallback and vote ratio', () => {
+    expect(normalizeSubmissionScore(0, 0)).toBe(0.5);
+    expect(normalizeSubmissionScore(8, 10)).toBe(0.8);
+    expect(normalizeSubmissionScore(0, 10)).toBe(0);
+  });
+
+  it('normalizes community score with offset-based clamping', () => {
+    expect(normalizeCommunityScore(0)).toBe(0.5);
+    expect(normalizeCommunityScore(5)).toBe(0.75);
+    expect(normalizeCommunityScore(-20)).toBe(0);
+    expect(normalizeCommunityScore(20)).toBe(1);
+  });
+
+  it('normalizes portfolio score with the current floor and maturity rules', () => {
+    expect(
+      normalizePortfolioScore({
+        netPlUsd: 0,
+        trackedCasinoCount: 0,
+        claimDays: 0,
+        successfulRedemptions: 0,
+        totalRedemptions: 0,
+      }),
+    ).toBeCloseTo(0.25, 4);
+
+    expect(
+      normalizePortfolioScore({
+        netPlUsd: 1000,
+        trackedCasinoCount: 5,
+        claimDays: 45,
+        successfulRedemptions: 3,
+        totalRedemptions: 3,
+      }),
+    ).toBe(1);
+
+    expect(
+      normalizePortfolioScore({
+        netPlUsd: -1000,
+        trackedCasinoCount: 2,
+        claimDays: 10,
+        successfulRedemptions: 1,
+        totalRedemptions: 4,
+      }),
+    ).toBeCloseTo(0.298056, 4);
+  });
+
+  it('combines trust components with the current weights and clamps the output', () => {
+    expect(combineTrustComponents(1, 1, 1, 1)).toBe(1);
+    expect(combineTrustComponents(0, 0, 0, 0)).toBe(0);
+    expect(combineTrustComponents(0.5, 0.8, 0.25, 1)).toBeCloseTo(0.7275, 4);
+    expect(combineTrustComponents(2, 2, 2, 2)).toBe(1);
   });
 });
